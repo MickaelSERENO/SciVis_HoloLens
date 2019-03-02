@@ -2,8 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Sereno
+using Sereno.SciVis;
+
+namespace Sereno.Datasets
 {
+    public interface ISubDatasetCallback
+    {
+        void OnColorRangeChange(SubDataset dataset, float min, float max, ColorMode mode);
+    }
+
     public class SubDataset
     {
         /// <summary>
@@ -41,6 +48,8 @@ namespace Sereno
         /// </summary>
         protected TFTexture m_tfTexture;
 
+        protected List<ISubDatasetCallback> m_listeners = new List<ISubDatasetCallback>();
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -56,11 +65,24 @@ namespace Sereno
         /// <param name="min">The minimum clamping (values below that should be clamped)</param>
         /// <param name="max">The maximum clamping (values above that should be clamped)</param>
         /// <param name="mode">The ColorMode to apply</param>
-        void SetColor(float min, float max, ColorMode mode)
+        public void SetColor(float min, float max, ColorMode mode)
         {
             m_minClamp  = min;
             m_maxClamp  = max;
             m_colorMode = mode;
+
+            foreach(var l in m_listeners)
+                l.OnColorRangeChange(this, min, max, mode);
+        }
+
+        public void AddListener(ISubDatasetCallback clbk)
+        {
+            m_listeners.Add(clbk);
+        }
+
+        public void RemoveListener(ISubDatasetCallback clbk)
+        {
+            m_listeners.Remove(clbk);
         }
 
         /// <summary>

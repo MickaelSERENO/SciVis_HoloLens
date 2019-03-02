@@ -141,8 +141,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d24b3717601b20c41b2564a10bf090b1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  VTKStructuredGrid: {fileID: 4300054485863557407, guid: 8cbe3991e661c3844aaeb6dcc73c0558,
+  VTKSMGameObject: {fileID: 4757634199374474188, guid: 640e0d42fa907e4429749e5e66efad2b,
     type: 3}
+  MainCamera: {fileID: 988031768}
+  DesiredVTKDensity: 256
 --- !u!4 &437981235
 Transform:
   m_ObjectHideFlags: 0

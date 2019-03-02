@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-
-namespace Sereno
+namespace Sereno.Datasets
 {
     public class Dataset
     {
@@ -12,11 +11,16 @@ namespace Sereno
         /// </summary>
         protected List<SubDataset> m_subDatasets = new List<SubDataset>();
 
+        private int m_id;
+
         /// <summary>
         /// Constructor, does nothing
         /// </summary>
-        public Dataset()
-        { }
+        /// <param name="id">The ID of the Dataset</param>
+        public Dataset(int id)
+        { 
+            m_id = id;
+        }
 
         /// <summary>
         /// Get the SubDataset at indice i.
@@ -29,5 +33,7 @@ namespace Sereno
         /// List of SubDatasets contained in this Dataset
         /// </summary>
         public List<SubDataset> SubDatasets {get => m_subDatasets;}
+
+        public int ID {get => m_id;}
     }
 }

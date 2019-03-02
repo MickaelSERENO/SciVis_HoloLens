@@ -4,10 +4,12 @@ using UnityEngine;
 using System;
 using System.Runtime.InteropServices;
 
+using Sereno.Datasets;
+using Sereno.SciVis;
 
-namespace Sereno
+namespace Sereno.SciVis
 {
-    public class VTKUnityStructuredGrid : MonoBehaviour
+    public class VTKUnityStructuredGrid
     {
         /// <summary>
         /// The list of the small multiples
@@ -35,39 +37,25 @@ namespace Sereno
         private VTKStructuredPoints m_ptsDesc;
 
         /// <summary>
-        /// The small multiple prefab to represent sub data.
-        /// </summary>
-        public VTKUnitySmallMultiple SmallMultiplePrefab;
-
-        /// <summary>
         /// The desired density
         /// </summary>
-        public UInt32 DesiredDensity;
+        private UInt32 m_desiredDensity;
 
         /// <summary>
         /// The Dataset bound to this SubDataset
         /// </summary>
         public VTKDataset m_dataset;
 
-        void Start()
-        {
-
-        }
-
-        /// <summary>
-        /// Initialize the StructuredGrid representation
-        /// </summary>
-        /// <param name="mask">The mask to apply point per point. if mask==null, we do not use it</param>
-        /// <returns></returns>
-        public unsafe bool Init(VTKDataset vtkDataset, byte* mask=null)
+        public unsafe VTKUnityStructuredGrid (VTKDataset vtkDataset, UInt32 desiredDensity, byte* mask=null)
         {
             m_dataset = vtkDataset;
+            m_desiredDensity = desiredDensity;
             m_mask    = mask;
             VTKParser parser = m_dataset.Parser;
             if(parser.GetDatasetType() != VTKDatasetType.VTK_STRUCTURED_POINTS)
             {
                 Debug.Log("Error: The dataset should be a structured points dataset");
-                return false;
+                return;
             }
 
             //Get the points and modify the points / normals buffer
@@ -83,14 +71,6 @@ namespace Sereno
             
             //Small multiples array
             m_smallMultiples = new List<VTKUnitySmallMultiple>();
-
-            return true;
-        }
-        
-        // Update is called once per frame
-        void Update() 
-        {
-            
         }
 
         /// <summary>
@@ -100,7 +80,7 @@ namespace Sereno
         /// <returns>A VTKUnitySmallMultiple object.</returns>
         public VTKUnitySmallMultiple CreatePointFieldSmallMultiple(Int32 dataID)
         {
-            VTKUnitySmallMultiple sm = GameObject.Instantiate(SmallMultiplePrefab);
+            VTKUnitySmallMultiple sm = new VTKUnitySmallMultiple();
 
             if(dataID >= m_dataset.PtFieldValues.Count || dataID < 0)
                 return null;
@@ -116,8 +96,6 @@ namespace Sereno
                     return sm;
                 }
             }
-
-            Destroy(sm);
             return null;
         }
 
@@ -173,6 +151,11 @@ namespace Sereno
         public Vector3Int Dimensions
         {
             get{ return m_dimensions; }
+        }
+
+        public UInt32 DesiredDensity
+        {
+            get{return m_desiredDensity;}
         }
     }
 }

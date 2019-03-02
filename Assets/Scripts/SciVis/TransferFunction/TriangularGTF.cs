@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Sereno
+namespace Sereno.SciVis
 {
     /// <summary>
     /// Triangular Gaussian Transfer Function.
@@ -49,7 +49,7 @@ namespace Sereno
             if(grad == 0)
                 return 0;
 
-            if(values.Length-1 < m_scale.Length || values.Length-1 < m_center.Length)
+            if(values.Length-1 > m_scale.Length || values.Length-1 > m_center.Length)
                 return -1;
 
             float r0 = 1.0f/grad;
@@ -63,7 +63,6 @@ namespace Sereno
                 r1[i] = r0*m_scale[i]*(values[i] - m_center[i]);
                 r1Mag += r1[i]*r1[i];
             }
-
             return (float)Math.Min(m_alphaMax*Math.Exp(-r1Mag), 1.0f);
         }
 

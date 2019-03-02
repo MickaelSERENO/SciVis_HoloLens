@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Sereno
+namespace Sereno.SciVis
 {
     /// <summary>
     /// Class representing a Gaussian Transfer Function
@@ -41,7 +41,7 @@ namespace Sereno
 
         public override float ComputeAlpha(float[] values)
         {
-            if(values.Length < m_scale.Length && values.Length < m_center.Length)
+            if(values.Length > m_scale.Length || values.Length > m_center.Length)
                 return -1;
 
             float[] r = new float[values.Length];

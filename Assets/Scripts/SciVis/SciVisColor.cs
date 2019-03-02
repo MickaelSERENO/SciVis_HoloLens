@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Sereno
+namespace Sereno.SciVis
 {
     public class SciVisColor
     {

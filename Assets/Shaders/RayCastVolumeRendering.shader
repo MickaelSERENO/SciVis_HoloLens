@@ -13,6 +13,7 @@
 		
 		ZWrite Off
 		Blend SrcAlpha OneMinusSrcAlpha
+		Cull Off
 
         LOD 100
 
@@ -26,17 +27,25 @@
 
             struct appdata
             {
-                fixed4 vertex : POSITION;
+                float4 vertex : POSITION;
             };
 
             struct v2f
             {
-				fixed3 rayNormal : TEXCOORD0;
-				fixed4 rayOrigin : TEXCOORD1;
-                fixed4 vertex    : SV_POSITION;
+				float3   rayNormal : TEXCOORD0;
+				float4   rayOrigin : TEXCOORD1;
+				float2   uvDepth   : TEXCOORD2;
+				float4x4 invMVP    : TEXCOORD3;
+                float4   vertex    : SV_POSITION;
             };
 
+			/** The Camera depth texture*/
+			sampler2D _CameraDepthTexture;
+
+			/** The Transfer function texture*/
             sampler2D _TFTexture;
+
+			/** The volume data*/
             sampler3D _TextureData;
 
 			float4x4 inverse(float4x4 m)
@@ -76,28 +85,25 @@
 			v2f vert(appdata v)
 			{
 				v2f o;
-				o.vertex = v.vertex;
+				o.vertex    = v.vertex;
+				o.invMVP    = inverse(UNITY_MATRIX_MVP);
+				//v.vertex.z  -= UNITY_NEAR_CLIP_VALUE;
 
-				fixed3 n;
+				float3 n;
+				float4 x1 = mul(inverse(UNITY_MATRIX_P), float4(v.vertex.xy, 1.0, 1.0));
+				float4 x2 = mul(inverse(UNITY_MATRIX_P), float4(v.vertex.xy, 0.0, 1.0));
+				n = x1/x1.w - x2/x2.w;
 
-				//Orthographique
-				if (unity_OrthoParams.w == 1.0)
-				{
-					n = mul(float3(0, 0, 1), (float3x3)UNITY_MATRIX_MVP);
-					o.rayOrigin = mul(inverse(UNITY_MATRIX_MVP), fixed4(v.vertex.xy, -1.0, 1));
-					o.rayOrigin = o.rayOrigin / o.rayOrigin.w;
-				}
+				n = (float3)mul(n, UNITY_MATRIX_MV);
 
-				//Projection
-				else
-				{
-					fixed4 x = mul(inverse(UNITY_MATRIX_P), fixed4(v.vertex.xy, -1.0, 1));
-					n = (float3)mul(x, UNITY_MATRIX_MV);
-					//o.rayOrigin = mul(x, UNITY_MATRIX_IT_MV);
-					o.rayOrigin = mul(inverse(UNITY_MATRIX_MVP), fixed4(v.vertex.xy, 1.0, 1));
-					o.rayOrigin = o.rayOrigin / o.rayOrigin.w;
-				}
+				//o.rayOrigin = mul(x, UNITY_MATRIX_IT_MV);
+				o.rayOrigin = mul(o.invMVP, v.vertex);
+				o.rayOrigin = o.rayOrigin/o.rayOrigin.w;
+				
 				o.rayNormal = normalize(n.xyz);
+				o.uvDepth   = v.vertex.xy*0.5 + 0.5;
+				if (_ProjectionParams.x < 0)
+					o.uvDepth.y = 1.0 - o.uvDepth.y;
 				return o;
 			}
 
@@ -107,9 +113,9 @@
 			 * \param planePosition the plane position
 			 * \param t[out] the parameter t of the ray equation
 			 * \return   true if intersection, false otherwise */
-			bool computeRayPlaneIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, in fixed3 planeNormal, in fixed3 planePosition, out fixed t)
+			bool computeRayPlaneIntersection(in float3 rayOrigin, in float3 rayNormal, in float3 planeNormal, in float3 planePosition, out float t)
 			{
-				fixed nDir = dot(planeNormal, rayNormal);
+				float nDir = dot(planeNormal, rayNormal);
 				if (nDir == 0.0)
 					return false;
 
@@ -122,26 +128,26 @@
 			 * \param rayOrigin the ray origin
 			 * \param t[6] the t values (pos = rayOrigin +t*varyRayNormal)
 			 * \param tValidity[6] the t validity (is t[i] a valid value?) */
-			void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fixed t[6], out bool tValidity[6])
+			void computeRayCubeIntersection(in float3 rayOrigin, in float3 rayNormal, out float t[6], out bool tValidity[6])
 			{
 				//Left
-				tValidity[0] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(-1, 0, 0),
-					fixed3(0.0, 0.0, 0.0), t[0]);
+				tValidity[0] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(-1, 0, 0),
+					float3(0.0, 0.0, 0.0), t[0]);
 				//Right
-				tValidity[1] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(1, 0, 0),
-					fixed3(1.0, 0.0, 0.0), t[1]);
-				//Top
-				tValidity[2] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, -1, 0),
-					fixed3(0.0, 0.0, 0.0), t[2]);
+				tValidity[1] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(1, 0, 0),
+					float3(1.0, 0.0, 0.0), t[1]);
 				//Bottom
-				tValidity[3] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 1, 0),
-					fixed3(0.0, 1.0, 0.0), t[3]);
+				tValidity[2] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, -1, 0),
+					float3(0.0, 0.0, 0.0), t[2]);
+				//tOP
+				tValidity[3] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 1, 0),
+					float3(0.0, 1.0, 0.0), t[3]);
 				//Front
-				tValidity[4] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 0, -1),
-					fixed3(0.0, 0.0, 0.0), t[4]);
+				tValidity[4] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 0, -1),
+					float3(0.0, 0.0, 0.0), t[4]);
 				//Back
-				tValidity[5] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 0, 1),
-					fixed3(0.0, 0.0, 1.0), t[5]);
+				tValidity[5] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 0, 1),
+					float3(0.0, 0.0, 1.0), t[5]);
 
 				//Test the limits
 				for (int i = 0; i < 2; i++)
@@ -149,38 +155,54 @@
 					//Left / Right
 					if (tValidity[i])
 					{
-						fixed3 p = t[i] * rayNormal + rayOrigin;
-						if (p.y <= 0.0 || p.y >= 1.0 ||
-							p.z <= 0.0 || p.z >= 1.0)
+						if(t[i] < 0.0)
 							tValidity[i] = false;
+						
+						else
+						{
+							float3 p = t[i] * rayNormal + rayOrigin;
+							if (p.y <= 0.0 || p.y >= 1.0 ||
+								p.z <= 0.0 || p.z >= 1.0)
+								tValidity[i] = false;
+						}
 					}
 
 					//Top / Bottom
 					if (tValidity[i + 2])
 					{
-						fixed3 p = t[i + 2] * rayNormal + rayOrigin;
-						if (p.x <= 0.0 || p.x >= 1.0 ||
-							p.z <= 0.0 || p.z >= 1.0)
+						if(t[i + 2] < 0.0)
 							tValidity[i + 2] = false;
+						else
+						{
+							float3 p = t[i + 2] * rayNormal + rayOrigin;
+							if (p.x <= 0.0 || p.x >= 1.0 ||
+								p.z <= 0.0 || p.z >= 1.0)
+								tValidity[i + 2] = false;
+						}
 					}
 
 					//Front / Back
-					if (tValidity[i + 4])
+					if(tValidity[i + 4])
 					{
-						fixed3 p = t[i + 4] * rayNormal + rayOrigin;
-						if (p.x <= 0.0 || p.x >= 1.0 ||
-							p.y <= 0.0 || p.y >= 1.0)
+						if(t[i + 4] < 0.0)
 							tValidity[i + 4] = false;
+						else
+						{
+							float3 p = t[i + 4] * rayNormal + rayOrigin;
+							if (p.x <= 0.0 || p.x >= 1.0 ||
+								p.y <= 0.0 || p.y >= 1.0)
+								tValidity[i + 4] = false;
+						}
 					}
 				}
 			}
 
-			fixed4 frag(v2f input) : SV_Target
+			float4 frag(v2f input) : SV_Target
 			{
-				fixed4 fragColor = fixed4(0, 0, 0, 0);
+				float4 fragColor = float4(0, 0, 0, 0);
 
 				//Compute ray - cube intersections
-				fixed t[6];
+				float t[6];
 				bool  tValidity[6];
 				computeRayCubeIntersection(input.rayOrigin.xyz, input.rayNormal, t, tValidity);
 
@@ -188,44 +210,77 @@
 				int startValidity = 0;
 				for (; !tValidity[startValidity] && startValidity < 6; startValidity++);
 
-				if (startValidity >=5)
+				if(startValidity == 6)
 					discard;
-				//If yes, look at the starting and end points
-				fixed minT = t[startValidity];
-				fixed maxT = minT;
 
-				for (int i = startValidity + 1; i < 6; i++)
+				//If yes, look at the starting and end points
+				float minT = t[startValidity];
+				float maxT = minT;
+
+				for(int i = startValidity + 1; i < 6; i++)
 				{
-					if (tValidity[i])
+					if(tValidity[i])
 					{
 						minT = min(minT, t[i]);
 						maxT = max(maxT, t[i]);
+						break;
 					}
 				}
 
-				//Handle ray not in at the beginning
-				if (minT < 0)
+				//If start == end -> only one point. Go from our position to the end!
+				if(minT == maxT)
 					minT = 0.0;
-				if (maxT < 0)
-					discard;
+
 				//compute step and maximum number of steps
-				//fixed rayStep = 1.0 / (max(max(uDimension.x, uDimension.y), uDimension.z)*4.0);
-				fixed rayStep = 1.0 / 128.0f;
-				fixed3 rayPos = input.rayOrigin.xyz + minT * input.rayNormal;
+				//float rayStep = 1.0 / (max(max(uDimension.x, uDimension.y), uDimension.z)*4.0);
+				float rayStep = 1.0 / (256.0);
+				float3 rayPos = input.rayOrigin.xyz + minT * input.rayNormal;
+				rayPos.x = min(max(rayPos.x, 0), 1.0);
+				rayPos.y = min(max(rayPos.y, 0), 1.0);
+				rayPos.z = min(max(rayPos.z, 0), 1.0);
+
+				//Determine max displacement (the displacement the ray can perform) regarding the depth
+				float depthPos = tex2D(_CameraDepthTexture, input.uvDepth);
+				#ifndef UNITY_REVERSED_Z
+				depthPos = 1.0f - depthPos;
+				#endif
+
+				if (UNITY_NEAR_CLIP_VALUE == 1.0)
+					depthPos = depthPos * 2.0 - 1.0;
+				float4 endRayOrigin = mul(input.invMVP, float4(input.uvDepth*2.0-1.0, depthPos, 1));
+				endRayOrigin /= endRayOrigin.w;
+				
+				float maxDepthDisplacement = 2.0*dot(input.rayNormal, rayPos - endRayOrigin); //-0.0001 == epsilon
+				if(maxDepthDisplacement < 0)
+					discard;
 
 				//Ray marching algorithm
 				for (; minT < maxT; minT += rayStep, rayPos += input.rayNormal * rayStep)
 				{
-					fixed2 tfCoord = tex3Dlod(_TextureData, fixed4(rayPos, 0.0)).rg;
-					fixed4 tfColor = tex2Dlod(_TFTexture, fixed4(tfCoord, 0.0, 0.0));
-					fragColor = (1.0 - fragColor.a)*tfColor + fragColor;
+					float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.xy, 1.0-rayPos.z, 0.0)).rg;
+					float4 tfColor = tex2Dlod(_TFTexture,   float4(tfCoord, 0.0, 0.0));
+					fragColor.xyz = fragColor.xyz + (1 - fragColor.a)*tfColor.a*tfColor.xyz;
+					fragColor.a = fragColor.a + tfColor.a*(1 - fragColor.a);
+
+					if(fragColor.a > 0.95)
+					{
+						fragColor.a = 1.0;
+						return fragColor;
+					}
 				}
 
 				//At t=maxT
-				fixed2 tfCoord = tex3D(_TextureData, input.rayOrigin.xyz + maxT * input.rayNormal).rg;
-				fixed4 tfColor = tex2D(_TFTexture, tfCoord);
-				
-				return (1.0 - fragColor.a)*tfColor + fragColor;
+				rayPos   = input.rayOrigin.xyz + maxT * input.rayNormal;
+				rayPos.x = min(max(rayPos.x, 0), 1.0);
+				rayPos.y = min(max(rayPos.y, 0), 1.0);
+				rayPos.z = min(max(rayPos.z, 0), 1.0);
+
+				float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.xy, 1.0-rayPos.z, 1.0)).rg;
+				float4 tfColor = tex2Dlod(_TFTexture, float4(tfCoord, 0.0, 0.0));
+
+				fragColor.xyz = fragColor.xyz + (1 - fragColor.a)*tfColor.a*tfColor.xyz;
+				fragColor.a = fragColor.a + tfColor.a*(1 - fragColor.a); 
+				return fragColor;
 			}
 			ENDCG
         }

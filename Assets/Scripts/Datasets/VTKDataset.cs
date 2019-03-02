@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 
 
-namespace Sereno
+namespace Sereno.Datasets
 {
     public class VTKDataset : Dataset
     {
@@ -27,7 +27,7 @@ namespace Sereno
         /// <param name="parser">The VTKParser containing all the dataset.</param>
         /// <param name="ptFieldValues">Array of point field values to take account of</param>
         /// <param name="cellFieldValues">Array of cell field values to take account of</param>
-        public VTKDataset(VTKParser parser, VTKFieldValue[] ptFieldValues, VTKFieldValue[] cellFieldValues)
+        public VTKDataset(int id, VTKParser parser, VTKFieldValue[] ptFieldValues, VTKFieldValue[] cellFieldValues) : base(id)
         {
             m_parser = parser;
             m_ptFieldValues = new List<VTKFieldValue>(ptFieldValues);
