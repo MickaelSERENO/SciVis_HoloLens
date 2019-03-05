@@ -5,9 +5,13 @@ using System;
 
 using Sereno.Datasets;
 using Sereno.SciVis;
+using System.Threading.Tasks;
 
 namespace Sereno.SciVis
 {
+    /// <summary>
+    /// VTK Small Multiple datasets. Computes data to use for 3D volumetric rendering
+    /// </summary>
     public class VTKUnitySmallMultiple : ISubDatasetCallback
     {
         /// <summary>
@@ -45,8 +49,14 @@ namespace Sereno.SciVis
         /// </summary>
         private float m_minGrad;
         
+        /// <summary>
+        /// The 3D texture color to use along a transfer function 2D texture
+        /// </summary>
         private Color[] m_textureColor = null;
 
+        /// <summary>
+        /// The VTKStructuredPoints associated with this small multiples
+        /// </summary>
         private VTKStructuredPoints m_descPts;
 
         /// <summary>
@@ -165,9 +175,9 @@ namespace Sereno.SciVis
             float maxVal = m_vtkSubDataset.MaxAmplitude;
 
             //Save the values normalized for later use
-            UInt64 colorValueOff = 0;
-            for(UInt32 k = 0; k < m_dimensions.z; k++)
+            Parallel.For(0, m_dimensions.z, k => 
             {
+                UInt64 colorValueOff = (UInt64)(k*m_dimensions.x*m_dimensions.y);
                 for(UInt32 j = 0; j < m_dimensions.y; j++)
                 {
                     for(UInt32 i = 0; i < m_dimensions.x; i++, colorValueOff++)
@@ -187,7 +197,7 @@ namespace Sereno.SciVis
                         m_values[colorValueOff] = c;
                     }
                 }
-            }
+            });
         }
 
         /// <summary>
@@ -200,7 +210,7 @@ namespace Sereno.SciVis
         private unsafe void ComputeGradients(VTKStructuredPoints descPts, VTKFieldValue fieldValue, VTKValue val, byte* mask)
         {
             //When gradient is computable
-            for(UInt32 k = 1; k < m_dimensions.z-1; k++)
+            Parallel.For(1, m_dimensions.z, k => 
             {
                 for(UInt32 j = 1; j < m_dimensions.y-1; j++)
                 {
@@ -217,12 +227,12 @@ namespace Sereno.SciVis
                         }
 
                         //Gradient
-                        UInt64 indX1 = (i-1) + descPts.Size[0]*j     + descPts.Size[1]*descPts.Size[0]*k;
-                        UInt64 indX2 = (i+1) + descPts.Size[0]*j     + descPts.Size[1]*descPts.Size[0]*k;
-                        UInt64 indY1 = i     + descPts.Size[0]*(j-1) + descPts.Size[1]*descPts.Size[0]*k;
-                        UInt64 indY2 = i     + descPts.Size[0]*(j+1) + descPts.Size[1]*descPts.Size[0]*k;
-                        UInt64 indZ1 = i     + descPts.Size[0]*j     + descPts.Size[1]*descPts.Size[0]*(k-1);
-                        UInt64 indZ2 = i     + descPts.Size[0]*j     + descPts.Size[1]*descPts.Size[0]*(k+1);
+                        UInt64 indX1 = (i-1) + descPts.Size[0]*j     + (UInt64)(descPts.Size[1]*descPts.Size[0]*k);
+                        UInt64 indX2 = (i+1) + descPts.Size[0]*j     + (UInt64)(descPts.Size[1]*descPts.Size[0]*k);
+                        UInt64 indY1 = i     + descPts.Size[0]*(j-1) + (UInt64)(descPts.Size[1]*descPts.Size[0]*k);
+                        UInt64 indY2 = i     + descPts.Size[0]*(j+1) + (UInt64)(descPts.Size[1]*descPts.Size[0]*k);
+                        UInt64 indZ1 = i     + descPts.Size[0]*j     + (UInt64)(descPts.Size[1]*descPts.Size[0]*(k-1));
+                        UInt64 indZ2 = i     + descPts.Size[0]*j     + (UInt64)(descPts.Size[1]*descPts.Size[0]*(k+1));
 
                         Vector3 grad = new Vector3((float)((val.ReadAsDouble(indX2 * fieldValue.NbValuesPerTuple) - val.ReadAsDouble(indX1 * fieldValue.NbValuesPerTuple))/descPts.Spacing[0]),
                                                    (float)((val.ReadAsDouble(indY2 * fieldValue.NbValuesPerTuple) - val.ReadAsDouble(indY1 * fieldValue.NbValuesPerTuple))/descPts.Spacing[1]),
@@ -231,10 +241,10 @@ namespace Sereno.SciVis
                         m_grads[colorValueOff] = (float)grad.magnitude/m_maxGrad;
                     }
                 }
-            }
+            });
 
             //When gradient is not computable - default 0.0f
-            for(UInt32 j = 0; j < m_dimensions.y; j++)
+            Parallel.For(0, m_dimensions.y, j => 
             {
                 for(UInt32 i = 0; i < m_dimensions.x; i++)
                 {
@@ -243,9 +253,9 @@ namespace Sereno.SciVis
                     UInt64 colorValueOff2 = (UInt64)(i+m_dimensions.x*j+m_dimensions.x*m_dimensions.y*(m_dimensions.z-1));
                     m_grads[colorValueOff1] = m_grads[colorValueOff2] = 0.0f;
                 }
-            }
+            });
 
-            for(UInt32 k = 0; k < m_dimensions.z; k++)
+            Parallel.For(0, m_dimensions.z, k => 
             {
                 for(UInt32 i = 0; i < m_dimensions.x; i++)
                 {
@@ -254,9 +264,9 @@ namespace Sereno.SciVis
                     UInt64 colorValueOff2 = (UInt64)(i+m_dimensions.x*(m_dimensions.y-1)+m_dimensions.x*m_dimensions.y*k);
                     m_grads[colorValueOff1] = m_grads[colorValueOff2] = 0.0f;
                 }
-            }
+            });
 
-            for(UInt32 k = 0; k < m_dimensions.z; k++)
+            Parallel.For(0, m_dimensions.z, k => 
             {
                 for(UInt32 j = 0; j < m_dimensions.y; j++)
                 {
@@ -265,7 +275,7 @@ namespace Sereno.SciVis
                     UInt64 colorValueOff2 = (UInt64)(m_dimensions.x-1+m_dimensions.x*j+m_dimensions.x*m_dimensions.y*k);
                     m_grads[colorValueOff1] = m_grads[colorValueOff2] = 0.0f;
                 }
-            }
+            });
         }
 
         public void OnColorRangeChange(SubDataset dataset, float min, float max, ColorMode mode)
@@ -273,12 +283,28 @@ namespace Sereno.SciVis
             UpdateRangeColor(min, max, mode);
         }
 
+        /// <summary>
+        /// The 3D Texure Color computed. This array has to be used along a transfer function
+        /// </summary>
+        /// <returns></returns>
         public Color[] TextureColor {get => m_textureColor; set => m_textureColor = value;}
 
+        /// <summary>
+        /// The VTKSubDataset bound to this Small Multiple
+        /// </summary>
+        /// <returns>The VTKSubDataset bound to this Small Multiple</returns>
         public VTKSubDataset VTKSubDataset {get => m_vtkSubDataset;}
 
+        /// <summary>
+        /// The three axis dimensions
+        /// </summary>
+        /// <returns>The Three axis dimensions</returns>
         public Vector3Int Dimensions {get => m_dimensions;}
 
+        /// <summary>
+        /// The Point descriptors of the structured grid used
+        /// </summary>
+        /// <returns>A VTKStructuredPoints describing the grid</returns>
         public VTKStructuredPoints DescPts {get => m_descPts;}
     }
 }

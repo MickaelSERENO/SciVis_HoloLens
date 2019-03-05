@@ -13,17 +13,40 @@ namespace Sereno
 {
     public class Main : MonoBehaviour, IMessageBufferCallback
     {
-        private List<Dataset>     m_datasets           = new List<Dataset>();
-        private Queue<VTKDataset> m_vtkDatasetsLoaded  = new Queue<VTKDataset>();
+        /// <summary>
+        /// The Dataset currently parsed. The key represents the datase ID
+        /// </summary>
+        private Dictionary<Int32, Dataset> m_datasets = new Dictionary<Int32, Dataset>();
+
+        /// <summary>
+        /// Dataset loaded that needed to be visualized (in construction GameObject. Needed to be read in the main thread.
+        /// </summary>
+        private Queue<VTKDataset> m_vtkDatasetsLoaded = new Queue<VTKDataset>();
+
+        /// <summary>
+        /// The VTK Small multiple being loaded from the Server thread. Useful to construct GameObjects in the main thread
+        /// </summary>
 
         private Queue<VTKUnitySmallMultiple> m_vtkSMLoaded = new Queue<VTKUnitySmallMultiple>();
 
-        private VFVClient        m_client;
+        /// <summary>
+        /// The Server Client. 
+        /// </summary>
+        private VFVClient m_client;
 
+        /// <summary>
+        /// Prefab of VTKUnitySmallMultipleGameObject correctly configured
+        /// </summary>
         public VTKUnitySmallMultipleGameObject VTKSMGameObject;
 
+        /// <summary>
+        /// The Main Camera to configure
+        /// </summary>
         public Camera MainCamera;
 
+        /// <summary>
+        /// The desired density for VTK structured grid datasets
+        /// </summary>
         public UInt32 DesiredVTKDensity;
 
         void Start()
@@ -60,6 +83,7 @@ namespace Sereno
                     VTKDataset d = m_vtkDatasetsLoaded.Dequeue();
                     for(int i = 0; i < d.SubDatasets.Count; i++)
                         d.GetSubDataset(i).UpdateGraphics();
+                    m_datasets.Add(d.ID, d);
                 }
             }
 
@@ -116,6 +140,13 @@ namespace Sereno
                         m_vtkSMLoaded.Enqueue(sm);
                 }
             }
+        }
+
+        public void OnRotateDataset(MessageBuffer messageBuffer, RotateDatasetMessage msg)
+        {
+            Debug.Log("Received rotation event");
+            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID])
+                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].Rotation = msg.Quaternion;
         }
     }
 }

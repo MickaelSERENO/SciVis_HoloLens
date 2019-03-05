@@ -15,7 +15,9 @@ namespace Sereno.Network
     /// </summary> 
     public class VFVClient : Client
     {
+        
         MessageBuffer m_msgBuf;
+
         public VFVClient(IMessageBufferCallback clbk) : base("127.0.0.1", 8000, null)
         {
             m_msgBuf = new MessageBuffer();

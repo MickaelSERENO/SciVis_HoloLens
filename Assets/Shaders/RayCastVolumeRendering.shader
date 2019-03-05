@@ -85,23 +85,24 @@
 			v2f vert(appdata v)
 			{
 				v2f o;
-				o.vertex    = v.vertex;
-				o.invMVP    = inverse(UNITY_MATRIX_MVP);
-				//v.vertex.z  -= UNITY_NEAR_CLIP_VALUE;
+				o.invMVP      = inverse(UNITY_MATRIX_MVP);
+				float4x4 invP = inverse(UNITY_MATRIX_P);
+				o.vertex      = v.vertex;
+				o.vertex.z   += UNITY_NEAR_CLIP_VALUE;
 
-				float3 n;
-				float4 x1 = mul(inverse(UNITY_MATRIX_P), float4(v.vertex.xy, 1.0, 1.0));
-				float4 x2 = mul(inverse(UNITY_MATRIX_P), float4(v.vertex.xy, 0.0, 1.0));
+				float4 n;
+				float4 x1 = mul(invP, float4(o.vertex.xy,  1.0, 1.0));
+				float4 x2 = mul(invP, o.vertex);
 				n = x1/x1.w - x2/x2.w;
 
-				n = (float3)mul(n, UNITY_MATRIX_MV);
+				n = mul(n, UNITY_MATRIX_MV);
 
-				//o.rayOrigin = mul(x, UNITY_MATRIX_IT_MV);
-				o.rayOrigin = mul(o.invMVP, v.vertex);
+				//o.rayOrigin = mul(x2, UNITY_MATRIX_IT_MV);
+				o.rayOrigin = mul(o.invMVP, o.vertex);
 				o.rayOrigin = o.rayOrigin/o.rayOrigin.w;
 				
 				o.rayNormal = normalize(n.xyz);
-				o.uvDepth   = v.vertex.xy*0.5 + 0.5;
+				o.uvDepth   = o.vertex.xy*0.5 + 0.5;
 				if (_ProjectionParams.x < 0)
 					o.uvDepth.y = 1.0 - o.uvDepth.y;
 				return o;
@@ -219,17 +220,17 @@
 
 				for(int i = startValidity + 1; i < 6; i++)
 				{
-					if(tValidity[i])
+					if(tValidity[i] == true)
 					{
 						minT = min(minT, t[i]);
 						maxT = max(maxT, t[i]);
-						break;
+						break; //Maximum two points
 					}
 				}
 
 				//If start == end -> only one point. Go from our position to the end!
 				if(minT == maxT)
-					minT = 0.0;
+					minT = 0;
 
 				//compute step and maximum number of steps
 				//float rayStep = 1.0 / (max(max(uDimension.x, uDimension.y), uDimension.z)*4.0);
@@ -240,22 +241,22 @@
 				rayPos.z = min(max(rayPos.z, 0), 1.0);
 
 				//Determine max displacement (the displacement the ray can perform) regarding the depth
-				float depthPos = tex2D(_CameraDepthTexture, input.uvDepth);
-				#ifndef UNITY_REVERSED_Z
+				float depthPos = Linear01Depth(tex2D(_CameraDepthTexture, input.uvDepth));
+				#ifdef UNITY_REVERSED_Z
 				depthPos = 1.0f - depthPos;
 				#endif
-
-				if (UNITY_NEAR_CLIP_VALUE == 1.0)
+				if (UNITY_NEAR_CLIP_VALUE == -1.0) //Transform [0, 1] to [-1, 1]
 					depthPos = depthPos * 2.0 - 1.0;
-				float4 endRayOrigin = mul(input.invMVP, float4(input.uvDepth*2.0-1.0, depthPos, 1));
+
+				float4 endRayOrigin = mul(input.invMVP, float4(input.uvDepth*2.0-1.0, depthPos, 1.0));
 				endRayOrigin /= endRayOrigin.w;
 				
-				float maxDepthDisplacement = 2.0*dot(input.rayNormal, rayPos - endRayOrigin); //-0.0001 == epsilon
+				float maxDepthDisplacement = -dot(input.rayNormal, rayPos - endRayOrigin.xyz)-0.0001; //-0.0001 == epsilon
 				if(maxDepthDisplacement < 0)
 					discard;
 
 				//Ray marching algorithm
-				for (; minT < maxT; minT += rayStep, rayPos += input.rayNormal * rayStep)
+				for (; minT < maxT && maxDepthDisplacement > 0; maxDepthDisplacement -= rayStep, minT += rayStep, rayPos += input.rayNormal * rayStep)
 				{
 					float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.xy, 1.0-rayPos.z, 0.0)).rg;
 					float4 tfColor = tex2Dlod(_TFTexture,   float4(tfCoord, 0.0, 0.0));
@@ -268,6 +269,9 @@
 						return fragColor;
 					}
 				}
+
+				if(maxDepthDisplacement < 0)
+					return fragColor;
 
 				//At t=maxT
 				rayPos   = input.rayOrigin.xyz + maxT * input.rayNormal;

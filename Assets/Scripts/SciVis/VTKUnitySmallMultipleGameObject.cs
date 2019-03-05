@@ -2,6 +2,9 @@ using UnityEngine;
 
 namespace Sereno.SciVis
 {
+    /// <summary>
+    /// Visualization of VTK Unity Small Multiple
+    /// </summary>
     public class VTKUnitySmallMultipleGameObject : MonoBehaviour
     {
         /// <summary>
@@ -34,8 +37,15 @@ namespace Sereno.SciVis
         /// </summary>
         private Texture3D m_texture3D;
 
+        /// <summary>
+        /// The model bound
+        /// </summary>
         private VTKUnitySmallMultiple m_sm;
 
+        /// <summary>
+        /// Initialize the visualization
+        /// </summary>
+        /// <param name="sm">The small multiple data to use</param>
         public void Init(VTKUnitySmallMultiple sm)
         {
             m_sm = sm;
@@ -71,24 +81,40 @@ namespace Sereno.SciVis
             transform.localScale = new Vector3(m_sm.DescPts.Size[0] / m_sm.Dimensions.x,
                                                m_sm.DescPts.Size[1] / m_sm.Dimensions.y,
                                                m_sm.DescPts.Size[2] / m_sm.Dimensions.z);
-
         }
         
-        // Update is called once per frame
         private void Update()
         {
-            if(m_sm.TextureColor != null)
+            //Update the 3D texture
+            lock(m_sm)
             {
-                m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGFloat, true);
-                m_texture3D.wrapModeU = TextureWrapMode.Repeat;
-                m_texture3D.wrapModeV = TextureWrapMode.Repeat;
-                m_texture3D.wrapModeW = TextureWrapMode.Repeat;
-                
-                m_texture3D.SetPixels(m_sm.TextureColor);
-                m_texture3D.Apply();
-                m_sm.TextureColor = null;
+                if(m_sm.TextureColor != null)
+                {
+                    m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGFloat, true);
+                    m_texture3D.wrapModeU = TextureWrapMode.Repeat;
+                    m_texture3D.wrapModeV = TextureWrapMode.Repeat;
+                    m_texture3D.wrapModeW = TextureWrapMode.Repeat;
+                    
+                    m_texture3D.SetPixels(m_sm.TextureColor);
+                    m_texture3D.Apply();
+                    m_sm.TextureColor = null;
+                }
             }
 
+            //Update the vtk sub dataset
+            lock(m_sm.VTKSubDataset)
+            {
+                if(m_sm.VTKSubDataset.RotationUpdated)
+                {
+                    m_sm.VTKSubDataset.RotationUpdated = false;
+                    transform.rotation = new Quaternion(m_sm.VTKSubDataset.Rotation[1],
+                                                        m_sm.VTKSubDataset.Rotation[2],
+                                                        m_sm.VTKSubDataset.Rotation[3],
+                                                        m_sm.VTKSubDataset.Rotation[0]);
+                }
+            }
+
+            //Draw the GameObject
             if(m_mesh != null && m_material != null)
             {
                 m_material.SetTexture("_TFTexture", m_sm.VTKSubDataset.TFTexture.Texture);

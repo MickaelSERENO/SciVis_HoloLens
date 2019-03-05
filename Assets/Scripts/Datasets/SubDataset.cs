@@ -48,6 +48,15 @@ namespace Sereno.Datasets
         /// </summary>
         protected TFTexture m_tfTexture;
 
+        
+        /// <summary>
+        /// The Quaternion rotation
+        /// 0 -> W, 1 -> i, 2 -> j, 3 -> k
+        /// </summary>
+        private float[] m_rotation = new float[4]{1.0f, 0.0f, 0.0f, 0.0f};
+
+        private bool m_rotationUpdated = false;
+
         protected List<ISubDatasetCallback> m_listeners = new List<ISubDatasetCallback>();
 
         /// <summary>
@@ -119,5 +128,29 @@ namespace Sereno.Datasets
         /// The Transfer function bound to this object
         /// </summary>
         public TFTexture TFTexture {get => m_tfTexture; set => m_tfTexture = value;}
+
+        /// <summary>
+        /// The Rotation Quaternion array. Rotation[0] == w, Rotation[1] = i, Rotation[2] = j, Rotation[3] = k
+        /// </summary>
+        /// <returns>The Rotation Quaternion array</returns>
+        public float[] Rotation 
+        {
+            get => m_rotation; 
+            set
+            {
+                for(int i = 0; i < Rotation.Length; i++) 
+                    m_rotation[i] = value[i];
+                m_rotationUpdated = true;
+            }
+        }
+
+        /// <summary>
+        /// Set or get if the rotation has been updated. Put at false when the new rotation has been read carrefully
+        /// </summary>
+        public bool RotationUpdated
+        {
+            get => m_rotationUpdated;
+            set => m_rotationUpdated = value;
+        }
     }
 }

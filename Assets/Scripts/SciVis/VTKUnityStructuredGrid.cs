@@ -9,6 +9,9 @@ using Sereno.SciVis;
 
 namespace Sereno.SciVis
 {
+    /// <summary>
+    /// StructuredGrid of VTK Dataset Model
+    /// </summary>
     public class VTKUnityStructuredGrid
     {
         /// <summary>
@@ -140,6 +143,9 @@ namespace Sereno.SciVis
             return new Vector3Int((int)m_ptsDesc.Size[0] / maxRatio, (int)m_ptsDesc.Size[1] / maxRatio, (int)m_ptsDesc.Size[2] / maxRatio);
         }
 
+        /// <summary>
+        /// The Spacing along each cells (along X, Y and Z axis)
+        /// </summary>
         public Vector3 Spacing
         {
             get{return m_spacing;}
@@ -153,6 +159,9 @@ namespace Sereno.SciVis
             get{ return m_dimensions; }
         }
 
+        /// <summary>
+        /// The Desired density to store
+        /// </summary>
         public UInt32 DesiredDensity
         {
             get{return m_desiredDensity;}
