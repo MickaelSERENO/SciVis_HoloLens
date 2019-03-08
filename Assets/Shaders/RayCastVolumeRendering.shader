@@ -133,22 +133,22 @@
 			{
 				//Left
 				tValidity[0] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(-1, 0, 0),
-					float3(0.0, 0.0, 0.0), t[0]);
+					float3(-0.5, -0.5, -0.5), t[0]);
 				//Right
 				tValidity[1] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(1, 0, 0),
-					float3(1.0, 0.0, 0.0), t[1]);
+					float3(+0.5, -0.5, -0.5), t[1]);
 				//Bottom
 				tValidity[2] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, -1, 0),
-					float3(0.0, 0.0, 0.0), t[2]);
+					float3(-0.5, -0.5, -0.5), t[2]);
 				//tOP
 				tValidity[3] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 1, 0),
-					float3(0.0, 1.0, 0.0), t[3]);
+					float3(-0.5, +0.5, -0.5), t[3]);
 				//Front
 				tValidity[4] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 0, -1),
-					float3(0.0, 0.0, 0.0), t[4]);
+					float3(-0.5, -0.5, -0.5), t[4]);
 				//Back
 				tValidity[5] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 0, 1),
-					float3(0.0, 0.0, 1.0), t[5]);
+					float3(-0.5, -0.5, +0.5), t[5]);
 
 				//Test the limits
 				for (int i = 0; i < 2; i++)
@@ -162,8 +162,8 @@
 						else
 						{
 							float3 p = t[i] * rayNormal + rayOrigin;
-							if (p.y <= 0.0 || p.y >= 1.0 ||
-								p.z <= 0.0 || p.z >= 1.0)
+							if (p.y <= -0.5 || p.y >= +0.5 ||
+								p.z <= -0.5 || p.z >= +0.5)
 								tValidity[i] = false;
 						}
 					}
@@ -176,8 +176,8 @@
 						else
 						{
 							float3 p = t[i + 2] * rayNormal + rayOrigin;
-							if (p.x <= 0.0 || p.x >= 1.0 ||
-								p.z <= 0.0 || p.z >= 1.0)
+							if (p.x <= -0.5 || p.x >= +0.5 ||
+								p.z <= -0.5 || p.z >= +0.5)
 								tValidity[i + 2] = false;
 						}
 					}
@@ -190,8 +190,8 @@
 						else
 						{
 							float3 p = t[i + 4] * rayNormal + rayOrigin;
-							if (p.x <= 0.0 || p.x >= 1.0 ||
-								p.y <= 0.0 || p.y >= 1.0)
+							if (p.x <= -0.5 || p.x >= +0.5 ||
+								p.y <= -0.5 || p.y >= +0.5)
 								tValidity[i + 4] = false;
 						}
 					}
@@ -234,11 +234,11 @@
 
 				//compute step and maximum number of steps
 				//float rayStep = 1.0 / (max(max(uDimension.x, uDimension.y), uDimension.z)*4.0);
-				float rayStep = 1.0 / (256.0);
+				float rayStep = 1.0 / (128.0*2.0);
 				float3 rayPos = input.rayOrigin.xyz + minT * input.rayNormal;
-				rayPos.x = min(max(rayPos.x, 0), 1.0);
-				rayPos.y = min(max(rayPos.y, 0), 1.0);
-				rayPos.z = min(max(rayPos.z, 0), 1.0);
+				rayPos.x = min(max(rayPos.x, -0.5), +0.5);
+				rayPos.y = min(max(rayPos.y, -0.5), +0.5);
+				rayPos.z = min(max(rayPos.z, -0.5), +0.5);
 
 				//Determine max displacement (the displacement the ray can perform) regarding the depth
 				float depthPos = Linear01Depth(tex2D(_CameraDepthTexture, input.uvDepth));
@@ -255,10 +255,13 @@
 				if(maxDepthDisplacement < 0)
 					discard;
 
+				rayPos += float3(0.5, 0.5, 0.5); //To read the 3D texture between 0.0 and 1.0
+
 				//Ray marching algorithm
-				for (; minT < maxT && maxDepthDisplacement > 0; maxDepthDisplacement -= rayStep, minT += rayStep, rayPos += input.rayNormal * rayStep)
+				for (; minT < maxT && maxDepthDisplacement > 0; maxDepthDisplacement -= rayStep, minT += rayStep, 
+																rayPos += input.rayNormal * rayStep)
 				{
-					float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.xy, 1.0-rayPos.z, 0.0)).rg;
+					float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.x, rayPos.y, rayPos.z, 0.0)).rg;
 					float4 tfColor = tex2Dlod(_TFTexture,   float4(tfCoord, 0.0, 0.0));
 					fragColor.xyz = fragColor.xyz + (1 - fragColor.a)*tfColor.a*tfColor.xyz;
 					fragColor.a = fragColor.a + tfColor.a*(1 - fragColor.a);
@@ -274,16 +277,17 @@
 					return fragColor;
 
 				//At t=maxT
-				rayPos   = input.rayOrigin.xyz + maxT * input.rayNormal;
-				rayPos.x = min(max(rayPos.x, 0), 1.0);
-				rayPos.y = min(max(rayPos.y, 0), 1.0);
-				rayPos.z = min(max(rayPos.z, 0), 1.0);
-
-				float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.xy, 1.0-rayPos.z, 1.0)).rg;
-				float4 tfColor = tex2Dlod(_TFTexture, float4(tfCoord, 0.0, 0.0));
-
-				fragColor.xyz = fragColor.xyz + (1 - fragColor.a)*tfColor.a*tfColor.xyz;
-				fragColor.a = fragColor.a + tfColor.a*(1 - fragColor.a); 
+				//rayPos   = input.rayOrigin.xyz + maxT * input.rayNormal;
+				//rayPos.x = min(max(rayPos.x, -0.5), +0.5);
+				//rayPos.y = min(max(rayPos.y, -0.5), +0.5);
+				//rayPos.z = min(max(rayPos.z, -0.5), +0.5);
+				//rayPos  += float3(0.5, 0.5, 0.5);
+//
+				//float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.xy, rayPos.z, 1.0)).rg;
+				//float4 tfColor = tex2Dlod(_TFTexture, float4(tfCoord, 0.0, 0.0));
+//
+				//fragColor.xyz = fragColor.xyz + (1 - fragColor.a)*tfColor.a*tfColor.xyz;
+				//fragColor.a = fragColor.a + tfColor.a*(1 - fragColor.a); 
 				return fragColor;
 			}
 			ENDCG

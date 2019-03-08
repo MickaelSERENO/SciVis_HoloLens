@@ -1,3 +1,5 @@
+using System;
+using Sereno.Datasets;
 using UnityEngine;
 
 namespace Sereno.SciVis
@@ -5,7 +7,7 @@ namespace Sereno.SciVis
     /// <summary>
     /// Visualization of VTK Unity Small Multiple
     /// </summary>
-    public class VTKUnitySmallMultipleGameObject : MonoBehaviour
+    public class VTKUnitySmallMultipleGameObject : MonoBehaviour, ISubDatasetCallback
     {
         /// <summary>
         /// Material to use
@@ -43,6 +45,26 @@ namespace Sereno.SciVis
         private VTKUnitySmallMultiple m_sm;
 
         /// <summary>
+        /// The new Quaternion received from the SmallMultiple.
+        /// </summary>
+        private Quaternion m_newQ;
+
+        /// <summary>
+        /// The new position received from the SmallMultiple.
+        /// </summary>
+        private Vector3 m_newP;
+
+        /// <summary>
+        /// Should we update the rotation quaternion?
+        /// </summary>
+        private bool m_updateQ = false;
+
+        /// <summary>
+        /// Should we update the 3D position?
+        /// </summary>
+        private bool m_updateP = false;
+
+        /// <summary>
         /// Initialize the visualization
         /// </summary>
         /// <param name="sm">The small multiple data to use</param>
@@ -73,16 +95,53 @@ namespace Sereno.SciVis
             //Add external 3D objects
             m_outline = GameObject.Instantiate(Outline);
             m_outline.transform.parent = transform;
-            m_outline.transform.localPosition = new Vector3(0.5f, 0.5f, 0.5f);
+            m_outline.transform.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
             m_outline.transform.localScale    = new Vector3(1, 1, 1);
             m_outline.transform.localRotation = Quaternion.identity;
 
             //Change our transformation matrix
-            transform.localScale = new Vector3(m_sm.DescPts.Size[0] / m_sm.Dimensions.x,
-                                               m_sm.DescPts.Size[1] / m_sm.Dimensions.y,
-                                               m_sm.DescPts.Size[2] / m_sm.Dimensions.z);
+            float maxRatio = Math.Max(m_sm.DescPts.Size[0]/m_sm.Dimensions.x,
+                                      Math.Max(m_sm.DescPts.Size[1]/m_sm.Dimensions.y,
+                                               m_sm.DescPts.Size[2]/m_sm.Dimensions.z));
+
+            transform.localScale = new Vector3((m_sm.DescPts.Size[0]/m_sm.Dimensions.x)/maxRatio,
+                                               (m_sm.DescPts.Size[1]/m_sm.Dimensions.y)/maxRatio,
+                                               (m_sm.DescPts.Size[2]/m_sm.Dimensions.z)/maxRatio);
+
+            //Update position / rotation
+            lock(m_sm)
+            {
+                OnRotationChange(m_sm.VTKSubDataset, m_sm.VTKSubDataset.Rotation);
+                OnPositionChange(m_sm.VTKSubDataset, m_sm.VTKSubDataset.Position);
+                m_sm.VTKSubDataset.AddListener(this);
+            }
         }
-        
+
+        public void OnColorRangeChange(SubDataset dataset, float min, float max, ColorMode mode)
+        {
+        }
+
+        public void OnPositionChange(SubDataset dataset, float[] position)
+        {
+            lock(this)
+            {
+                m_updateP = true;
+                m_newP    = new Vector3(position[0], position[1], position[2]); 
+            }
+        }
+
+        public void OnRotationChange(SubDataset dataset, float[] rotationQuaternion)
+        {
+            lock(this)
+            {
+                m_newQ = new Quaternion(rotationQuaternion[1],
+                                        rotationQuaternion[2],
+                                        rotationQuaternion[3],
+                                        rotationQuaternion[0]); 
+                m_updateQ = true;
+            }        
+        }
+
         private void Update()
         {
             //Update the 3D texture
@@ -99,20 +158,18 @@ namespace Sereno.SciVis
                     m_texture3D.Apply();
                     m_sm.TextureColor = null;
                 }
-            }
+            }         
 
-            //Update the vtk sub dataset
-            lock(m_sm.VTKSubDataset)
+            //Update the 3D transform of this game object
+            lock(this)
             {
-                if(m_sm.VTKSubDataset.RotationUpdated)
-                {
-                    m_sm.VTKSubDataset.RotationUpdated = false;
-                    transform.rotation = new Quaternion(m_sm.VTKSubDataset.Rotation[1],
-                                                        m_sm.VTKSubDataset.Rotation[2],
-                                                        m_sm.VTKSubDataset.Rotation[3],
-                                                        m_sm.VTKSubDataset.Rotation[0]);
-                }
-            }
+                if(m_updateP)
+                    transform.localPosition = m_newP;
+                m_updateP = false;
+                if(m_updateQ)
+                    transform.localRotation = m_newQ;
+                m_updateQ = false;
+            }       
 
             //Draw the GameObject
             if(m_mesh != null && m_material != null)

@@ -35,6 +35,11 @@ namespace Sereno.SciVis
         private Vector3Int m_dimensions;
 
         /// <summary>
+        /// The actual spacing between each cell (captured one)
+        /// </summary>
+        private Vector3    m_spacing;
+
+        /// <summary>
         ///The offset along each axis to apply : pos = x* offset.x + y* offset.y + z* offset.z
         /// </summary>
         private Vector3Int m_offset;
@@ -84,6 +89,14 @@ namespace Sereno.SciVis
             VTKStructuredPoints descPts = parser.GetStructuredPointsDescriptor();
             m_descPts = descPts;
 
+            float  maxAxis   = (float)Math.Max(descPts.Spacing[0]*m_dimensions[0],
+                                               Math.Max(descPts.Spacing[1]*m_dimensions[1],
+                                                        descPts.Spacing[2]*m_dimensions[2]));
+
+            m_spacing = new Vector3();
+            for(int i = 0; i < 3; i++)
+                m_spacing[i] = (float)(m_dimensions[i]*descPts.Spacing[i]/m_dimensions[i]/maxAxis);
+
             //Read the points values
             VTKValue      val    = parser.ParseAllFieldValues(fieldValue);
 
@@ -99,41 +112,46 @@ namespace Sereno.SciVis
                 if(mask != null && mask[i]==0)
                     continue;
                 float v = (float)val.ReadAsDouble(i * fieldValue.NbValuesPerTuple);
+
                 if(maxVal < v)
                     maxVal = v;
                 if(minVal > v)
                     minVal = v;
+
+                //TODO some optimization can be done here to not read again the dataset (even if in memory)
             }
+            //Update the amplitude of this SubDataset
+            m_vtkSubDataset.MaxAmplitude = maxVal;
+            m_vtkSubDataset.MinAmplitude = minVal;
+
+            //Compute the values
+            ComputeValues(descPts, fieldValue, val, mask);
 
             //Gradient values
-            for(UInt32 k = 1; k < descPts.Size[2]-1; k++)
-                for(UInt32 j = 1; j < descPts.Size[1]-1; j++)
-                    for(UInt32 i = 1; i < descPts.Size[0]-1; i++)
+            for(UInt32 k = 1; k < m_dimensions[2]-1; k++)
+                for(UInt32 j = 1; j < m_dimensions[1]-1; j++)
+                    for(UInt32 i = 1; i < m_dimensions[0]-1; i++)
                     {
-                        UInt64 indX1 = (i-1)+descPts.Size[0]*j+descPts.Size[1]*descPts.Size[0]*k;
-                        UInt64 indX2 = (i+1)+descPts.Size[0]*j+descPts.Size[1]*descPts.Size[0]*k;
-                        UInt64 indY1 = i+descPts.Size[0]*(j-1)+descPts.Size[1]*descPts.Size[0]*k;
-                        UInt64 indY2 = i+descPts.Size[0]*(j+1)+descPts.Size[1]*descPts.Size[0]*k;
-                        UInt64 indZ1 = i+descPts.Size[0]*j+descPts.Size[1]*descPts.Size[0]*(k-1);
-                        UInt64 indZ2 = i+descPts.Size[0]*j+descPts.Size[1]*descPts.Size[0]*(k+1);
+                        Int64 indX1 = (i-1)+m_dimensions[0]*j+m_dimensions[1]*m_dimensions[0]*k;
+                        Int64 indX2 = (i+1)+m_dimensions[0]*j+m_dimensions[1]*m_dimensions[0]*k;
+                        Int64 indY1 = i+m_dimensions[0]*(j-1)+m_dimensions[1]*m_dimensions[0]*k;
+                        Int64 indY2 = i+m_dimensions[0]*(j+1)+m_dimensions[1]*m_dimensions[0]*k;
+                        Int64 indZ1 = i+m_dimensions[0]*j+m_dimensions[1]*m_dimensions[0]*(k-1);
+                        Int64 indZ2 = i+m_dimensions[0]*j+m_dimensions[1]*m_dimensions[0]*(k+1);
 
-                        Vector3 grad = new Vector3((float)((val.ReadAsDouble(indX1 * fieldValue.NbValuesPerTuple) - val.ReadAsDouble(indX2 * fieldValue.NbValuesPerTuple))/descPts.Spacing[0]),
-                                                   (float)((val.ReadAsDouble(indY1 * fieldValue.NbValuesPerTuple) - val.ReadAsDouble(indY2 * fieldValue.NbValuesPerTuple))/descPts.Spacing[1]),
-                                                   (float)((val.ReadAsDouble(indZ1 * fieldValue.NbValuesPerTuple) - val.ReadAsDouble(indZ2 * fieldValue.NbValuesPerTuple))/descPts.Spacing[2]));
+                        Vector3 grad = new Vector3((float)(m_values[indX1] - m_values[indX2])/(2.0f*m_spacing[0]),
+                                                   (float)(m_values[indY1] - m_values[indY2])/(2.0f*m_spacing[1]),
+                                                   (float)(m_values[indZ1] - m_values[indZ2])/(2.0f*m_spacing[2]));
 
                         float gradMag = grad.magnitude;
                         if(gradMag < m_minGrad)
                             m_minGrad = gradMag;
                         if(gradMag > m_maxGrad)
                             m_maxGrad = gradMag;
+
+                        //TODO some optimization can be done here to not read again the dataset (even if in memory)
                     }
-
-            //Update the amplitude of this SubDataset
-            m_vtkSubDataset.MaxAmplitude = maxVal;
-            m_vtkSubDataset.MinAmplitude = minVal;
-
-            //Compute the values and the gradient
-            ComputeValues(descPts, fieldValue, val, mask);
+            //Compute the gradient
             ComputeGradients(descPts, fieldValue, val, mask);
             UpdateRangeColor(m_vtkSubDataset.MinClamp, m_vtkSubDataset.MaxClamp, m_vtkSubDataset.ColorMode);
 
@@ -210,7 +228,7 @@ namespace Sereno.SciVis
         private unsafe void ComputeGradients(VTKStructuredPoints descPts, VTKFieldValue fieldValue, VTKValue val, byte* mask)
         {
             //When gradient is computable
-            Parallel.For(1, m_dimensions.z, k => 
+            Parallel.For(1, m_dimensions.z-1, k => 
             {
                 for(UInt32 j = 1; j < m_dimensions.y-1; j++)
                 {
@@ -227,16 +245,16 @@ namespace Sereno.SciVis
                         }
 
                         //Gradient
-                        UInt64 indX1 = (i-1) + descPts.Size[0]*j     + (UInt64)(descPts.Size[1]*descPts.Size[0]*k);
-                        UInt64 indX2 = (i+1) + descPts.Size[0]*j     + (UInt64)(descPts.Size[1]*descPts.Size[0]*k);
-                        UInt64 indY1 = i     + descPts.Size[0]*(j-1) + (UInt64)(descPts.Size[1]*descPts.Size[0]*k);
-                        UInt64 indY2 = i     + descPts.Size[0]*(j+1) + (UInt64)(descPts.Size[1]*descPts.Size[0]*k);
-                        UInt64 indZ1 = i     + descPts.Size[0]*j     + (UInt64)(descPts.Size[1]*descPts.Size[0]*(k-1));
-                        UInt64 indZ2 = i     + descPts.Size[0]*j     + (UInt64)(descPts.Size[1]*descPts.Size[0]*(k+1));
+                        Int64 indX1 = (i-1) + m_dimensions[0]*j     + m_dimensions[1]*m_dimensions[0]*k;
+                        Int64 indX2 = (i+1) + m_dimensions[0]*j     + m_dimensions[1]*m_dimensions[0]*k;
+                        Int64 indY1 = i     + m_dimensions[0]*(j-1) + m_dimensions[1]*m_dimensions[0]*k;
+                        Int64 indY2 = i     + m_dimensions[0]*(j+1) + m_dimensions[1]*m_dimensions[0]*k;
+                        Int64 indZ1 = i     + m_dimensions[0]*j     + m_dimensions[1]*m_dimensions[0]*(k-1);
+                        Int64 indZ2 = i     + m_dimensions[0]*j     + m_dimensions[1]*m_dimensions[0]*(k+1);
 
-                        Vector3 grad = new Vector3((float)((val.ReadAsDouble(indX2 * fieldValue.NbValuesPerTuple) - val.ReadAsDouble(indX1 * fieldValue.NbValuesPerTuple))/descPts.Spacing[0]),
-                                                   (float)((val.ReadAsDouble(indY2 * fieldValue.NbValuesPerTuple) - val.ReadAsDouble(indY1 * fieldValue.NbValuesPerTuple))/descPts.Spacing[1]),
-                                                   (float)((val.ReadAsDouble(indZ2 * fieldValue.NbValuesPerTuple) - val.ReadAsDouble(indZ1 * fieldValue.NbValuesPerTuple))/descPts.Spacing[2]));
+                        Vector3 grad = new Vector3((float)(m_values[indX2] - m_values[indX1])/(2.0f*m_spacing[0]),
+                                                   (float)(m_values[indY2] - m_values[indY1])/(2.0f*m_spacing[1]),
+                                                   (float)(m_values[indZ2] - m_values[indZ1])/(2.0f*m_spacing[2]));
 
                         m_grads[colorValueOff] = (float)grad.magnitude/m_maxGrad;
                     }
@@ -282,6 +300,12 @@ namespace Sereno.SciVis
         {
             UpdateRangeColor(min, max, mode);
         }
+
+        public void OnRotationChange(SubDataset dataset, float[] rotationQuaternion)
+        {}
+
+        public void OnPositionChange(SubDataset dataset, float[] position)
+        {}
 
         /// <summary>
         /// The 3D Texure Color computed. This array has to be used along a transfer function

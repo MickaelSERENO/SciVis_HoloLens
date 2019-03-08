@@ -26,7 +26,6 @@ namespace Sereno
         /// <summary>
         /// The VTK Small multiple being loaded from the Server thread. Useful to construct GameObjects in the main thread
         /// </summary>
-
         private Queue<VTKUnitySmallMultiple> m_vtkSMLoaded = new Queue<VTKUnitySmallMultiple>();
 
         /// <summary>
@@ -93,12 +92,15 @@ namespace Sereno
                 {
                     VTKUnitySmallMultiple sm = m_vtkSMLoaded.Dequeue();
                     var gameObject = Instantiate(VTKSMGameObject);
+                    gameObject.transform.parent = transform;
                     gameObject.Init(sm);
                 }
             }
 
         }
 
+        /* Message Buffer callbacks */
+#region
         public void OnEmptyMessage(MessageBuffer messageBuffer, EmptyMessage msg)
         {
         }
@@ -134,10 +136,12 @@ namespace Sereno
                 unsafe
                 {
                     VTKUnityStructuredGrid grid = new VTKUnityStructuredGrid(dataset, DesiredVTKDensity);
-                    VTKUnitySmallMultiple sm    = grid.CreatePointFieldSmallMultiple(0);
-
-                    lock(m_vtkSMLoaded)
-                        m_vtkSMLoaded.Enqueue(sm);
+                    for(int i = 0; i < ptValues.Length; i++)
+                    {
+                        VTKUnitySmallMultiple sm = grid.CreatePointFieldSmallMultiple(i);
+                        lock(m_vtkSMLoaded)
+                            m_vtkSMLoaded.Enqueue(sm);
+                    }
                 }
             }
         }
@@ -148,5 +152,13 @@ namespace Sereno
             lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID])
                 m_datasets[msg.DataID].SubDatasets[msg.SubDataID].Rotation = msg.Quaternion;
         }
+
+        public void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg)
+        {
+            Debug.Log($"Received movement event : {msg.Position[0]}, {msg.Position[1]}, {msg.Position[2]}");
+            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID])
+                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].Position = msg.Position;
+        }
+#endregion
     }
 }

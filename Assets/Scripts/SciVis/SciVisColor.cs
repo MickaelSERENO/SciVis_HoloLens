@@ -24,7 +24,7 @@ namespace Sereno.SciVis
             switch(mode)
             {
                 case ColorMode.RAINBOW:
-                    return new HSVColor(360.0f*t, 1.0f, 1.0f).ToRGB();
+                    return new HSVColor(260.0f*t, 1.0f, 1.0f).ToRGB();
                 case ColorMode.GRAYSCALE:
                     return new Color(t, t, t);
                 case ColorMode.WARM_COLD_CIELAB:

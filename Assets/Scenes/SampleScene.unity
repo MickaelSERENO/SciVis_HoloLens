@@ -144,7 +144,7 @@ MonoBehaviour:
   VTKSMGameObject: {fileID: 4757634199374474188, guid: 640e0d42fa907e4429749e5e66efad2b,
     type: 3}
   MainCamera: {fileID: 988031768}
-  DesiredVTKDensity: 256
+  DesiredVTKDensity: 128
 --- !u!4 &437981235
 Transform:
   m_ObjectHideFlags: 0

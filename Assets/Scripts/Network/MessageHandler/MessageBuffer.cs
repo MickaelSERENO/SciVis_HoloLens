@@ -30,6 +30,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed containing information to update the dataset along the rotation</param>
         void OnRotateDataset(MessageBuffer messageBuffer, RotateDatasetMessage msg);
+
+        /// <summary>
+        /// Function called when a Move message has been parsed
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed containing information to update the dataset position</param>
+        void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg);
     }
 
     /// <summary>
@@ -100,6 +107,7 @@ namespace Sereno.Network.MessageHandler
             int bufPos = 0;
             while(true)
             {
+                //Get the message type
                 if(m_msg == null)
                 {
                     if(!ReadInt16(buf, bufPos, out Int16 type, out bufPos))
@@ -107,6 +115,7 @@ namespace Sereno.Network.MessageHandler
                     AllocateData(type);
                 }
 
+                //Read the buffer and send the correct type to the associated servermessage
                 while(m_msg != null && m_msg.GetMaxCursor() >= m_msg.Cursor)
                 {
                     switch(m_msg.GetCurrentType())
@@ -142,6 +151,7 @@ namespace Sereno.Network.MessageHandler
                     }
                 }
 
+                //Call the listeners
                 if(m_msg != null)
                 {
                     switch(m_msg.Type)
@@ -153,6 +163,10 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_ON_ROTATE_DATASET:
                             foreach(var l in m_listeners)
                                 l.OnRotateDataset(this, (RotateDatasetMessage)m_msg);
+                            break;
+                        case ServerType.GET_ON_MOVE_DATASET:
+                            foreach(var l in m_listeners)
+                                l.OnMoveDataset(this, (MoveDatasetMessage)m_msg);
                             break;
                         default:
                             break;
@@ -288,6 +302,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_ON_ROTATE_DATASET:
                     m_msg = new RotateDatasetMessage(ServerType.GET_ON_ROTATE_DATASET);
+                    break;
+                case ServerType.GET_ON_MOVE_DATASET:
+                    m_msg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                     break;
             }
         }
