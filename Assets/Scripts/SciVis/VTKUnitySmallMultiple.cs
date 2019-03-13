@@ -212,7 +212,7 @@ namespace Sereno.SciVis
                         //Value
                         float c = (float)val.ReadAsDouble(fieldOff*fieldValue.NbValuesPerTuple);
                         c = (c - minVal) / (maxVal-minVal);
-                        m_values[colorValueOff] = Math.Min(Math.Max(c, 0.0f), 1.0f);
+                        m_values[colorValueOff] = Math.Min(Math.Max(c, 0.01f), 1.0f-0.01f);
                     }
                 }
             });
@@ -256,7 +256,7 @@ namespace Sereno.SciVis
                                                    (float)(m_values[indY2] - m_values[indY1])/(2.0f*m_spacing[1]),
                                                    (float)(m_values[indZ2] - m_values[indZ1])/(2.0f*m_spacing[2]));
 
-                        m_grads[colorValueOff] = (float)grad.magnitude/m_maxGrad;
+                        m_grads[colorValueOff] = Math.Min((float)grad.magnitude/m_maxGrad, 1.0f);
                     }
                 }
             });

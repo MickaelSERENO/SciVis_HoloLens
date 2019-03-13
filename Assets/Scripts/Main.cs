@@ -100,7 +100,14 @@ namespace Sereno
                                                 MainCamera.transform.rotation[1],
                                                 MainCamera.transform.rotation[2]};
 
-            m_client.SendHeadsetUpdateData(headsetData);
+            if(m_client.IsConnected())
+                m_client.SendHeadsetUpdateData(headsetData);
+        }
+
+         
+        public void OnDestroy()
+        {
+            m_client.Close();
         }
 
         /* Message Buffer callbacks */
@@ -166,7 +173,7 @@ namespace Sereno
 
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
         {
-            Debug.Log($"Received init headset message. Color : ${msg.Color:X}");
+            Debug.Log($"Received init headset message. Color : {msg.Color:X}");
             m_clientColor = new Color32((byte)((msg.Color >> 16) & 0xff),
                                         (byte)((msg.Color >> 8 ) & 0xff),
                                         (byte)(msg.Color & 0xff), 255);

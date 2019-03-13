@@ -18,7 +18,7 @@ namespace Sereno.Network
     {
         MessageBuffer m_msgBuf;
 
-        public VFVClient(IMessageBufferCallback clbk) : base("127.0.0.1", 8000, null)
+        public VFVClient(IMessageBufferCallback clbk) : base("192.168.1.132", 8000, null)
         {
             m_msgBuf = new MessageBuffer();
             m_msgBuf.AddListener(clbk);
@@ -29,7 +29,7 @@ namespace Sereno.Network
         /// <summary>
         /// Send the hololens ident message to the server
         /// </summary>
-        public void SendHololensIdent()
+        public void SendHeadsetIdent()
         {
             byte[] data = new byte[2];
             WriteInt16(data, 0, (Int16)VFVSendCommand.SEND_IDENT_HOLOLENS);
@@ -109,7 +109,7 @@ namespace Sereno.Network
         private void OnConnectionStatus(ConnectionStatus status)
         {
             if(status == ConnectionStatus.CONNECTED)
-                SendHololensIdent(); 
+                SendHeadsetIdent(); 
         }
     }
 }

@@ -90,7 +90,7 @@ namespace Sereno.SciVis
             m_mesh.vertices  = meshPos;
             m_mesh.triangles = meshFaces;
             m_mesh.UploadMeshData(false);
-            m_mesh.bounds = new Bounds(new Vector3(0, 0, 0), new Vector3(1, 1, 1));
+            m_mesh.bounds = new Bounds(new Vector3(0.0f, 0.0f, 0.0f), new Vector3(1.0f, 1.0f, 1.0f));
 
             //Add external 3D objects
             m_outline = GameObject.Instantiate(Outline);
@@ -145,38 +145,93 @@ namespace Sereno.SciVis
         private void Update()
         {
             //Update the 3D texture
-            lock(m_sm)
+            lock (m_sm)
             {
-                if(m_sm.TextureColor != null)
+                if (m_sm.TextureColor != null)
                 {
                     m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGFloat, true);
                     m_texture3D.wrapModeU = TextureWrapMode.Repeat;
                     m_texture3D.wrapModeV = TextureWrapMode.Repeat;
                     m_texture3D.wrapModeW = TextureWrapMode.Repeat;
-                    
+
                     m_texture3D.SetPixels(m_sm.TextureColor);
                     m_texture3D.Apply();
                     m_sm.TextureColor = null;
                 }
-            }         
+            }
 
             //Update the 3D transform of this game object
-            lock(this)
+            lock (this)
             {
-                if(m_updateP)
+                if (m_updateP)
                     transform.localPosition = m_newP;
                 m_updateP = false;
-                if(m_updateQ)
+                if (m_updateQ)
                     transform.localRotation = m_newQ;
                 m_updateQ = false;
-            }       
+            }
 
             //Draw the GameObject
-            if(m_mesh != null && m_material != null)
+            if (m_mesh != null && m_material != null)
             {
                 m_material.SetTexture("_TFTexture", m_sm.VTKSubDataset.TFTexture.Texture);
                 m_material.SetTexture("_TextureData", m_texture3D);
                 Graphics.DrawMesh(m_mesh, transform.localToWorldMatrix, m_material, 1);
+            }
+        }
+
+        void OnPreRender()
+        {
+            if(Camera.current != null)
+            {
+                //Determine the part of the object on screen
+                Matrix4x4 mvp = Camera.current.projectionMatrix * Camera.current.worldToCameraMatrix * transform.localToWorldMatrix;
+
+                Vector3[] screenPos = new Vector3[8];
+                Vector3[] localPos = new Vector3[8];
+                localPos[0] = m_mesh.bounds.min;
+                localPos[1] = m_mesh.bounds.max;
+                localPos[2] = new Vector3(m_mesh.bounds.min.x, m_mesh.bounds.min.y, m_mesh.bounds.max.z);
+                localPos[3] = new Vector3(m_mesh.bounds.min.x, m_mesh.bounds.max.y, m_mesh.bounds.min.z);
+                localPos[4] = new Vector3(m_mesh.bounds.max.x, m_mesh.bounds.min.y, m_mesh.bounds.min.z);
+                localPos[5] = new Vector3(m_mesh.bounds.max.x, m_mesh.bounds.min.y, m_mesh.bounds.max.z);
+                localPos[6] = new Vector3(m_mesh.bounds.max.x, m_mesh.bounds.max.y, m_mesh.bounds.min.z);
+                localPos[7] = new Vector3(m_mesh.bounds.min.x, m_mesh.bounds.max.y, m_mesh.bounds.max.z);
+
+                screenPos[0] = mvp * localPos[0];
+                Vector2 minScreenPos = new Vector2(screenPos[0].x, screenPos[0].y);
+                Vector2 maxScreenPos = new Vector2(screenPos[0].x, screenPos[0].y);
+
+                for(int i = 1; i < 8; i++)
+                {
+                    screenPos[i] = mvp * localPos[i];
+                    //Min
+                    if (minScreenPos.x > screenPos[i].x)
+                        minScreenPos.x = screenPos[i].x;
+                    if (minScreenPos.y > screenPos[i].y)
+                        minScreenPos.y = screenPos[i].y;
+
+                    //Max
+                    if (maxScreenPos.x < screenPos[i].x)
+                        maxScreenPos.x = screenPos[i].x;
+                    if (maxScreenPos.y < screenPos[i].y)
+                        maxScreenPos.y = screenPos[i].y;
+                }
+
+                //Update the mesh
+                Vector3[] meshPos = new Vector3[4];
+                meshPos[0] = new Vector3(minScreenPos.x, minScreenPos.y, 0);
+                meshPos[1] = new Vector3(maxScreenPos.x, minScreenPos.y, 0);
+                meshPos[2] = new Vector3(maxScreenPos.x, maxScreenPos.y, 0);
+                meshPos[3] = new Vector3(minScreenPos.x, maxScreenPos.y, 0);
+                
+                int[] meshFaces = new int[6];
+                meshFaces[0] = 0; meshFaces[1] = 1; meshFaces[2] = 2;
+                meshFaces[3] = 0; meshFaces[4] = 2; meshFaces[5] = 3;
+                
+                m_mesh.vertices  = meshPos;
+                m_mesh.triangles = meshFaces;
+                m_mesh.UploadMeshData(false);
             }
         }
     }
