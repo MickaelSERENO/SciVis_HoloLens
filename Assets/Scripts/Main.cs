@@ -34,6 +34,11 @@ namespace Sereno
         private VFVClient m_client;
 
         /// <summary>
+        /// The client color
+        /// </summary>
+        private Color32 m_clientColor;
+
+        /// <summary>
         /// Prefab of VTKUnitySmallMultipleGameObject correctly configured
         /// </summary>
         public VTKUnitySmallMultipleGameObject VTKSMGameObject;
@@ -56,19 +61,6 @@ namespace Sereno
 
             //Configure the main camera. Depth texture is used during raycasting
             MainCamera.depthTextureMode = DepthTextureMode.Depth;
-
-            //This if for test
-            /*VTKParser oceanParser   = new VTKParser($"{Application.streamingAssetsPath}/Agulhas_10_resampled.vtk");
-            oceanParser.Parse();
-            VTKDataset oceanDataset = new VTKDataset(0, oceanParser, new VTKFieldValue[1]{oceanParser.GetPointFieldValueDescriptors()[2]}, new VTKFieldValue[0]);
-
-            unsafe
-            {
-                VTKUnityStructuredGrid grid = Object.Instantiate(VTKStructuredGrid);
-                grid.Init(oceanDataset);
-                grid.CreatePointFieldSmallMultiple(0);
-                m_datasetGameObjects.Add(grid.gameObject);
-            }*/
         }
 
         // Update is called once per frame
@@ -97,6 +89,18 @@ namespace Sereno
                 }
             }
 
+            //Send camera status
+            HeadsetUpdateData headsetData = new HeadsetUpdateData();
+            headsetData.Position = new float[3]{MainCamera.transform.position[0],
+                                                MainCamera.transform.position[1],
+                                                MainCamera.transform.position[2]};
+
+            headsetData.Rotation = new float[4]{MainCamera.transform.rotation[3],
+                                                MainCamera.transform.rotation[0],
+                                                MainCamera.transform.rotation[1],
+                                                MainCamera.transform.rotation[2]};
+
+            m_client.SendHeadsetUpdateData(headsetData);
         }
 
         /* Message Buffer callbacks */
@@ -159,6 +163,19 @@ namespace Sereno
             lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID])
                 m_datasets[msg.DataID].SubDatasets[msg.SubDataID].Position = msg.Position;
         }
-#endregion
+
+        public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
+        {
+            Debug.Log($"Received init headset message. Color : ${msg.Color:X}");
+            m_clientColor = new Color32((byte)((msg.Color >> 16) & 0xff),
+                                        (byte)((msg.Color >> 8 ) & 0xff),
+                                        (byte)(msg.Color & 0xff), 255);
+        }
+
+        public void OnHeadsetsStatus(MessageBuffer messageBuffer, HeadsetsStatusMessage msg)
+        {
+            //TODO
+        }
+        #endregion
     }
 }

@@ -11,6 +11,13 @@ namespace Sereno.Network.MessageHandler
     public interface IMessageBufferCallback
     {
         /// <summary>
+        /// Function called when the server has finished initializing this headset
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed containing initial values of this headset</param>
+        void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg);
+
+        /// <summary>
         /// Function called when an empty message has been received
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
@@ -37,6 +44,14 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed containing information to update the dataset position</param>
         void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg);
+
+
+        /// <summary>
+        /// Function called when new headsets status have been received
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed containing information to update all the known headsets</param>
+        void OnHeadsetsStatus(MessageBuffer messageBuffer, HeadsetsStatusMessage msg);
     }
 
     /// <summary>
@@ -156,6 +171,10 @@ namespace Sereno.Network.MessageHandler
                 {
                     switch(m_msg.Type)
                     {
+                        case ServerType.GET_ON_HEADSET_INIT:
+                            foreach(var l in m_listeners)
+                                l.OnHeadsetInit(this, (HeadsetInitMessage)m_msg);
+                            break;
                         case ServerType.GET_ADD_VTK_DATASET:
                             foreach(var l in m_listeners)
                                 l.OnAddVTKDataset(this, (AddVTKDatasetMessage)m_msg);
@@ -167,6 +186,10 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_ON_MOVE_DATASET:
                             foreach(var l in m_listeners)
                                 l.OnMoveDataset(this, (MoveDatasetMessage)m_msg);
+                            break;
+                        case ServerType.GET_HEADSETS_STATUS:
+                            foreach(var l in m_listeners)
+                                l.OnHeadsetsStatus(this, (HeadsetsStatusMessage)m_msg);
                             break;
                         default:
                             break;
@@ -297,6 +320,9 @@ namespace Sereno.Network.MessageHandler
         {
             switch((ServerType)type)
             {
+                case ServerType.GET_ON_HEADSET_INIT:
+                    m_msg = new HeadsetInitMessage(ServerType.GET_ON_HEADSET_INIT);
+                    break;
                 case ServerType.GET_ADD_VTK_DATASET:
                     m_msg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
                     break;
@@ -305,6 +331,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_ON_MOVE_DATASET:
                     m_msg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                    break;
+                case ServerType.GET_HEADSETS_STATUS:
+                    m_msg = new HeadsetsStatusMessage(ServerType.GET_HEADSETS_STATUS);
                     break;
             }
         }

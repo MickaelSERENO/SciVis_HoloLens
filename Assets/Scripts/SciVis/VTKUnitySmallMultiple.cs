@@ -212,7 +212,7 @@ namespace Sereno.SciVis
                         //Value
                         float c = (float)val.ReadAsDouble(fieldOff*fieldValue.NbValuesPerTuple);
                         c = (c - minVal) / (maxVal-minVal);
-                        m_values[colorValueOff] = c;
+                        m_values[colorValueOff] = Math.Min(Math.Max(c, 0.0f), 1.0f);
                     }
                 }
             });
