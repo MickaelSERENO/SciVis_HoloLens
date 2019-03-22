@@ -23,6 +23,11 @@ namespace Sereno.Network.MessageHandler
         /// </summary>
         public Int32   SubDataID;
 
+        /// <summary>
+        /// The headset ID performing this movement (can be us). -1 == server
+        /// </summary>
+        public Int32 HeadsetID;
+
         public RotateDatasetMessage(ServerType type) : base(type)
         {}
 
@@ -43,14 +48,17 @@ namespace Sereno.Network.MessageHandler
         {
             if(Cursor == 0)
                 DataID = value;
-            else
+            else if(Cursor == 1)
                 SubDataID = value;
+            else if(Cursor == 2)
+                HeadsetID = value;
+
             base.Push(value);
         }
 
         public override Int32 GetMaxCursor()
         {
-            return 5;
+            return 6;
         }
     }
 }

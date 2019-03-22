@@ -158,9 +158,14 @@ namespace Sereno.Network.MessageHandler
                         }
                         case (byte)'f':
                         {
-                            if(!ReadFloat(buf, bufPos, out float i, out bufPos))
+                            if(!ReadFloat(buf, bufPos, out float f, out bufPos))
                                 return;
-                            m_msg.Push(i);
+                            m_msg.Push(f);
+                            break;
+                        }
+                        case (byte)'b':
+                        {
+                            m_msg.Push(buf[bufPos++]);
                             break;
                         }
                     }

@@ -2,13 +2,19 @@ using System.IO;
 using System;
 
 using Sereno.Network.MessageHandler;
+using System.Net.Sockets;
 
 namespace Sereno.Network
 {
+    /// <summary>
+    /// Different type of command this client can send to the server
+    /// </summary>
     public enum VFVSendCommand
     {
         SEND_IDENT_HOLOLENS = 0,
         SEND_UPDATE_HEADSET = 5,
+        SEND_ANCHORING_DATA_SEGMENT = 7,
+        SEND_ANCHORING_DATA_STATUS  = 8
     }
 
     /// <summary> 
@@ -18,12 +24,12 @@ namespace Sereno.Network
     {
         MessageBuffer m_msgBuf;
 
-        public VFVClient(IMessageBufferCallback clbk) : base("192.168.1.132", 8000, null)
+        public VFVClient(IMessageBufferCallback clbk) : base("192.168.1.132", 8000)
         {
             m_msgBuf = new MessageBuffer();
             m_msgBuf.AddListener(clbk);
 
-            ClientStatusClbk = new ClientStatusClbk(OnConnectionStatus);
+            base.AddListener(new ClientStatusCallback(OnConnectionStatus));
         }
 
         /// <summary>
@@ -56,6 +62,46 @@ namespace Sereno.Network
             //Rotation
             for(int i = 0; i < 4; i++, offset += 4)
                 WriteFloat(data, offset, updateData.Rotation[i]);
+
+            Send(data);
+        }
+
+        /// <summary>
+        /// Send a new anchoring data segment to the server
+        /// </summary>
+        /// <param name="seg">the segment to send</param>
+        public void SendAnchoringDataSegment(byte[] seg)
+        {
+            byte[] data = new byte[2+4]; //Header, just contain type + length
+            Int32 offset = 0;
+
+            //Type
+            WriteInt16(data, offset, (Int16)VFVSendCommand.SEND_ANCHORING_DATA_SEGMENT);
+            offset += 2;
+
+            //Length
+            WriteInt32(data, offset, seg.Length);
+            offset += 4;
+
+            Send(data);
+            Send(seg);
+        }
+
+        /// <summary>
+        /// Send the status of the anchoring data
+        /// </summary>
+        /// <param name="succeed">Whether or not the encoding succeed</param>
+        public void SendAnchoringDataStatus(bool succeed)
+        {
+            byte[] data = new byte[2+1];
+            Int32 offset = 0;
+
+            //Type
+            WriteInt16(data, offset, (Int16)VFVSendCommand.SEND_ANCHORING_DATA_STATUS);
+            offset += 2;
+
+            //Succeed status
+            data[offset++] = (byte)(succeed ? 1 : 0);
 
             Send(data);
         }
@@ -106,7 +152,12 @@ namespace Sereno.Network
             m_msgBuf.Push(msg);
         }
 
-        private void OnConnectionStatus(ConnectionStatus status)
+        /// <summary>
+        /// Handles changement in the connection status
+        /// </summary>
+        /// <param name="s">The socket being used. It can be closed after this call</param>
+        /// <param name="status">The new status to take account of</param>
+        private void OnConnectionStatus(Socket s, ConnectionStatus status)
         {
             if(status == ConnectionStatus.CONNECTED)
                 SendHeadsetIdent(); 

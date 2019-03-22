@@ -19,14 +19,16 @@ namespace Sereno.Network
 	{
 		CONNECTED,
 		DISCONNECTED,
+        SOCKET_RECREATED,
 		FAILED_CONNECTION
 	}
 
     /// <summary>
     /// Delegate function called when the status of the connection has changed
     /// </summary>
+    /// <param name="s">The socket being used. It can be closed after this call</param>
     /// <param name="status">status the status value of the connection</param>
-    public delegate void ClientStatusClbk(ConnectionStatus status);
+    public delegate void ClientStatusCallback(Socket s, ConnectionStatus status);
 
     /// <summary>
     /// Client object. It will connect to a remote Server and launch a Read Thread.
@@ -71,12 +73,17 @@ namespace Sereno.Network
         /// <summary>
         /// The status callback
         /// </summary>
-		private ClientStatusClbk m_statusCallback = null;
+		private List<ClientStatusCallback> m_statusCallbacks = new List<ClientStatusCallback>();
 
         /// <summary>
         /// The write buffer queue
         /// </summary>
         private Queue<byte[]> m_writeBuffer = new Queue<byte[]>();
+
+        /// <summary>
+        /// The current connection status
+        /// </summary>
+        private ConnectionStatus m_currentStatus = ConnectionStatus.DISCONNECTED;
 
 		private const int THREAD_SLEEP = 50;
 
@@ -89,13 +96,11 @@ namespace Sereno.Network
         /// </summary>
         /// <param name="addr">addr the Address to connect</param>
         /// <param name="port">port the port to connect</param>
-        /// <param name="statusCallback"> statusCallback a delegate callback function : void func(ConnectionStatus)</param>
         /// <exception cref="FormatException">when the address is not in a correct format</exception>
-        public Client(string addr, uint port, ClientStatusClbk statusCallback)
+        public Client(string addr, uint port)
 		{
 			m_addr           = IPAddress.Parse(addr);
 			m_port           = port;
-			m_statusCallback = statusCallback;
 		}
 
         /// <summary>
@@ -103,12 +108,10 @@ namespace Sereno.Network
         /// </summary>
         /// <param name="addr">addr the Address to connect</param>
         /// <param name="port">port the port to connect</param>
-        /// <param name="statusCallback">statusCallback a delegate callback function : void func(ConnectionStatus)</param>
-        public Client(IPAddress addr, uint port, ClientStatusClbk statusCallback)
+        public Client(IPAddress addr, uint port)
 		{
 			m_addr           = addr;
 			m_port           = port;
-			m_statusCallback = statusCallback;
         }
 
         ~Client()
@@ -166,6 +169,24 @@ namespace Sereno.Network
 			}
         }
 
+        /// <summary>
+        /// Add a new Callback listener
+        /// </summary>
+        /// <param name="clbk">The new callback to call when status connection changes</param>
+        public void AddListener(ClientStatusCallback clbk)
+        {
+            m_statusCallbacks.Add(clbk);
+        }
+
+        /// <summary>
+        /// Remove an already registered Callback listener
+        /// </summary>
+        /// <param name="clbk">The old callback called when status connection changes</param>
+        public void RemoveListener(ClientStatusCallback clbk)
+        {
+            m_statusCallbacks.Remove(clbk);
+        }
+
         /******************************/
         /*****PROTECTED FUNCTIONS******/
         /******************************/
@@ -193,8 +214,12 @@ namespace Sereno.Network
         private void FiredStatus(ConnectionStatus status)
 		{
 			lock(this)
-				if(m_statusCallback != null)
-					m_statusCallback (status);
+                if(status != m_currentStatus)
+                {
+                    m_currentStatus = status;
+				    foreach(var clbk in m_statusCallbacks)
+					    clbk(m_sock, status);
+                }
         }
 
         /// <summary>
@@ -216,15 +241,17 @@ namespace Sereno.Network
 					try
 					{
 						m_sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                        FiredStatus(ConnectionStatus.SOCKET_RECREATED);
 						m_sock.Connect(new IPEndPoint(m_addr, (int)m_port));
 						FiredStatus(ConnectionStatus.CONNECTED);
 					}
 					catch(SocketException)
 					{
-						m_sock = null;
-						Thread.Sleep(THREAD_SLEEP);
 						FiredStatus (ConnectionStatus.FAILED_CONNECTION);
-						continue;
+                        m_sock.Close();
+                        m_sock = null;
+                        Thread.Sleep(THREAD_SLEEP);
+                        continue;
 					}
 				}
 
@@ -243,7 +270,8 @@ namespace Sereno.Network
 				{
 					FiredStatus (ConnectionStatus.DISCONNECTED);
 					m_sock.Close();
-					m_sock = null;
+                    Thread.Sleep(THREAD_SLEEP);
+                    m_sock = null;
 				}
 
 				//Sleep because no data yet available
@@ -291,14 +319,5 @@ namespace Sereno.Network
         }
 
         #endregion
-
-        public ClientStatusClbk ClientStatusClbk 
-		{
-			set
-			{
-				lock(this)
-				m_statusCallback = value;
-			}
-		} 
     }
 }

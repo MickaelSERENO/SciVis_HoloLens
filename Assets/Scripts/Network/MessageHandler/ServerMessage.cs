@@ -39,6 +39,12 @@ namespace Sereno.Network.MessageHandler
         public virtual Int32 GetMaxCursor() {return -1;}
 
         /// <summary>
+        /// Push a byte value
+        /// </summary>
+        /// <param name="value">The value to push</param>
+        public virtual void Push(byte value) { Cursor++; }
+
+        /// <summary>
         /// Push a Int32 value
         /// </summary>
         /// <param name="value">The value to push</param>

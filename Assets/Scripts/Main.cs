@@ -8,9 +8,37 @@ using Sereno.Network;
 using Sereno.Datasets;
 using Sereno.Network.MessageHandler;
 using System;
+using System.Net.Sockets;
+using System.Net;
+using UnityEngine.XR.WSA.Sharing;
 
 namespace Sereno
 {
+    public class IPTextValue
+    {
+        /// <summary>
+        /// The IP string value
+        /// </summary>
+        public String IPStr = "";
+
+        /// <summary>
+        /// Should we enable the IPText?
+        /// </summary>
+        public bool   EnableTexts = false;
+
+        /// <summary>
+        /// Should we update the text values?
+        /// </summary>
+        public bool   UpdateTexts = false;
+    }
+
+    public enum AnchorCommunication
+    {
+        NONE,
+        EXPORT,
+        IMPORT
+    }
+
     public class Main : MonoBehaviour, IMessageBufferCallback
     {
         /// <summary>
@@ -39,6 +67,21 @@ namespace Sereno
         private Color32 m_clientColor;
 
         /// <summary>
+        /// The root anchor game object
+        /// </summary>
+        private GameObject m_rootAnchorGO = null;
+
+        /// <summary>
+        /// Information received from the communication thread in order to update the IP text values being displayed
+        /// </summary>
+        private IPTextValue m_textValues = new IPTextValue();
+
+        /// <summary>
+        /// The anchor communication the server asked
+        /// </summary>
+        private AnchorCommunication m_anchorCommunication = AnchorCommunication.NONE;
+
+        /// <summary>
         /// Prefab of VTKUnitySmallMultipleGameObject correctly configured
         /// </summary>
         public VTKUnitySmallMultipleGameObject VTKSMGameObject;
@@ -53,19 +96,77 @@ namespace Sereno
         /// </summary>
         public UInt32 DesiredVTKDensity;
 
+        /// <summary>
+        /// The IP header text being displayed
+        /// </summary>
+        public UnityEngine.UI.Text IPHeaderText;
+
+        /// <summary>
+        /// The IP value text being displayed
+        /// </summary>
+        public UnityEngine.UI.Text IPValueText;
+
+        const String DEFAULT_IP_ADDRESS_TEXT = "Server not found";
+
         void Start()
         {
-            //Start the network communication
-            m_client = new VFVClient(this);
-            m_client.Connect();
+            //Default text helpful to bind headset to tablet
+            m_textValues.UpdateTexts = true;
+            m_textValues.EnableTexts = true;
 
             //Configure the main camera. Depth texture is used during raycasting
             MainCamera.depthTextureMode = DepthTextureMode.Depth;
+
+            //Start the network communication
+            m_client = new VFVClient(this);
+            m_client.AddListener(new ClientStatusCallback(OnConnectionStatus));
+            m_client.Connect();
         }
 
         // Update is called once per frame
         void Update()
         {
+            lock(this)
+            {
+                if(m_anchorCommunication == AnchorCommunication.EXPORT)
+                {
+                    if(m_rootAnchorGO != null)
+                        Destroy(m_rootAnchorGO);
+
+                    m_rootAnchorGO = new GameObject();
+                    m_rootAnchorGO.AddComponent<UnityEngine.XR.WSA.WorldAnchor>();
+
+                    WorldAnchorTransferBatch transferBatch = new WorldAnchorTransferBatch();
+                    transferBatch.AddWorldAnchor("rootAnchor", m_rootAnchorGO.GetComponent<UnityEngine.XR.WSA.WorldAnchor>());
+                    WorldAnchorTransferBatch.ExportAsync(transferBatch, OnExportDataAvailable, OnExportComplete);
+                }
+            }
+            lock(m_textValues)
+            {
+                if(m_textValues.UpdateTexts)
+                {
+                    //Enable/Disable the IP Text
+                    IPHeaderText.enabled = m_textValues.EnableTexts;
+                    IPValueText.enabled  = m_textValues.EnableTexts;
+
+                    //If we should enable the text, set the text value
+                    if(m_textValues.EnableTexts)
+                    {
+                        if(m_textValues.IPStr.Length > 0)
+                        {
+                            IPHeaderText.text = "Headset IP adress:";
+                            IPValueText.text  = m_textValues.IPStr;
+                        }
+                        else
+                        {
+                            IPHeaderText.text = DEFAULT_IP_ADDRESS_TEXT;
+                            IPValueText.text  = "";
+                        }
+                    }
+                    m_textValues.UpdateTexts = false;
+                }
+            }
+
             //Load what the server thread loaded
             lock(m_vtkDatasetsLoaded)
             {
@@ -173,16 +274,68 @@ namespace Sereno
 
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
         {
-            Debug.Log($"Received init headset message. Color : {msg.Color:X}");
+            Debug.Log($"Received init headset message. Color : {msg.Color:X}, tablet connected: {msg.TabletConnected}, first connected: {msg.IsFirstConnected}");
+            if(msg.TabletConnected)
+            {
+                lock(m_textValues)
+                {
+                    m_textValues.UpdateTexts = true;
+                    m_textValues.EnableTexts = false;
+                }
+            }
             m_clientColor = new Color32((byte)((msg.Color >> 16) & 0xff),
                                         (byte)((msg.Color >> 8 ) & 0xff),
                                         (byte)(msg.Color & 0xff), 255);
+
+            //Send anchor dataset to the server. 
+            //The server will store that and send that information to other headsets if needed
+            if(msg.IsFirstConnected)
+            {
+                lock(this)
+                    m_anchorCommunication = AnchorCommunication.EXPORT;
+            }
         }
 
         public void OnHeadsetsStatus(MessageBuffer messageBuffer, HeadsetsStatusMessage msg)
         {
-            //TODO
+            Debug.Log($"On headset status");
         }
         #endregion
+
+        /// <summary>
+        /// Handles changement in the connection status
+        /// </summary>
+        /// <param name="s">The socket being used. It can be closed after this call</param>
+        /// <param name="status">The new status to take account of</param>
+        private void OnConnectionStatus(Socket s, ConnectionStatus status)
+        {
+            lock(m_textValues)
+            {
+                m_textValues.EnableTexts = true;
+                m_textValues.UpdateTexts = true;
+                if(status == ConnectionStatus.CONNECTED)
+                    m_textValues.IPStr = IPAddress.Parse(((IPEndPoint)s.LocalEndPoint).Address.ToString()).ToString();
+                else
+                    m_textValues.IPStr = "";
+            }
+        }
+
+        /// <summary>
+        /// Method called each time anchor data is available (segment of data)
+        /// </summary>
+        /// <param name="data"></param>
+        private void OnExportDataAvailable(byte[] data)
+        {
+            m_client.SendAnchoringDataSegment(data);
+        }
+
+        /// <summary>
+        /// Method called once the export data are all correctly exported
+        /// </summary>
+        /// <param name="completionReason"></param>
+        private void OnExportComplete(SerializationCompletionReason completionReason)
+        {
+            m_client.SendAnchoringDataStatus(completionReason == SerializationCompletionReason.Succeeded);
+        }
     }
 }
