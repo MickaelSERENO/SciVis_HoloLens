@@ -145,9 +145,9 @@ namespace Sereno.SciVis
         private void Update()
         {
             //Update the 3D texture
-            lock (m_sm)
+            lock(m_sm)
             {
-                if (m_sm.TextureColor != null)
+                if(m_sm.TextureColor != null)
                 {
                     m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGFloat, true);
                     m_texture3D.wrapModeU = TextureWrapMode.Repeat;
@@ -161,12 +161,12 @@ namespace Sereno.SciVis
             }
 
             //Update the 3D transform of this game object
-            lock (this)
+            lock(this)
             {
-                if (m_updateP)
+                if(m_updateP)
                     transform.localPosition = m_newP;
                 m_updateP = false;
-                if (m_updateQ)
+                if(m_updateQ)
                     transform.localRotation = m_newQ;
                 m_updateQ = false;
             }
@@ -175,7 +175,7 @@ namespace Sereno.SciVis
             if (m_mesh != null && m_material != null)
             {
                 UpdateMaterial();
-                Graphics.DrawMesh(m_mesh, transform.localToWorldMatrix, m_material, 0);
+                Graphics.DrawMesh(m_mesh, transform.localToWorldMatrix, m_material, 0, Camera.main);
             }
         }
 
@@ -183,12 +183,14 @@ namespace Sereno.SciVis
         {
             m_material.SetTexture("_TFTexture", m_sm.VTKSubDataset.TFTexture.Texture);
             m_material.SetTexture("_TextureData", m_texture3D);
+            m_material.SetFloat("_MaxDimension", Math.Max(Math.Max(m_sm.Dimensions.x, m_sm.Dimensions.y), m_sm.Dimensions.z));
+
+            return;
             if(Camera.main != null)
             {
-                //Determine the part of the object on screen
+                //Determine the part of the object on screen to narrow down the viewport
                 Matrix4x4 mvp = (GL.GetGPUProjectionMatrix(Camera.main.projectionMatrix, true) * Camera.main.worldToCameraMatrix * transform.localToWorldMatrix);
 
-                Vector3[] screenPos = new Vector3[8];
                 Vector3[] localPos = new Vector3[8];
                 localPos[0] = m_mesh.bounds.min;
                 localPos[1] = m_mesh.bounds.max;
@@ -199,24 +201,24 @@ namespace Sereno.SciVis
                 localPos[6] = new Vector3(m_mesh.bounds.max.x, m_mesh.bounds.max.y, m_mesh.bounds.min.z);
                 localPos[7] = new Vector3(m_mesh.bounds.min.x, m_mesh.bounds.max.y, m_mesh.bounds.max.z);
 
-                screenPos[0] = mvp * localPos[0];
-                Vector2 minScreenPos = new Vector2(screenPos[0].x, screenPos[0].y);
-                Vector2 maxScreenPos = new Vector2(screenPos[0].x, screenPos[0].y);
+                Vector3 screenPos = mvp * localPos[0];
+                Vector2 minScreenPos = new Vector2(screenPos.x, screenPos.y);
+                Vector2 maxScreenPos = new Vector2(screenPos.x, screenPos.y);
 
                 for(int i = 1; i < 8; i++)
                 {
-                    screenPos[i] = mvp * localPos[i];
+                    screenPos = mvp * localPos[i];
                     //Min
-                    if (minScreenPos.x > screenPos[i].x)
-                        minScreenPos.x = screenPos[i].x;
-                    if (minScreenPos.y > screenPos[i].y)
-                        minScreenPos.y = screenPos[i].y;
+                    if (minScreenPos.x > screenPos.x)
+                        minScreenPos.x = screenPos.x;
+                    if (minScreenPos.y > screenPos.y)
+                        minScreenPos.y = screenPos.y;
 
                     //Max
-                    if (maxScreenPos.x < screenPos[i].x)
-                        maxScreenPos.x = screenPos[i].x;
-                    if (maxScreenPos.y < screenPos[i].y)
-                        maxScreenPos.y = screenPos[i].y;
+                    if (maxScreenPos.x < screenPos.x)
+                        maxScreenPos.x = screenPos.x;
+                    if (maxScreenPos.y < screenPos.y)
+                        maxScreenPos.y = screenPos.y;
                 }
 
                 //Update the mesh
@@ -226,18 +228,13 @@ namespace Sereno.SciVis
                 meshPos[2] = new Vector3(maxScreenPos.x, maxScreenPos.y, 0);
                 meshPos[3] = new Vector3(minScreenPos.x, maxScreenPos.y, 0);
                 
-                int[] meshFaces = new int[6];
-                meshFaces[0] = 0; meshFaces[1] = 1; meshFaces[2] = 2;
-                meshFaces[3] = 0; meshFaces[4] = 2; meshFaces[5] = 3;
+                //int[] meshFaces = new int[6];
+                //meshFaces[0] = 0; meshFaces[1] = 1; meshFaces[2] = 2;
+                //meshFaces[3] = 0; meshFaces[4] = 2; meshFaces[5] = 3;
 
                 m_mesh.vertices  = meshPos;
-                m_mesh.triangles = meshFaces;
+                //m_mesh.triangles = meshFaces;
                 m_mesh.UploadMeshData(false);
-
-                if(SystemInfo.graphicsShaderLevel < 40)
-                    print("no decent shaders supported...\n");
-                if(m_sm != null)
-                    m_material.SetFloat("_MaxDimension", Math.Max(Math.Max(m_sm.Dimensions.x, m_sm.Dimensions.y), m_sm.Dimensions.z));
             }
         }
     }

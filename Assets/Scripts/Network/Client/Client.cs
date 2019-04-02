@@ -85,7 +85,7 @@ namespace Sereno.Network
         /// </summary>
         private ConnectionStatus m_currentStatus = ConnectionStatus.DISCONNECTED;
 
-		private const int THREAD_SLEEP = 50;
+		private const int THREAD_SLEEP = 1000;
 
         /******************************/
         /*******PUBLIC FUNCTIONS*******/

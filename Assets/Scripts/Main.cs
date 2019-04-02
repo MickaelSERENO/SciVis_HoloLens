@@ -383,11 +383,16 @@ namespace Sereno
             lock(m_textValues)
             {
                 m_textValues.EnableTexts = true;
-                m_textValues.UpdateTexts = true;
+                String txt = "";
                 if(status == ConnectionStatus.CONNECTED)
-                    m_textValues.IPStr = IPAddress.Parse(((IPEndPoint)s.LocalEndPoint).Address.ToString()).ToString();
+                    txt = IPAddress.Parse(((IPEndPoint)s.LocalEndPoint).Address.ToString()).ToString();
                 else
-                    m_textValues.IPStr = "";
+                    txt = "";
+                if(txt != m_textValues.IPStr)
+                {
+                    m_textValues.IPStr = txt;
+                    m_textValues.UpdateTexts = true;
+                }
             }
         }
 

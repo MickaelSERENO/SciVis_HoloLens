@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 33844947240466542}
   - component: {fileID: 23267615315553168}
   m_Layer: 0
-  m_Name: Outline_Line
+  m_Name: OutlineLine
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -51,7 +51,7 @@ MeshRenderer:
   m_CastShadows: 0
   m_ReceiveShadows: 0
   m_DynamicOccludee: 0
-  m_MotionVectors: 1
+  m_MotionVectors: 0
   m_LightProbeUsage: 0
   m_ReflectionProbeUsage: 0
   m_RenderingLayerMask: 4294967295
