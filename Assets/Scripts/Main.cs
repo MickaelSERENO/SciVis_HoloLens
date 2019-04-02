@@ -1,4 +1,6 @@
-﻿using System.Net.Security;
+﻿#define TEST
+
+using System.Net.Security;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,6 +13,7 @@ using System;
 using System.Net.Sockets;
 using System.Net;
 using UnityEngine.XR.WSA.Sharing;
+
 
 namespace Sereno
 {
@@ -32,6 +35,9 @@ namespace Sereno
         public bool   UpdateTexts = false;
     }
 
+    /// <summary>
+    /// Results of the anchor creation communication
+    /// </summary>
     public enum AnchorCommunication
     {
         NONE,
@@ -82,6 +88,16 @@ namespace Sereno
         private AnchorCommunication m_anchorCommunication = AnchorCommunication.NONE;
 
         /// <summary>
+        /// List of the other headset status
+        /// </summary>
+        private List<HeadsetStatus> m_headsetStatus = new List<HeadsetStatus>();
+
+        /// <summary>
+        /// List of GameObject representing the headset colors
+        /// </summary>
+        private List<GameObject> m_headsetColors = new List<GameObject>();
+
+        /// <summary>
         /// Prefab of VTKUnitySmallMultipleGameObject correctly configured
         /// </summary>
         public VTKUnitySmallMultipleGameObject VTKSMGameObject;
@@ -106,6 +122,14 @@ namespace Sereno
         /// </summary>
         public UnityEngine.UI.Text IPValueText;
 
+        /// <summary>
+        /// The minicube displayed above the user coding their color
+        /// </summary>
+        public GameObject UserEntityColor;
+
+        /// <summary>
+        /// Default text displayed for the IP address
+        /// </summary>
         const String DEFAULT_IP_ADDRESS_TEXT = "Server not found";
 
         void Start()
@@ -121,6 +145,16 @@ namespace Sereno
             m_client = new VFVClient(this);
             m_client.AddListener(new ClientStatusCallback(OnConnectionStatus));
             m_client.Connect();
+
+#if TEST
+            AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
+            addVTKMsg.DataID = 0;
+            addVTKMsg.NbCellFieldValueIndices = 0;
+            addVTKMsg.NbPtFieldValueIndices   = 1;
+            addVTKMsg.Path = "Agulhas_10_resampled.vtk";
+            addVTKMsg.PtFieldValueIndices = new int[] { 1 };
+            OnAddVTKDataset(null, addVTKMsg);
+#endif
         }
 
         // Update is called once per frame
@@ -187,6 +221,39 @@ namespace Sereno
                     var gameObject = Instantiate(VTKSMGameObject);
                     gameObject.transform.parent = transform;
                     gameObject.Init(sm);
+                }
+            }
+
+            //Load the headset status
+            lock(m_headsetStatus)
+            {
+                //Create enough GameObjects
+                while(m_headsetStatus.Count > m_headsetColors.Count)
+                {
+                    GameObject go = Instantiate(UserEntityColor);
+                    go.transform.parent = this.transform;
+                    m_headsetColors.Add(go);                    
+                }
+
+                //hide the useless ones
+                for(int i = m_headsetStatus.Count; i < m_headsetColors.Count; i++)
+                    m_headsetColors[i].SetActive(false);
+
+                //Change the color and the position/rotation
+                for(int i = 0; i < m_headsetStatus.Count; i++)
+                {
+                    m_headsetColors[i].transform.localRotation = new Quaternion(m_headsetStatus[i].Rotation[1],
+                                                                                m_headsetStatus[i].Rotation[2],
+                                                                                m_headsetStatus[i].Rotation[3],
+                                                                                m_headsetStatus[i].Rotation[0]);
+
+                    m_headsetColors[i].transform.localPosition = new Vector3(m_headsetStatus[i].Position[0],
+                                                                             m_headsetStatus[i].Position[1],
+                                                                             m_headsetStatus[i].Position[2]);
+
+                    m_headsetColors[i].GetComponent<MeshRenderer>().material.color = new Color(((m_headsetStatus[i].Color >> 24) & 0xff)/255.0f,
+                                                                                               ((m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
+                                                                                               ((m_headsetStatus[i].Color >> 8)  & 0xff)/255.0f);
                 }
             }
 
@@ -298,7 +365,11 @@ namespace Sereno
 
         public void OnHeadsetsStatus(MessageBuffer messageBuffer, HeadsetsStatusMessage msg)
         {
-            Debug.Log($"On headset status");
+            lock(m_headsetStatus)
+            {
+                m_headsetStatus.Clear();
+                m_headsetStatus.AddRange(msg.HeadsetsStatus);
+            }
         }
         #endregion
 

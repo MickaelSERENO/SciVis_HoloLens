@@ -33,14 +33,14 @@ namespace Sereno.Network.MessageHandler
 
         public override byte GetCurrentType()
         {
-            if(Cursor <= 1)
+            if(Cursor <= 2)
                 return (byte)'I';
             return (byte)'f';
         }
 
         public override void Push(float value)
         {
-            Quaternion[Cursor-2] = value;
+            Quaternion[Cursor-3] = value;
             base.Push(value);
         }
 

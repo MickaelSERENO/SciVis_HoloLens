@@ -1,4 +1,9 @@
-﻿Shader "Sereno/RayCastVolumeRendering"
+﻿// Upgrade NOTE: replaced '_World2Object' with 'unity_WorldToObject'
+
+// Upgrade NOTE: replaced '_CameraToWorld' with 'unity_CameraToWorld'
+// Upgrade NOTE: replaced '_World2Object' with 'unity_WorldToObject'
+
+Shader "Sereno/RayCastVolumeRendering"
 {
     Properties
     {
@@ -31,11 +36,11 @@
 
             struct v2f
             {
-				float3   rayNormal  : TEXCOORD0;
-				float4   rayOrigin  : TEXCOORD1;
-				float2   uvDepth    : TEXCOORD2;
-				float4x4 invMVP     : TEXCOORD3;
-				float4   vertex     : SV_POSITION;
+				float4x4 invMVP     : TEXCOORD4;
+				float2 uvDepth      : TEXCOORD2;
+				float4 vertexBis    : TEXCOORD3;
+				float4 vertex       : SV_POSITION;
+				UNITY_VERTEX_OUTPUT_STEREO
 			};
 
 			/** The Camera depth texture*/
@@ -46,6 +51,10 @@
 
 			/** The volume data*/
             sampler3D _TextureData;
+
+			/** The maximum sampling dimension along all axis*/
+			float _MaxDimension;
+
 
 			float4x4 inverse(float4x4 m)
 			{
@@ -59,9 +68,9 @@
 				float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
 				float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
 				float idet = 1.0f / det;
-
+				
 				float4x4 ret;
-
+				
 				ret[0][0] = t11 * idet;
 				ret[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
 				ret[0][2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * idet;
@@ -84,31 +93,19 @@
 			v2f vert(appdata v)
 			{
 				v2f o;
-				o.invMVP      = inverse(UNITY_MATRIX_MVP);
-				float4x4 invP = inverse(UNITY_MATRIX_P);
-				o.vertex      = v.vertex;
+				UNITY_SETUP_INSTANCE_ID(v);
+				UNITY_TRANSFER_INSTANCE_ID(v, o);
+				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+				o.vertex    = v.vertex;
+#ifdef UNITY_REVERSED_Z
+				o.vertex.z = 1.0;
+#else
+				o.vertex.z = UNITY_NEAR_CLIP_VALUE;
+#endif
+				o.vertexBis = v.vertex;
+				o.invMVP    = mul(transpose(UNITY_MATRIX_IT_MV), unity_CameraInvProjection);
+				o.uvDepth   = float2(o.vertex.x, o.vertex.y*_ProjectionParams.x)*0.5 + 0.5;
 
-				//OpenGL
-				if(UNITY_NEAR_CLIP_VALUE == -1.0)
-					o.vertex.z = -1.0;
-				else
-					o.vertex.z = 0.0;
-
-				float4 n;
-				float4 x1 = mul(invP, float4(o.vertex.xy,  1.0, 1.0));
-				float4 x2 = mul(invP, float4(o.vertex.xyz, 1.0));
-				n = x1/x1.w - x2/x2.w;
-
-				n = mul(n, UNITY_MATRIX_MV);
-
-				//o.rayOrigin = mul(x2, UNITY_MATRIX_IT_MV);
-				o.rayOrigin = mul(o.invMVP, o.vertex);
-				o.rayOrigin = o.rayOrigin/o.rayOrigin.w;
-				
-				o.rayNormal = normalize(n.xyz);
-				o.uvDepth   = o.vertex.xy*0.5 + 0.5;
-				if (_ProjectionParams.x < 0)
-					o.uvDepth.y = 1.0 - o.uvDepth.y;
 				return o;
 			}
 
@@ -121,11 +118,11 @@
 			bool computeRayPlaneIntersection(in float3 rayOrigin, in float3 rayNormal, in float3 planeNormal, in float3 planePosition, out float t)
 			{
 				float nDir = dot(planeNormal, rayNormal);
-				if (nDir == 0.0)
+				if (nDir*nDir <= 1e-6)
 					return false;
 
 				t = dot(planeNormal, planePosition - rayOrigin) / nDir;
-				return true;
+				return t >= 0.0;
 			}
 
 			/** \brief  Compute the ray-cube intersection
@@ -137,22 +134,22 @@
 			{
 				//Left
 				tValidity[0] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(-1, 0, 0),
-					float3(-0.5, -0.5, -0.5), t[0]);
+					float3(-0.5, 0, 0), t[0]);
 				//Right
 				tValidity[1] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(1, 0, 0),
-					float3(+0.5, -0.5, -0.5), t[1]);
+					float3(+0.5, 0, 0), t[1]);
 				//Bottom
 				tValidity[2] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, -1, 0),
-					float3(-0.5, -0.5, -0.5), t[2]);
+					float3(0, -0.5, 0), t[2]);
 				//tOP
 				tValidity[3] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 1, 0),
-					float3(-0.5, +0.5, -0.5), t[3]);
+					float3(0, +0.5, 0), t[3]);
 				//Front
 				tValidity[4] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 0, -1),
-					float3(-0.5, -0.5, -0.5), t[4]);
+					float3(0, 0, -0.5), t[4]);
 				//Back
 				tValidity[5] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 0, 1),
-					float3(-0.5, -0.5, +0.5), t[5]);
+					float3(0, 0, +0.5), t[5]);
 
 				//Test the limits
 				for (int i = 0; i < 2; i++)
@@ -160,55 +157,50 @@
 					//Left / Right
 					if (tValidity[i])
 					{
-						if(t[i] < 0.0)
+						float3 p = t[i] * rayNormal + rayOrigin;
+						if (p.y < -0.5 || p.y > +0.5 ||
+							p.z < -0.5 || p.z > +0.5)
 							tValidity[i] = false;
-						else
-						{
-							float3 p = t[i] * rayNormal + rayOrigin;
-							if (p.y < -0.5 - 0.001 || p.y > +0.5 + 0.001 ||
-								p.z < -0.5 - 0.001 || p.z > +0.5 + 0.001)
-								tValidity[i] = false;
-						}
 					}
 
 					//Top / Bottom
 					if (tValidity[i + 2])
 					{
-						if(t[i + 2] < 0.0)
+						float3 p = t[i + 2] * rayNormal + rayOrigin;
+						if (p.x < -0.5 || p.x > +0.5 ||
+							p.z < -0.5 || p.z > +0.5)
 							tValidity[i + 2] = false;
-						else
-						{
-							float3 p = t[i + 2] * rayNormal + rayOrigin;
-							if (p.x < -0.5 - 0.001 || p.x > +0.5 + 0.001 ||
-								p.z < -0.5 - 0.001 || p.z > +0.5 + 0.001)
-								tValidity[i + 2] = false;
-						}
 					}
 
 					//Front / Back
 					if(tValidity[i + 4])
 					{
-						if(t[i + 4] < 0.0)
+						float3 p = t[i + 4] * rayNormal + rayOrigin;
+						if (p.x < -0.5 || p.x > +0.5 ||
+							p.y < -0.5 || p.y > +0.5)
 							tValidity[i + 4] = false;
-						else
-						{
-							float3 p = t[i + 4] * rayNormal + rayOrigin;
-							if (p.x < -0.5-0.001 || p.x > +0.5+0.001 ||
-								p.y < -0.5-0.001 || p.y > +0.5+0.001)
-								tValidity[i + 4] = false;
-						}
 					}
 				}
 			}
 
-			float4 frag(v2f input) : SV_Target
+			fixed4 frag(v2f input) : SV_Target
 			{
+				UNITY_SETUP_INSTANCE_ID(input);
+				float4 endRayOrigin = mul(input.invMVP, float4(input.vertexBis.x, input.vertexBis.y*_ProjectionParams.x,  1.0,  1.0));
+				float4 begRayOrigin = mul(input.invMVP, float4(input.vertexBis.x, input.vertexBis.y*_ProjectionParams.x, -1.0, 1.0));
+				endRayOrigin /= endRayOrigin.w;
+				begRayOrigin /= begRayOrigin.w;
+
+				float3 rayOrigin = begRayOrigin.xyz;
+				float3 rayNormal = normalize(endRayOrigin.xyz - begRayOrigin.xyz);
+
+				//return fixed4(input.rayNormal, 1.0);
 				float4 fragColor = float4(0, 0, 0, 0);
 
 				//Compute ray - cube intersections
 				float t[6];
 				bool  tValidity[6];
-				computeRayCubeIntersection(input.rayOrigin.xyz, input.rayNormal, t, tValidity);
+				computeRayCubeIntersection(rayOrigin.xyz, rayNormal, t, tValidity);
 
 				//Determine if the ray touched the cube or not
 				int startValidity = 0;
@@ -227,7 +219,7 @@
 					{
 						minT = min(minT, t[i]);
 						maxT = max(maxT, t[i]);
-						//break; //Maximum two points
+						break; //Maximum two points
 					}
 				}
 
@@ -236,45 +228,36 @@
 					minT = 0;
 
 				//compute step and maximum number of steps
-				//float rayStep = 1.0 / (max(max(uDimension.x, uDimension.y), uDimension.z)*4.0);
-				float rayStep = 1.0 / (256.0*2.0);
-				#ifdef UNITY_REVERSED_Z
-					rayStep *= -1;
-					float temp = minT;
-					minT = maxT;
-					maxT = temp;
-				#endif
-
-				float3 rayPos = input.rayOrigin.xyz + minT * input.rayNormal;
-
+				float rayStep = 1.0 / (3.0*_MaxDimension);
+				float3 rayPos = rayOrigin.xyz + minT * rayNormal;
 
 				//Determine max displacement (the displacement the ray can perform) regarding the depth
-				float depthPos = Linear01Depth(tex2D(_CameraDepthTexture, input.uvDepth));
-				#ifdef UNITY_REVERSED_Z
-				depthPos = 1.0f - depthPos;
-				#endif
-				if (UNITY_NEAR_CLIP_VALUE == 1.0) //Transform [0, 1] to [-1, 1]
-					depthPos = depthPos * 2.0 - 1.0;
-
-				float4 endRayOrigin = mul(input.invMVP, float4(input.uvDepth*2.0-1.0, depthPos, 1.0));
-				endRayOrigin /= endRayOrigin.w;
+				float2 uvDepth = TransformStereoScreenSpaceTex(input.uvDepth, 1.0);
+				float depthPos = UNITY_SAMPLE_DEPTH(tex2D(_CameraDepthTexture, uvDepth));
 				
-				float maxDepthDisplacement = -dot(input.rayNormal, rayPos - endRayOrigin.xyz)-0.0001; //-0.0001 == epsilon
-				if(maxDepthDisplacement < 0)
-					discard;
+				//Reverse Z
+#if defined(UNITY_REVERSED_Z)
+				depthPos = 1.0 - depthPos;
+#endif
+				//Between -1 and 1.0
+				depthPos = 2.0*depthPos-1.0;
 
-				rayPos += float3(0.5, 0.5, 0.5); //To read the 3D texture between 0.0 and 1.0
+				uvDepth = input.uvDepth;
+				uvDepth.y *= _ProjectionParams.x;
+
+				uvDepth = 2.0*uvDepth - 1.0;
+				float4 endRayDepth = mul(input.invMVP, float4(uvDepth, depthPos, 1.0));
+				endRayDepth /= endRayDepth.w;
+
+				float maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos); 
+				if(maxDepthDisplacement < 0.05) //Apply a small epsilon
+					discard;
+				rayPos += 0.5;
 
 				//Ray marching algorithm
-				#ifdef UNITY_REVERSED_Z //minT and maxT are reversed
-				for (; minT > maxT && maxDepthDisplacement > 0; 
+				for (; minT < maxT && maxDepthDisplacement > 0.0;
 					minT += rayStep, maxDepthDisplacement -= rayStep,
-					rayPos += input.rayNormal * rayStep)
-				#else
-				for(; minT < maxT && maxDepthDisplacement > 0*/; 
-					minT += rayStep, maxDepthDisplacement -= rayStep,
-					rayPos += input.rayNormal * rayStep)
-				#endif
+					rayPos += rayNormal * rayStep)
 				{
 					float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.x, rayPos.y, rayPos.z, 0.0)).rg;
 					float4 tfColor = tex2Dlod(_TFTexture,   float4(tfCoord, 0.0, 0.0));

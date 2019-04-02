@@ -58,11 +58,15 @@ namespace Sereno.Network.MessageHandler
         {
             //Number of headsets
             if(Cursor == 0)
+            {
                 m_status = new HeadsetStatus[value];
+                for(int i = 0; i < value; i++)
+                    m_status[i] = new HeadsetStatus();
+            }
             else
             {
-                Int32 id      = (Cursor-1)%9;
-                int   headset = (Cursor-1)/9;
+                Int32 id = (Cursor-1)%9;
+                int headset = (Cursor-1)/9;
 
                 if(id == 0)
                     m_status[headset].ID = value;

@@ -90,7 +90,7 @@ namespace Sereno.SciVis
             m_mesh.vertices  = meshPos;
             m_mesh.triangles = meshFaces;
             m_mesh.UploadMeshData(false);
-            m_mesh.bounds = new Bounds(new Vector3(0.0f, 0.0f, 0.0f), new Vector3(1.0f, 1.0f, 1.0f));
+            m_mesh.bounds = new Bounds(new Vector3(0, 0, 0), new Vector3(1, 1, 1));
 
             //Add external 3D objects
             m_outline = GameObject.Instantiate(Outline);
@@ -174,18 +174,19 @@ namespace Sereno.SciVis
             //Draw the GameObject
             if (m_mesh != null && m_material != null)
             {
-                m_material.SetTexture("_TFTexture", m_sm.VTKSubDataset.TFTexture.Texture);
-                m_material.SetTexture("_TextureData", m_texture3D);
-                Graphics.DrawMesh(m_mesh, transform.localToWorldMatrix, m_material, 1);
+                UpdateMaterial();
+                Graphics.DrawMesh(m_mesh, transform.localToWorldMatrix, m_material, 0);
             }
         }
 
-        void OnPreRender()
+        private void UpdateMaterial()
         {
-            if(Camera.current != null)
+            m_material.SetTexture("_TFTexture", m_sm.VTKSubDataset.TFTexture.Texture);
+            m_material.SetTexture("_TextureData", m_texture3D);
+            if(Camera.main != null)
             {
                 //Determine the part of the object on screen
-                Matrix4x4 mvp = Camera.current.projectionMatrix * Camera.current.worldToCameraMatrix * transform.localToWorldMatrix;
+                Matrix4x4 mvp = (GL.GetGPUProjectionMatrix(Camera.main.projectionMatrix, true) * Camera.main.worldToCameraMatrix * transform.localToWorldMatrix);
 
                 Vector3[] screenPos = new Vector3[8];
                 Vector3[] localPos = new Vector3[8];
@@ -228,10 +229,15 @@ namespace Sereno.SciVis
                 int[] meshFaces = new int[6];
                 meshFaces[0] = 0; meshFaces[1] = 1; meshFaces[2] = 2;
                 meshFaces[3] = 0; meshFaces[4] = 2; meshFaces[5] = 3;
-                
+
                 m_mesh.vertices  = meshPos;
                 m_mesh.triangles = meshFaces;
                 m_mesh.UploadMeshData(false);
+
+                if(SystemInfo.graphicsShaderLevel < 40)
+                    print("no decent shaders supported...\n");
+                if(m_sm != null)
+                    m_material.SetFloat("_MaxDimension", Math.Max(Math.Max(m_sm.Dimensions.x, m_sm.Dimensions.y), m_sm.Dimensions.z));
             }
         }
     }
