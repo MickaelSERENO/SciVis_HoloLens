@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.IO;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Sereno.Network.MessageHandler
 {
@@ -45,13 +46,19 @@ namespace Sereno.Network.MessageHandler
         /// <param name="msg">The message parsed containing information to update the dataset position</param>
         void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg);
 
-
         /// <summary>
         /// Function called when new headsets status have been received
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed containing information to update all the known headsets</param>
         void OnHeadsetsStatus(MessageBuffer messageBuffer, HeadsetsStatusMessage msg);
+
+        /// <summary>
+        /// Function called when a new byte array have been received
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed containing the byte array to parse</param>
+        void OnDefaultByteArray(MessageBuffer messageBuffer, DefaultByteArray msg);
     }
 
     /// <summary>
@@ -60,14 +67,14 @@ namespace Sereno.Network.MessageHandler
     public class MessageBuffer
     {
         /// <summary>
-        /// Position along the next string to parse
+        /// Position along the next byte array to parse
         /// </summary>
-        private int    m_stringPos = -1;
+        private int    m_byteArrayPos = -1;
 
         /// <summary>
-        /// The string getting parsed
+        /// The byte array getting parsed
         /// </summary>
-        private byte[] m_string = null;
+        private byte[] m_byteArray    = null;
 
         /// <summary>
         /// The current message being parsed
@@ -168,6 +175,13 @@ namespace Sereno.Network.MessageHandler
                             m_msg.Push(buf[bufPos++]);
                             break;
                         }
+                        case (byte)'a':
+                        {
+                            if(!ReadByteArray(buf, bufPos, out byte[] arr, out bufPos))
+                                return;
+                            m_msg.Push(arr);
+                            break;
+                        }
                     }
                 }
 
@@ -195,6 +209,14 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_HEADSETS_STATUS:
                             foreach(var l in m_listeners)
                                 l.OnHeadsetsStatus(this, (HeadsetsStatusMessage)m_msg);
+                            break;
+                        case ServerType.GET_ANCHOR_SEGMENT:
+                            foreach(var l in m_listeners)
+                                l.OnDefaultByteArray(this, (DefaultByteArray)m_msg);
+                            break;
+                        case ServerType.GET_ANCHOR_EOF:
+                            foreach(var l in m_listeners)
+                                l.OnEmptyMessage(this, (EmptyMessage)m_msg);
                             break;
                         default:
                             break;
@@ -294,26 +316,44 @@ namespace Sereno.Network.MessageHandler
         /// <returns>true if enough data was pushed to parsed a string value, false otherwise</returns>
         private bool ReadString(byte[] data, int offset, out String s, out Int32 newOffset)
         {
-            newOffset = offset;
             s         = "";
-            if(m_string == null)
+            if(!ReadByteArray(data, offset, out byte[] stringData, out newOffset))
+                return false;
+            
+            s = System.Text.Encoding.ASCII.GetString(stringData);
+            return true;
+        }
+
+        /// <summary>
+        /// Read a byte array from the current buffer
+        /// </summary>
+        /// <param name="data">The incoming buffer</param>
+        /// <param name="offset">Offset of the buffer</param>
+        /// <param name="val">The value parsed (if any)</param>
+        /// <param name="newOffset">The new offset to apply</param>
+        /// <returns>true if enough data was pushed to parsed a byte array value, false otherwise</returns>
+        private bool ReadByteArray(byte[] data, int offset, out byte[] arr, out Int32 newOffset)
+        {
+            newOffset = offset;
+            arr       = null;
+
+            if(m_byteArray == null)
             {
-                if(!ReadInt32(data, newOffset, out m_stringPos, out newOffset))
+                if(!ReadInt32(data, newOffset, out m_byteArrayPos, out newOffset))
                     return false;
-                m_string     = new byte[m_stringPos];
-                m_stringPos = 0;
+                m_byteArray    = new byte[m_byteArrayPos];
+                m_byteArrayPos = 0;
             }
 
-            for(; m_stringPos < m_string.Length && newOffset < data.Length; m_stringPos++)
-                m_string[m_stringPos] = data[newOffset++];
-            
-            if(newOffset < data.Length)
+            for(; m_byteArrayPos < m_byteArray.Length && newOffset < data.Length;)
+                m_byteArray[m_byteArrayPos++] = data[newOffset++];
+
+            if(m_byteArrayPos == m_byteArray.Length)
             {
-                s = System.Text.Encoding.ASCII.GetString(m_string);
-                m_string = null;
+                arr = m_byteArray;
+                m_byteArray = null;
                 return true;
             }
-
             return false;
         }
 
@@ -339,6 +379,12 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_HEADSETS_STATUS:
                     m_msg = new HeadsetsStatusMessage(ServerType.GET_HEADSETS_STATUS);
+                    break;
+                case ServerType.GET_ANCHOR_SEGMENT:
+                    m_msg = new DefaultByteArray(ServerType.GET_ANCHOR_SEGMENT);
+                    break;
+                case ServerType.GET_ANCHOR_EOF:
+                    m_msg = new EmptyMessage(ServerType.GET_ANCHOR_EOF);
                     break;
             }
         }

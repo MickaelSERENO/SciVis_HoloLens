@@ -22,14 +22,19 @@ namespace Sereno.Network
     /// </summary> 
     public class VFVClient : Client
     {
-        MessageBuffer m_msgBuf;
+        /// <summary>
+        /// The message buffer reading the data
+        /// </summary>
+        private MessageBuffer m_msgBuf;
 
-        public VFVClient(IMessageBufferCallback clbk) : base("192.168.1.132", 8000)
+        //Has the connection message being sent?
+        private bool          m_headsetConnectionSent = false;
+
+        public VFVClient(IMessageBufferCallback clbk) : base("192.168.43.44", 8000)
         {
             m_msgBuf = new MessageBuffer();
-            m_msgBuf.AddListener(clbk);
-
             base.AddListener(new ClientStatusCallback(OnConnectionStatus));
+            m_msgBuf.AddListener(clbk);
         }
 
         /// <summary>
@@ -40,6 +45,7 @@ namespace Sereno.Network
             byte[] data = new byte[2];
             WriteInt16(data, 0, (Int16)VFVSendCommand.SEND_IDENT_HOLOLENS);
             Send(data);
+            m_headsetConnectionSent = true;
         }
 
         /// <summary>
@@ -159,8 +165,14 @@ namespace Sereno.Network
         /// <param name="status">The new status to take account of</param>
         private void OnConnectionStatus(Socket s, ConnectionStatus status)
         {
+            m_headsetConnectionSent = true;
             if(status == ConnectionStatus.CONNECTED)
                 SendHeadsetIdent(); 
         }
+
+        /// <summary>
+        /// Has the headset connection being send?
+        /// </summary>
+        public bool HeadsetConnectionSent { get => m_headsetConnectionSent; }
     }
 }

@@ -73,6 +73,12 @@ namespace Sereno.Network.MessageHandler
         /// </summary>
         /// <param name="value">The value to push</param>
         public virtual void Push(double value) {Cursor++;}
+
+        /// <summary>
+        /// Push a byte array value
+        /// </summary>
+        /// <param name="value">The value to push</param>
+        public virtual void Push(byte[] value) {Cursor++;}
     
         /// <summary>
         /// The Type of the message

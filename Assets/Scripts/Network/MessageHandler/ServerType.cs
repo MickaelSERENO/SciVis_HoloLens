@@ -10,5 +10,7 @@ namespace Sereno.Network.MessageHandler
         GET_ON_MOVE_DATASET   = 3, //Move a dataset
         GET_ON_HEADSET_INIT   = 4, //Initialize the headset,
         GET_HEADSETS_STATUS   = 5, //All the headsets status (this one excluded)
+        GET_ANCHOR_SEGMENT    = 6, //An anchor segment
+        GET_ANCHOR_EOF        = 7, //The anchor EOF signal
     }
 }

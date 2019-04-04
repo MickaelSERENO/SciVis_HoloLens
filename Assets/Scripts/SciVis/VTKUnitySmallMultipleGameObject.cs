@@ -142,7 +142,7 @@ namespace Sereno.SciVis
             }        
         }
 
-        private void Update()
+        void LateUpdate()
         {
             //Update the 3D texture
             lock(m_sm)
@@ -150,9 +150,9 @@ namespace Sereno.SciVis
                 if(m_sm.TextureColor != null)
                 {
                     m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGFloat, true);
-                    m_texture3D.wrapModeU = TextureWrapMode.Repeat;
-                    m_texture3D.wrapModeV = TextureWrapMode.Repeat;
-                    m_texture3D.wrapModeW = TextureWrapMode.Repeat;
+                    m_texture3D.wrapModeU = TextureWrapMode.Clamp;
+                    m_texture3D.wrapModeV = TextureWrapMode.Clamp;
+                    m_texture3D.wrapModeW = TextureWrapMode.Clamp;
 
                     m_texture3D.SetPixels(m_sm.TextureColor);
                     m_texture3D.Apply();
@@ -185,7 +185,6 @@ namespace Sereno.SciVis
             m_material.SetTexture("_TextureData", m_texture3D);
             m_material.SetFloat("_MaxDimension", Math.Max(Math.Max(m_sm.Dimensions.x, m_sm.Dimensions.y), m_sm.Dimensions.z));
 
-            return;
             if(Camera.main != null)
             {
                 //Determine the part of the object on screen to narrow down the viewport

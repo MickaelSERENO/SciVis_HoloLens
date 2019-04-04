@@ -145,16 +145,13 @@ namespace Sereno.Network
 				m_readThread.Join();
 				m_writeThread.Join();
 				if(m_sock != null && m_sock.Connected)
-					m_sock.Close ();
+					m_sock.Close();
 			}
         }
 
         public bool IsConnected()
         {
-            lock(this)
-            {
-                return m_sock != null && m_sock.Connected;
-            }
+            return m_sock != null && m_sock.Connected;
         }
 
         /// <summary>
@@ -232,52 +229,63 @@ namespace Sereno.Network
         /// </summary>
         private void ReadThread()
 		{
+            bool sleep = false;
 			//The closed command will be sent by "Close()" function
 			while(!m_closed) 
 			{
-				//If the socket is not created, recreate it and try to reconnect
-				if(m_sock == null)
-				{
-					try
-					{
-						m_sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                        FiredStatus(ConnectionStatus.SOCKET_RECREATED);
-						m_sock.Connect(new IPEndPoint(m_addr, (int)m_port));
-						FiredStatus(ConnectionStatus.CONNECTED);
-					}
-					catch(SocketException)
-					{
-						FiredStatus (ConnectionStatus.FAILED_CONNECTION);
-                        m_sock.Close();
-                        m_sock = null;
-                        Thread.Sleep(THREAD_SLEEP);
-                        continue;
-					}
-				}
-
-				//Data available
-				//The message will be sent to HandleMessage
-				else if(m_sock.Available > 0)
-				{
-					//Receive data and handle it
-					byte[] dataBuf = new byte[m_sock.Available];
-					m_sock.Receive(dataBuf, dataBuf.Length, SocketFlags.None);
-					HandleMessage(dataBuf);
-				} 
-
-				//Server disconnected
-				else if(m_sock.Poll(10, SelectMode.SelectRead) && m_sock.Available == 0)
-				{
-					FiredStatus (ConnectionStatus.DISCONNECTED);
-					m_sock.Close();
+                if(sleep)
                     Thread.Sleep(THREAD_SLEEP);
-                    m_sock = null;
-				}
+                sleep = false;
 
-				//Sleep because no data yet available
-				else
-					Thread.Sleep(THREAD_SLEEP);
-			}
+                //If the socket is not created, recreate it and try to reconnect
+                lock(this)
+                {
+                    if(m_sock == null)
+                    {
+                        try
+                        {
+                            lock(m_writeBuffer)
+                                m_writeBuffer.Clear();
+                            m_sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                            m_sock.NoDelay = true;
+                            FiredStatus(ConnectionStatus.SOCKET_RECREATED);
+                            m_sock.Connect(new IPEndPoint(m_addr, (int)m_port));
+                            FiredStatus(ConnectionStatus.CONNECTED);
+                        }
+                        catch(SocketException)
+                        {
+                            FiredStatus(ConnectionStatus.FAILED_CONNECTION);
+                            m_sock.Close();
+                            m_sock = null;
+                            sleep = true;
+                            continue;
+                        }
+                    }
+
+                    //Data available
+                    //The message will be sent to HandleMessage
+                    else if(m_sock.Available > 0)
+                    {
+                        //Receive data and handle it
+                        byte[] dataBuf = new byte[m_sock.Available];
+                        m_sock.Receive(dataBuf, dataBuf.Length, SocketFlags.None);
+                        HandleMessage(dataBuf);
+                    }
+
+                    //Server disconnected
+                    else if(m_sock.Poll(10, SelectMode.SelectRead) && m_sock.Available == 0)
+                    {
+                        FiredStatus(ConnectionStatus.DISCONNECTED);
+                        m_sock.Close();
+                        sleep = true;
+                        m_sock = null;
+                    }
+
+                    //Sleep because no data yet available
+                    else
+                        sleep = true;
+                }
+            }
 		}
 
         /// <summary>
@@ -285,35 +293,44 @@ namespace Sereno.Network
         /// </summary>
         private void WriteThread()
         {
+            bool sleep = false; 
             while (!m_closed)
             {
-                if(m_sock == null || m_sock.Connected == false)
-                {
+                if(sleep)
                     Thread.Sleep(THREAD_SLEEP);
-                    continue;
-                }
+                sleep = false;
 
-                byte[] msg = null;
-                lock(m_writeBuffer)
+                lock(this)
                 {
-                    if(m_writeBuffer.Count > 0)
-                        msg = m_writeBuffer.Dequeue();
-                }
+                    if(m_sock == null || m_sock.Connected == false)
+                    {
+                        sleep = true;
+                        continue;
+                    }
 
-                if (msg == null)
-                {
-                    Thread.Sleep(THREAD_SLEEP);
-                    continue;
-                }
 
-                //Try to send. If failed -> Disconnection
-                try
-                {
-                    m_sock.Send(msg);
-                }
-                catch (SocketException)
-                {
-                    //The disconnection is handled by the reading thread
+                    byte[] msg = null;
+                    lock(m_writeBuffer)
+                    {
+                        if(m_writeBuffer.Count > 0)
+                            msg = m_writeBuffer.Dequeue();
+                    }
+
+                    if (msg == null)
+                    {
+                        sleep = true;
+                        continue;
+                    }
+
+                    //Try to send. If failed -> Disconnection
+                    try
+                    {
+                        m_sock.Send(msg);
+                    }
+                    catch (SocketException)
+                    {
+                        //The disconnection is handled by the reading thread
+                    }
                 }
             }
         }
