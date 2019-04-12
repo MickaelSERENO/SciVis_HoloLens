@@ -204,7 +204,7 @@
 
 				//compute step and maximum number of steps
 				float  rayStep = 1.0 / (1.5*_MaxDimension);
-				float3 rayPos  = rayOrigin.xyz + minT * rayNormal;
+				float3 rayPos = rayOrigin.xyz + minT * rayNormal;
 
 				float2 uvDepth = input.uvDepth;
 				//Determine max displacement (the displacement the ray can perform) regarding the depth
@@ -223,30 +223,28 @@
 				float4 endRayDepth = mul(input.invMVP, float4(uvDepth, depthPos, 1.0));
 				endRayDepth /= endRayDepth.w;
 
-				float maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos); 
+				float maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos)-0.01; 
 				if(maxDepthDisplacement < 0) //Apply a small epsilon
 					discard;
 				rayPos += 0.5;
 
 				//Ray marching algorithm
-				for(float i = min(maxDepthDisplacement, maxT-minT); i >= 0 && maxDepthDisplacement > 0.0;
+				for(float i = min(maxDepthDisplacement, maxT-minT); i >= 0;
 					i -= rayStep, rayPos += rayNormal * rayStep)
 				{
 					float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.x, rayPos.y, rayPos.z, 0.0)).rg;
 					float4 tfColor = tex2Dlod(_TFTexture,   float4(tfCoord, 0.0, 0.2));
 
-					//Contribution only if needed
-					if (tfColor.a >= 0.005)
-					{
-						fragColor.xyz = fragColor.xyz + (1 - fragColor.a)*tfColor.a*tfColor.xyz;
-						fragColor.a = fragColor.a + (1 - fragColor.a)*tfColor.a;
+					tfColor.a /= 1.5; //Divide by the number of rays position we are computing in addition (see rayStep computation)
 
-						//If enough contribution
-						if (fragColor.a > 0.85)
-						{
-							fragColor.a = 1.0;
-							return fragColor;
-						}
+					fragColor.xyz = fragColor.xyz + (1 - fragColor.a)*tfColor.a*tfColor.xyz;
+					fragColor.a = fragColor.a + (1 - fragColor.a)*tfColor.a;
+
+					//If enough contribution
+					if (fragColor.a > 0.90)
+					{
+						fragColor.a = 1.0;
+						return fragColor;
 					}
 				}
 

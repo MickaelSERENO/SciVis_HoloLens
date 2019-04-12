@@ -43,7 +43,7 @@ namespace Sereno
         IMPORT  //Import the anchor
     }
 
-    public class Main : MonoBehaviour, IMessageBufferCallback
+    public class Main : MonoBehaviour, IMessageBufferCallback, IDataProvider
     {
         /// <summary>
         /// Default text displayed for the IP address
@@ -125,7 +125,7 @@ namespace Sereno
         /// <summary>
         /// List of GameObject representing the headset colors
         /// </summary>
-        private List<GameObject> m_headsetColors = new List<GameObject>();
+        private List<GameObject> m_headsetGlyphs = new List<GameObject>();
 
 
         /// <summary>
@@ -165,6 +165,26 @@ namespace Sereno
         /// The minicube displayed above the user coding their color
         /// </summary>
         public GameObject UserEntityColor;
+
+        /// <summary>
+        /// The "Nothing" glyph displayed above characters
+        /// </summary>
+        public Mesh NothingGlyph;
+
+        /// <summary>
+        /// The "Translate" glyph displayed above characters
+        /// </summary>
+        public Mesh TranslateGlyph;
+
+        /// <summary>
+        /// The "Scale" glyph displayed above characters
+        /// </summary>
+        public Mesh ScaleGlyph;
+
+        /// <summary>
+        /// The "Rotate" glyph displayed above characters
+        /// </summary>
+        public Mesh RotateGlyph;
 #endregion
 
         void Start()
@@ -296,7 +316,7 @@ namespace Sereno
                 VTKUnitySmallMultiple sm = m_vtkSMLoaded.Dequeue();
                 var gameObject = Instantiate(VTKSMGameObject);
                 gameObject.transform.parent = transform;
-                gameObject.Init(sm);
+                gameObject.Init(sm, this);
 
                 m_datasetGameObjects.Enqueue(gameObject);
             }
@@ -309,32 +329,53 @@ namespace Sereno
         {
             //Load the headset status
             //Create enough GameObjects
-            while(m_headsetStatus.Count > m_headsetColors.Count)
+            while(m_headsetStatus.Count > m_headsetGlyphs.Count)
             {
                 GameObject go = Instantiate(UserEntityColor);
                 go.transform.parent = this.transform;
-                m_headsetColors.Add(go);
+                m_headsetGlyphs.Add(go);
             }
 
             //hide the useless ones
-            for(int i = m_headsetStatus.Count; i < m_headsetColors.Count; i++)
-                m_headsetColors[i].SetActive(false);
+            for(int i = m_headsetStatus.Count; i < m_headsetGlyphs.Count; i++)
+                m_headsetGlyphs[i].SetActive(false);
 
-            //Change the color and the position/rotation
+            //Change the color, shape and the position/rotation of each character's glyph
             for(int i = 0; i < m_headsetStatus.Count; i++)
             {
-                m_headsetColors[i].transform.localRotation = new Quaternion(m_headsetStatus[i].Rotation[1],
+                //Update the glyph position / rotation
+                m_headsetGlyphs[i].transform.localRotation = new Quaternion(m_headsetStatus[i].Rotation[1],
                                                                             m_headsetStatus[i].Rotation[2],
                                                                             m_headsetStatus[i].Rotation[3],
                                                                             m_headsetStatus[i].Rotation[0]);
 
-                m_headsetColors[i].transform.localPosition = new Vector3(m_headsetStatus[i].Position[0],
-                                                                            m_headsetStatus[i].Position[1]+0.15f,
-                                                                            m_headsetStatus[i].Position[2]);
+                m_headsetGlyphs[i].transform.localPosition = new Vector3(m_headsetStatus[i].Position[0],
+                                                                         m_headsetStatus[i].Position[1],
+                                                                         m_headsetStatus[i].Position[2]-0.15f);
 
-                m_headsetColors[i].GetComponent<MeshRenderer>().material.color = new Color(((m_headsetStatus[i].Color >> 24) & 0xff)/255.0f,
+                //Update the glyph color
+                m_headsetGlyphs[i].GetComponent<MeshRenderer>().material.color = new Color(((m_headsetStatus[i].Color >> 24) & 0xff)/255.0f,
                                                                                             ((m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
                                                                                             ((m_headsetStatus[i].Color >> 8)  & 0xff)/255.0f);
+
+
+                //Update the glyph shape
+                MeshFilter mf = m_headsetGlyphs[i].GetComponent<MeshFilter>();
+                switch(m_headsetStatus[i].CurrentAction)
+                {
+                    case HeadsetCurrentAction.MOVING:
+                        mf.mesh = TranslateGlyph;
+                        break;
+                    case HeadsetCurrentAction.ROTATING:
+                        mf.mesh = RotateGlyph;
+                        break;
+                    case HeadsetCurrentAction.SCALING:
+                        mf.mesh = ScaleGlyph;
+                        break;
+                    default:
+                        mf.mesh = NothingGlyph;
+                        break;
+                }
             }
         }
 
@@ -488,7 +529,31 @@ namespace Sereno
                 }
             }
         }
-#endregion
+
+        public void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg)
+        {
+            //TODO
+        }
+        #endregion
+
+        public Color GetHeadsetColor(int headsetID)
+        {
+            lock(this)
+            {
+                if(headsetID == -1)
+                    return new Color(0.0f, 0.0f, 1.0f);
+                else
+                {
+                    foreach(HeadsetStatus status in m_headsetStatus)
+                        if(status.ID == headsetID)
+                            return new Color(((status.Color >> 24) & 0xff)/255.0f,
+                                             ((status.Color >> 16) & 0xff)/255.0f,
+                                             ((status.Color >> 8)  & 0xff)/255.0f);
+
+                    return new Color(0.0f, 0.0f, 1.0f);
+                }
+            }
+        }
 
         /// <summary>
         /// Handles changement in the connection status
@@ -609,6 +674,7 @@ namespace Sereno
 
             m_anchorImportSegments.Clear();
         }
-    }
+
 #endregion
+    }
 }

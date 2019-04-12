@@ -65,11 +65,27 @@ namespace Sereno.SciVis
         private bool m_updateP = false;
 
         /// <summary>
+        /// Object providing the needed data
+        /// </summary>
+        private IDataProvider m_dataProvider = null;
+
+        /// <summary>
+        /// The new outline color to apply
+        /// </summary>
+        private Color m_outlineColor;
+
+        /// <summary>
+        /// Should we update the outline color?
+        /// </summary>
+        private bool m_updateOutlineColor = false;
+
+        /// <summary>
         /// Initialize the visualization
         /// </summary>
         /// <param name="sm">The small multiple data to use</param>
-        public void Init(VTKUnitySmallMultiple sm)
+        public void Init(VTKUnitySmallMultiple sm, IDataProvider provider)
         {
+            m_dataProvider = provider;
             m_sm = sm;
 
             m_material = new Material(ColorMaterial);            
@@ -115,10 +131,24 @@ namespace Sereno.SciVis
                 OnPositionChange(m_sm.VTKSubDataset, m_sm.VTKSubDataset.Position);
                 m_sm.VTKSubDataset.AddListener(this);
             }
+
+            m_outlineColor = m_dataProvider.GetHeadsetColor(-1);
         }
 
         public void OnColorRangeChange(SubDataset dataset, float min, float max, ColorMode mode)
         {
+        }
+
+        public void OnOwnerIDChange(SubDataset dataset, int ownerID)
+        {
+            lock(this)
+            {
+                if(m_dataProvider != null)
+                {
+                    m_updateOutlineColor = true;
+                    m_outlineColor = m_dataProvider.GetHeadsetColor(ownerID);
+                }
+            }
         }
 
         public void OnPositionChange(SubDataset dataset, float[] position)
@@ -169,6 +199,9 @@ namespace Sereno.SciVis
                 if(m_updateQ)
                     transform.localRotation = m_newQ;
                 m_updateQ = false;
+                if(m_updateOutlineColor)
+                    m_outline.GetComponent<MeshRenderer>().material.color = m_outlineColor;
+                m_updateOutlineColor = false;
             }
 
             //Draw the GameObject

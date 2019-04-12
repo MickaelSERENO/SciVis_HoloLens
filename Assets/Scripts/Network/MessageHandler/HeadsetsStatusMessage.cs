@@ -3,6 +3,18 @@ using System;
 namespace Sereno.Network.MessageHandler
 {
     /// <summary>
+    /// Enumeration of headset current action
+    /// </summary>
+    public enum HeadsetCurrentAction
+    {
+        NOTHING   = 0,
+        MOVING    = 1,
+        SCALING   = 2,
+        ROTATING  = 3,
+        SKETCHING = 4
+    }
+
+    /// <summary>
     /// Status of a collabroator Headset
     /// </summary>
     public class HeadsetStatus
@@ -26,6 +38,11 @@ namespace Sereno.Network.MessageHandler
         /// The headset Color
         /// </summary>
         public int Color;
+
+        /// <summary>
+        /// The headset current action
+        /// </summary>
+        public HeadsetCurrentAction CurrentAction = HeadsetCurrentAction.NOTHING;
     }
 
     /// <summary>
@@ -44,13 +61,13 @@ namespace Sereno.Network.MessageHandler
 
         public override void Push(float value)
         {
-            int   headset = (Cursor-1)/9;
-            Int32 id      = (Cursor-1) % 9;
+            int   headset = (Cursor-1)/10;
+            Int32 id      = (Cursor-1) % 10;
 
-            if((Cursor - 1) % 9 < 5) //Position
-                m_status[headset].Position[id - 2] = value;
-            else if((Cursor - 1) % 9 < 9) //Rotation
-                m_status[headset].Rotation[id - 5] = value;
+            if(id < 6) //Position
+                m_status[headset].Position[id - 3] = value;
+            else if(id % 9 < 10) //Rotation
+                m_status[headset].Rotation[id - 6] = value;
             base.Push(value);
         }
 
@@ -72,6 +89,8 @@ namespace Sereno.Network.MessageHandler
                     m_status[headset].ID = value;
                 else if(id == 1)
                     m_status[headset].Color = value;
+                else if(id == 2)
+                    m_status[headset].CurrentAction = (HeadsetCurrentAction)value;
             }
             base.Push(value);
         }
@@ -84,19 +103,19 @@ namespace Sereno.Network.MessageHandler
             {
                 Int32 id = (Cursor-1) % 9;
 
-                if(id < 2) //Color / ID
+                if(id < 3) //Color / ID
                     return (byte)'I';
 
-                if(id < 5) //Position
+                if(id < 6) //Position
                     return (byte)'f';
 
-                else if(id < 9) //Rotation
+                else if(id < 10) //Rotation
                     return (byte)'f';
             }
             return 0;
         }
 
-        public override Int32 GetMaxCursor() { return 0+(m_status != null ? m_status.Length*9 : 0); }
+        public override Int32 GetMaxCursor() { return 0+(m_status != null ? m_status.Length*10 : 0); }
 
         /// <summary>
         /// The headsets status received

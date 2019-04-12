@@ -12,5 +12,6 @@ namespace Sereno.Network.MessageHandler
         GET_HEADSETS_STATUS   = 5, //All the headsets status (this one excluded)
         GET_ANCHOR_SEGMENT    = 6, //An anchor segment
         GET_ANCHOR_EOF        = 7, //The anchor EOF signal
+        GET_SUBDATASET_OWNER  = 8, //The subdataset modification owner
     }
 }

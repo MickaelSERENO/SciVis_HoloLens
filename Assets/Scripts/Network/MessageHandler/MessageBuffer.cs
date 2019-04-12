@@ -59,6 +59,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed containing the byte array to parse</param>
         void OnDefaultByteArray(MessageBuffer messageBuffer, DefaultByteArray msg);
+
+        /// <summary>
+        /// Function called when a new owner has been designed for a SudDataset
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed containing the owner information</param>
+        void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg);
     }
 
     /// <summary>
@@ -217,6 +224,10 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_ANCHOR_EOF:
                             foreach(var l in m_listeners)
                                 l.OnEmptyMessage(this, (EmptyMessage)m_msg);
+                            break;
+                        case ServerType.GET_SUBDATASET_OWNER:
+                            foreach(var l in m_listeners)
+                                l.OnSubDatasetOwner(this, (SubDatasetOwnerMessage)m_msg);
                             break;
                         default:
                             break;
@@ -385,6 +396,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_ANCHOR_EOF:
                     m_msg = new EmptyMessage(ServerType.GET_ANCHOR_EOF);
+                    break;
+                case ServerType.GET_SUBDATASET_OWNER:
+                    m_msg = new SubDatasetOwnerMessage(ServerType.GET_SUBDATASET_OWNER);
                     break;
             }
         }

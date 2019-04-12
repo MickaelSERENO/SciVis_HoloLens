@@ -33,6 +33,13 @@ namespace Sereno.Datasets
         /// <param name="dataset">The dataset being modified</param>
         /// <param name="position">The new position to apply. See dataset.Position</param>
         void OnPositionChange(SubDataset dataset, float[] position);
+
+        /// <summary>
+        /// Called when the owner changes
+        /// </summary>
+        /// <param name="dataset">The dataset being modified</param>
+        /// <param name="ownerID">The new owner ID</param>
+        void OnOwnerIDChange(SubDataset dataset, int ownerID);
     }
 
     public class SubDataset
@@ -72,6 +79,10 @@ namespace Sereno.Datasets
         /// </summary>
         protected TFTexture m_tfTexture;
 
+        /// <summary>
+        /// The Owner ID
+        /// </summary>
+        protected int       m_ownerID;
         
         /// <summary>
         /// The Quaternion rotation
@@ -195,6 +206,17 @@ namespace Sereno.Datasets
                     m_position[i] = value[i];
                 foreach(var l in m_listeners)
                     l.OnPositionChange(this, m_position);
+            }
+        }
+
+        public int OwnerID
+        {
+            get => m_ownerID;
+            set
+            {
+                m_ownerID = value;
+                foreach(var l in m_listeners)
+                    l.OnOwnerIDChange(this, m_ownerID);
             }
         }
     }

@@ -307,6 +307,9 @@ namespace Sereno.SciVis
         public void OnPositionChange(SubDataset dataset, float[] position)
         {}
 
+        public void OnOwnerIDChange(SubDataset dataset, int ownerID)
+        {}
+
         /// <summary>
         /// The 3D Texure Color computed. This array has to be used along a transfer function
         /// </summary>
