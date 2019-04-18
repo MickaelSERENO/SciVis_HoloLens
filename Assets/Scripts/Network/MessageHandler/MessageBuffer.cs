@@ -47,6 +47,13 @@ namespace Sereno.Network.MessageHandler
         void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg);
 
         /// <summary>
+        /// Function called when a Scale message has been parsed
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed containing information to update the dataset scaling</param>
+        void OnScaleDataset(MessageBuffer messageBuffer, ScaleDatasetMessage msg);
+
+        /// <summary>
         /// Function called when new headsets status have been received
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
@@ -229,6 +236,10 @@ namespace Sereno.Network.MessageHandler
                             foreach(var l in m_listeners)
                                 l.OnSubDatasetOwner(this, (SubDatasetOwnerMessage)m_msg);
                             break;
+                        case ServerType.GET_ON_SCALE_DATASET:
+                            foreach(var l in m_listeners)
+                                l.OnScaleDataset(this, (ScaleDatasetMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -399,6 +410,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_SUBDATASET_OWNER:
                     m_msg = new SubDatasetOwnerMessage(ServerType.GET_SUBDATASET_OWNER);
+                    break;
+                case ServerType.GET_ON_SCALE_DATASET:
+                    m_msg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                     break;
             }
         }

@@ -307,6 +307,9 @@ namespace Sereno.SciVis
         public void OnPositionChange(SubDataset dataset, float[] position)
         {}
 
+        public void OnScaleChange(SubDataset dataset, float[] scale)
+        {}
+
         public void OnOwnerIDChange(SubDataset dataset, int ownerID)
         {}
 

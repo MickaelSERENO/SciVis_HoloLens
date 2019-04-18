@@ -85,7 +85,7 @@ namespace Sereno.Network
         /// </summary>
         private ConnectionStatus m_currentStatus = ConnectionStatus.DISCONNECTED;
 
-		private const int THREAD_SLEEP = 1000;
+		private const int THREAD_SLEEP = 10;
 
         /******************************/
         /*******PUBLIC FUNCTIONS*******/
@@ -248,6 +248,7 @@ namespace Sereno.Network
                                 m_writeBuffer.Clear();
                             m_sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                             m_sock.NoDelay = true;
+                            m_sock.ReceiveTimeout = THREAD_SLEEP;
                             FiredStatus(ConnectionStatus.SOCKET_RECREATED);
                             m_sock.Connect(new IPEndPoint(m_addr, (int)m_port));
                             FiredStatus(ConnectionStatus.CONNECTED);
@@ -280,10 +281,6 @@ namespace Sereno.Network
                         sleep = true;
                         m_sock = null;
                     }
-
-                    //Sleep because no data yet available
-                    else
-                        sleep = true;
                 }
             }
 		}

@@ -28,11 +28,18 @@ namespace Sereno.Datasets
         void OnRotationChange(SubDataset dataset, float[] rotationQuaternion);
 
         /// <summary>
-        /// Called when the position quaternion changed
+        /// Called when the 3D position changed
         /// </summary>
         /// <param name="dataset">The dataset being modified</param>
         /// <param name="position">The new position to apply. See dataset.Position</param>
         void OnPositionChange(SubDataset dataset, float[] position);
+
+        /// <summary>
+        /// Called when the 3D scaling changed
+        /// </summary>
+        /// <param name="dataset">The dataset being modified</param>
+        /// <param name="scale">The new scale to apply. See dataset.Scale</param>
+        void OnScaleChange(SubDataset dataset, float[] scale);
 
         /// <summary>
         /// Called when the owner changes
@@ -94,6 +101,11 @@ namespace Sereno.Datasets
         /// The Vector3 position
         /// </summary>
         private float[] m_position = new float[3]{0.0f, 0.0f, 0.0f};
+
+        /// <summary>
+        /// The Scaling factors
+        /// </summary>
+        private float[] m_scale    = new float[3]{1.0f, 1.0f, 1.0f};
 
         /// <summary>
         /// The listeners to call when the internal state changed
@@ -193,10 +205,11 @@ namespace Sereno.Datasets
                     l.OnRotationChange(this, m_rotation);
             }
         }
+
         /// <summary>
-        /// The Rotation Quaternion array. Rotation[0] == w, Rotation[1] = i, Rotation[2] = j, Rotation[3] = k
+        /// The 3D vector position (x, y, z)
         /// </summary>
-        /// <returns>The Rotation Quaternion array</returns>
+        /// <returns>The 3D Position array</returns>
         public float[] Position
         {
             get => m_position; 
@@ -206,6 +219,22 @@ namespace Sereno.Datasets
                     m_position[i] = value[i];
                 foreach(var l in m_listeners)
                     l.OnPositionChange(this, m_position);
+            }
+        }
+
+        /// <summary>
+        /// The 3D scaling factors (x, y, z)
+        /// </summary>
+        /// <returns>The 3D Scaling array</returns>
+        public float[] Scale
+        {
+            get => m_scale;
+            set
+            {
+                for(int i = 0; i < Scale.Length; i++)
+                    m_scale[i] = value[i];
+                foreach(var l in m_listeners)
+                    l.OnScaleChange(this, m_scale);
             }
         }
 

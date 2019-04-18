@@ -484,6 +484,14 @@ namespace Sereno
                 m_datasets[msg.DataID].SubDatasets[msg.SubDataID].Position = msg.Position;
         }
 
+        public void OnScaleDataset(MessageBuffer messageBuffer, ScaleDatasetMessage msg)
+        {
+            Debug.Log($"Received Scale event : {msg.Scale[0]}, {msg.Scale[1]}, {msg.Scale[2]}");
+            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID])
+                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].Scale = msg.Scale;
+        }
+
+
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
         {
             Debug.Log($"Received init headset message. Color : {msg.Color:X}, tablet connected: {msg.TabletConnected}, first connected: {msg.IsFirstConnected}");
@@ -675,6 +683,6 @@ namespace Sereno
             m_anchorImportSegments.Clear();
         }
 
-#endregion
+        #endregion
     }
 }

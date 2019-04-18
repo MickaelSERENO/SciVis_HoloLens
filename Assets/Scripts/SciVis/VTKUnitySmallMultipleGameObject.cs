@@ -55,6 +55,11 @@ namespace Sereno.SciVis
         private Vector3 m_newP;
 
         /// <summary>
+        /// The new scale received from the SmallMultiple
+        /// </summary>
+        private Vector3 m_newS;
+
+        /// <summary>
         /// Should we update the rotation quaternion?
         /// </summary>
         private bool m_updateQ = false;
@@ -63,6 +68,11 @@ namespace Sereno.SciVis
         /// Should we update the 3D position?
         /// </summary>
         private bool m_updateP = false;
+
+        /// <summary>
+        /// Should we update the 3D scaling?
+        /// </summary>
+        private bool m_updateS = false;
 
         /// <summary>
         /// Object providing the needed data
@@ -172,6 +182,15 @@ namespace Sereno.SciVis
             }        
         }
 
+        public void OnScaleChange(SubDataset dataset, float[] scale)
+        {
+            lock(this)
+            {
+                m_newS    = new Vector3(scale[0], scale[1], scale[2]);
+                m_updateS = true;
+            }
+        }
+
         void LateUpdate()
         {
             //Update the 3D texture
@@ -196,9 +215,15 @@ namespace Sereno.SciVis
                 if(m_updateP)
                     transform.localPosition = m_newP;
                 m_updateP = false;
+
                 if(m_updateQ)
                     transform.localRotation = m_newQ;
                 m_updateQ = false;
+
+                if(m_updateS)
+                    transform.localScale = m_newS;
+                m_updateS = false;
+
                 if(m_updateOutlineColor)
                     m_outline.GetComponent<MeshRenderer>().material.color = m_outlineColor;
                 m_updateOutlineColor = false;

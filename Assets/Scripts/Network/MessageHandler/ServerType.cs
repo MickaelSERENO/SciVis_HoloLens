@@ -13,5 +13,6 @@ namespace Sereno.Network.MessageHandler
         GET_ANCHOR_SEGMENT    = 6, //An anchor segment
         GET_ANCHOR_EOF        = 7, //The anchor EOF signal
         GET_SUBDATASET_OWNER  = 8, //The subdataset modification owner
+        GET_ON_SCALE_DATASET  = 9, //Scale a dataset
     }
 }
