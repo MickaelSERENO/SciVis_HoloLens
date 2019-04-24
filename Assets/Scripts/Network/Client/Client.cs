@@ -184,6 +184,18 @@ namespace Sereno.Network
             m_statusCallbacks.Remove(clbk);
         }
 
+        /// <summary>
+        /// Get the IP Address of this client
+        /// </summary>
+        /// <returns>The IP Adress if connected, null otherwise</returns>
+        public IPAddress GetIPAddress()
+        {
+            lock(this)
+                if(IsConnected())
+                    return ((IPEndPoint)m_sock.LocalEndPoint).Address;
+            return null;
+        }
+
         /******************************/
         /*****PROTECTED FUNCTIONS******/
         /******************************/

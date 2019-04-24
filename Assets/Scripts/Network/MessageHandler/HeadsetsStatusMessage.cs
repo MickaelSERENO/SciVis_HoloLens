@@ -66,7 +66,7 @@ namespace Sereno.Network.MessageHandler
 
             if(id < 6) //Position
                 m_status[headset].Position[id - 3] = value;
-            else if(id % 9 < 10) //Rotation
+            else if(id < 10) //Rotation
                 m_status[headset].Rotation[id - 6] = value;
             base.Push(value);
         }
@@ -82,8 +82,8 @@ namespace Sereno.Network.MessageHandler
             }
             else
             {
-                Int32 id = (Cursor-1)%9;
-                int headset = (Cursor-1)/9;
+                Int32 id = (Cursor-1)%10;
+                int headset = (Cursor-1)/10;
 
                 if(id == 0)
                     m_status[headset].ID = value;
@@ -101,7 +101,7 @@ namespace Sereno.Network.MessageHandler
                 return (byte)'I';
             else
             {
-                Int32 id = (Cursor-1) % 9;
+                Int32 id = (Cursor-1) % 10;
 
                 if(id < 3) //Color / ID
                     return (byte)'I';

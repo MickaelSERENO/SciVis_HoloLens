@@ -36,6 +36,7 @@
 				float2   uvDepth      : TEXCOORD2;
 				float4   vertexBis    : TEXCOORD3;
 				float3   begRayOrigin : TEXCOORD1;   //The beginning of ray origin only if in perspective mode
+				float4   endRayOrigin : TEXCOORD0;
 				float4   vertex       : SV_POSITION;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
@@ -70,7 +71,8 @@
 				if(unity_OrthoParams.w == 0.0)
 				{
 					float4 begRayOrigin = mul(float4(0, 0, 0, 1.0), UNITY_MATRIX_IT_MV);
-					o.begRayOrigin  = begRayOrigin.xyz / begRayOrigin.w;
+					o.begRayOrigin = begRayOrigin.xyz / begRayOrigin.w;
+					o.endRayOrigin = mul(o.invMVP, float4(v.vertex.x, v.vertex.y*_ProjectionParams.x, 1.0, 1.0));
 				}
 
 				return o;
@@ -159,8 +161,7 @@
 				float3 rayOrigin;
 
 				//Define start and end point 
-				float4 endRayOrigin = mul(input.invMVP, float4(input.vertexBis.x, input.vertexBis.y*_ProjectionParams.x,  1.0, 1.0));
-				endRayOrigin /= endRayOrigin.w;
+				float3 endRayOrigin = input.endRayOrigin.xyz / input.endRayOrigin.w;
 
 				//Optimization when in perspective mode
 				if(unity_OrthoParams.w == 0.0)
@@ -229,8 +230,8 @@
 				rayPos += 0.5;
 
 				//Ray marching algorithm
-				for(float i = min(maxDepthDisplacement, maxT-minT); i >= 0;
-					i -= rayStep, rayPos += rayNormal * rayStep)
+				for(float j = min(maxDepthDisplacement, maxT-minT); j >= 0;
+					j -= rayStep, rayPos += rayNormal * rayStep)
 				{
 					float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.x, rayPos.y, rayPos.z, 0.0)).rg;
 					float4 tfColor = tex2Dlod(_TFTexture,   float4(tfCoord, 0.0, 0.2));

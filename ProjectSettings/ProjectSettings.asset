@@ -515,7 +515,7 @@ PlayerSettings:
   m_MobileRenderingPath: 1
   metroPackageName: SciVisHololens
   metroPackageVersion: 1.0.0.0
-  metroCertificatePath: C:\Users\Mickael Sereno\Documents\Programs\Unity3D\SciVis_Hololens\Assets\WSATestCertificate.pfx
+  metroCertificatePath: Assets\WSATestCertificate.pfx
   metroCertificatePassword: 
   metroCertificateSubject: DefaultCompany
   metroCertificateIssuer: DefaultCompany

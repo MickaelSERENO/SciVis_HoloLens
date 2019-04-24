@@ -55,6 +55,11 @@ namespace Sereno
         /// </summary>
         const int MAX_IMPORT_ANCHOR_DATA_RETRY = 3;
 
+        /// <summary>
+        /// The headset size
+        /// </summary>
+        const float HEADSET_SIZE = 0.30f;
+
         /* Private attributes*/
         #region 
         /// <summary>
@@ -348,10 +353,10 @@ namespace Sereno
                                                                             m_headsetStatus[i].Rotation[2],
                                                                             m_headsetStatus[i].Rotation[3],
                                                                             m_headsetStatus[i].Rotation[0]);
-
+                
                 m_headsetGlyphs[i].transform.localPosition = new Vector3(m_headsetStatus[i].Position[0],
                                                                          m_headsetStatus[i].Position[1],
-                                                                         m_headsetStatus[i].Position[2]-0.15f);
+                                                                         m_headsetStatus[i].Position[2]) + m_headsetGlyphs[i].transform.forward*(-HEADSET_SIZE/2.0f); //Middle of the head
 
                 //Update the glyph color
                 m_headsetGlyphs[i].GetComponent<MeshRenderer>().material.color = new Color(((m_headsetStatus[i].Color >> 24) & 0xff)/255.0f,
@@ -387,14 +392,13 @@ namespace Sereno
             //Send camera status
             if(m_rootAnchorGO != null && m_client.IsConnected() && m_client.HeadsetConnectionSent)
             {
-
                 HeadsetUpdateData headsetData = new HeadsetUpdateData();
 
                 headsetData.Position = new float[3]{Camera.main.transform.localPosition[0] - m_rootAnchorGO.transform.localPosition[0],
                                                     Camera.main.transform.localPosition[1] - m_rootAnchorGO.transform.localPosition[1],
                                                     Camera.main.transform.localPosition[2] - m_rootAnchorGO.transform.localPosition[2]};
 
-                Quaternion rel = Quaternion.Inverse(Camera.main.transform.localRotation) * m_rootAnchorGO.transform.localRotation;
+                Quaternion rel = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * Camera.main.transform.localRotation;
                 headsetData.Rotation = new float[4]{rel[3], rel[0], rel[1], rel[2]};
 
                 m_client.SendHeadsetUpdateData(headsetData);
@@ -495,12 +499,28 @@ namespace Sereno
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
         {
             Debug.Log($"Received init headset message. Color : {msg.Color:X}, tablet connected: {msg.TabletConnected}, first connected: {msg.IsFirstConnected}");
+
+            //Remove the connection message
             if(msg.TabletConnected)
             {
                 lock(this)
                 {
                     m_textValues.UpdateTexts = true;
                     m_textValues.EnableTexts = false;
+                }
+            }
+            //Redisplay the connection message
+            else
+            {
+                lock(this)
+                {
+                    IPAddress addr = m_client.GetIPAddress();
+                    String s = DEFAULT_IP_ADDRESS_TEXT;
+                    if(addr != null)
+                        s = IPAddress.Parse(addr.ToString()).ToString();
+                    m_textValues.IPStr = s;
+                    m_textValues.UpdateTexts = true;
+                    m_textValues.EnableTexts = true;
                 }
             }
             m_clientColor = new Color32((byte)((msg.Color >> 16) & 0xff),
