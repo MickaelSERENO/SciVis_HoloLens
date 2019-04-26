@@ -2,7 +2,6 @@
 {
     Properties
     {
-		_TFTexture  ("TFTexture", 2D)   = "defaulttexture" {}
 		_TextureData("TextureData", 3D) = "defaulttexture" {}
     }
 
@@ -45,14 +44,11 @@
 			/** The Camera depth texture*/
 			UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthTexture);
 
-			/** The Transfer function texture*/
-            sampler2D _TFTexture;
-
 			/** The volume data*/
             sampler3D _TextureData;
 
 			/** The maximum sampling dimension along all axis*/
-			float _MaxDimension;
+			float _MaxDimension = 128;
 
 			v2f vert(appdata v)
 			{
@@ -68,11 +64,19 @@
 				o.invMVP    = mul(transpose(UNITY_MATRIX_IT_MV), unity_CameraInvProjection);
 				o.uvDepth   = float2(o.vertex.x, o.vertex.y*_ProjectionParams.x)*0.5 + 0.5;
 
+				//Perspective
 				if(unity_OrthoParams.w == 0.0)
 				{
 					float4 begRayOrigin = mul(float4(0, 0, 0, 1.0), UNITY_MATRIX_IT_MV);
 					o.begRayOrigin = begRayOrigin.xyz / begRayOrigin.w;
 					o.endRayOrigin = mul(o.invMVP, float4(v.vertex.x, v.vertex.y*_ProjectionParams.x, 1.0, 1.0));
+				}
+
+				//Orthographic
+				else
+				{
+					float4 begRayOrigin = mul(o.invMVP, float4(v.vertex.x, v.vertex.y*_ProjectionParams.x, -1.0, 1.0));
+					o.begRayOrigin = begRayOrigin.xyz / begRayOrigin.w;
 				}
 
 				return o;
@@ -167,10 +171,8 @@
 				if(unity_OrthoParams.w == 0.0)
 					rayOrigin = input.begRayOrigin.xyz;
 				else
-				{
-					float4 begRayOrigin = mul(input.invMVP, float4(input.vertexBis.x, input.vertexBis.y*_ProjectionParams.x, -1.0, 1.0));
-					rayOrigin = begRayOrigin.xyz / begRayOrigin.w;
-				}
+					rayOrigin = input.begRayOrigin.xyz;
+
 				float3 rayNormal = normalize(endRayOrigin.xyz - rayOrigin.xyz);
 
 				//Compute ray - cube intersections
@@ -203,9 +205,9 @@
 				if(minT == maxT)
 					minT = 0;
 
-				//compute step and maximum number of steps
-				float  rayStep = 1.0 / (1.5*_MaxDimension);
-				float3 rayPos = rayOrigin.xyz + minT * rayNormal;
+				float3 rayPos        = rayOrigin.xyz + minT * rayNormal;
+				const float rayStep = 0.50 / _MaxDimension;
+				float3 rayStepNormal = rayStep*rayNormal;
 
 				float2 uvDepth = input.uvDepth;
 				//Determine max displacement (the displacement the ray can perform) regarding the depth
@@ -217,32 +219,29 @@
 #endif
 				//Between -1 and 1.0
 				depthPos = 2.0*depthPos-1.0;
-				
-				uvDepth.y *= _ProjectionParams.x;
 
 				uvDepth = 2.0*uvDepth - 1.0;
 				float4 endRayDepth = mul(input.invMVP, float4(uvDepth, depthPos, 1.0));
 				endRayDepth /= endRayDepth.w;
 
 				float maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos)-0.01; 
-				if(maxDepthDisplacement < 0) //Apply a small epsilon
+				if (maxDepthDisplacement < 0) //Apply a small epsilon
 					discard;
+
+				//Ray marching algorithm
 				rayPos += 0.5;
 
 				//Ray marching algorithm
 				for(float j = min(maxDepthDisplacement, maxT-minT); j >= 0;
-					j -= rayStep, rayPos += rayNormal * rayStep)
+					j -= rayStep, rayPos += rayStepNormal)
 				{
-					float2 tfCoord = tex3Dlod(_TextureData, float4(rayPos.x, rayPos.y, rayPos.z, 0.0)).rg;
-					float4 tfColor = tex2Dlod(_TFTexture,   float4(tfCoord, 0.0, 0.2));
+					float4 tfColor = tex3Dlod(_TextureData, float4(rayPos.x, rayPos.y, rayPos.z, 0.0));
 
-					tfColor.a /= 1.5; //Divide by the number of rays position we are computing in addition (see rayStep computation)
-
-					fragColor.xyz = fragColor.xyz + (1 - fragColor.a)*tfColor.a*tfColor.xyz;
-					fragColor.a = fragColor.a + (1 - fragColor.a)*tfColor.a;
-
+					tfColor.a *= 0.5; //Apply the modification of raystep for stability
+					float4 col = float4(tfColor.xyz, 1.0);
+					fragColor = fragColor + (1 - fragColor.a)*tfColor.a*col;
 					//If enough contribution
-					if (fragColor.a > 0.90)
+					if (fragColor.a > 0.95)
 					{
 						fragColor.a = 1.0;
 						return fragColor;

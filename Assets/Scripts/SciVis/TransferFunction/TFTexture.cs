@@ -14,11 +14,6 @@ namespace Sereno.SciVis
         private byte[]     m_colors;
 
         /// <summary>
-        /// The color mode to apply
-        /// </summary>
-        public ColorMode m_mode;
-
-        /// <summary>
         /// The Texture2D created
         /// </summary>
         public Texture2D m_texture;
@@ -34,11 +29,9 @@ namespace Sereno.SciVis
         /// <param name="tf">The Transfer Function to use</param>
         /// <param name="textureDim">The texture dimension wanted</param>
         /// <param name="mode">The ColorMode to apply</param>
-        public TFTexture(TransferFunction tf, Vector2Int textureDim, ColorMode mode)
+        public TFTexture(TransferFunction tf, Vector2Int textureDim)
         {
-            m_mode    = mode;
             m_tf      = tf;
-
             m_dimensions = textureDim;
         }
 
@@ -58,7 +51,7 @@ namespace Sereno.SciVis
             for(int i = 0; i < m_colors.Length/4; i++)
             {
                 Array.Copy(values, padding*i, v, 0, padding);
-                Color iCol = SciVisColor.GenColor(m_mode, m_tf.ComputeColor(v));
+                Color iCol = SciVisColor.GenColor(m_tf.ColorMode, m_tf.ComputeColor(v));
                 m_colors[4*i]   = (byte)(iCol.r*255);
                 m_colors[4*i+1] = (byte)(iCol.g*255);
                 m_colors[4*i+2] = (byte)(iCol.b*255);
@@ -85,9 +78,6 @@ namespace Sereno.SciVis
         /// Get the Texture2D created
         /// </summary>
         public Texture2D Texture {get => m_texture;}
-        /// <sum>        /// The ColorMode in use. When set, use "ComputeTexture" to update the Texture
-        /// </summary>
-        public ColorMode ColorMode {get => m_mode; set => m_mode = value;}
 
         /// <summary>
         /// Get the TransferFunction

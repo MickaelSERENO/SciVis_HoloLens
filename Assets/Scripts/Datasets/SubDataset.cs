@@ -17,8 +17,14 @@ namespace Sereno.Datasets
         /// <param name="dataset">The subdataset being modified</param>
         /// <param name="min">The minimum clamping color value of the sub dataset</param>
         /// <param name="max">The maximum clamping color value of the sub dataset</param>
-        /// <param name="mode">The new color mode to apply</param>
-        void OnColorRangeChange(SubDataset dataset, float min, float max, ColorMode mode);
+        void OnColorRangeChange(SubDataset dataset, float min, float max);
+
+        /// <summary>
+        /// Called when the transfer function attached changed
+        /// </summary>
+        /// <param name="dataset">The subdataset being modified</param>
+        /// <param name="tf">The new transfer function</param>
+        void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf);
 
         /// <summary>
         /// Called when the rotation quaternion changed
@@ -67,11 +73,6 @@ namespace Sereno.Datasets
         protected float     m_maxClamp  = 1.0f;
 
         /// <summary>
-        /// The ColorMode to apply for this subdataset
-        /// </summary>
-        protected ColorMode m_colorMode = ColorMode.RAINBOW;
-
-        /// <summary>
         /// The minimum amplitude of this dataset
         /// </summary>
         protected float m_minAmplitude = 0.0f;
@@ -84,7 +85,7 @@ namespace Sereno.Datasets
         /// <summary>
         /// The transfer function to use
         /// </summary>
-        protected TFTexture m_tfTexture;
+        protected TransferFunction m_tf = null;
 
         /// <summary>
         /// The Owner ID
@@ -126,15 +127,13 @@ namespace Sereno.Datasets
         /// </summary>
         /// <param name="min">The minimum clamping (values below that should be clamped)</param>
         /// <param name="max">The maximum clamping (values above that should be clamped)</param>
-        /// <param name="mode">The ColorMode to apply</param>
-        public void SetColor(float min, float max, ColorMode mode)
+        public void SetColorRange(float min, float max)
         {
             m_minClamp  = min;
             m_maxClamp  = max;
-            m_colorMode = mode;
 
             foreach(var l in m_listeners)
-                l.OnColorRangeChange(this, min, max, mode);
+                l.OnColorRangeChange(this, min, max);
         }
 
         /// <summary>
@@ -163,17 +162,26 @@ namespace Sereno.Datasets
         /// <summary>
         /// The minimum clamping applied (values below that should be clamped)
         /// </summary>
-        public float MinClamp {get => m_minClamp; set => SetColor(value, m_maxClamp, m_colorMode);}
+        public float MinClamp {get => m_minClamp; set => SetColorRange(value, m_maxClamp);}
 
         /// <summary>
         /// The maximum clamping applied (values above that should be clamped)</param>
         /// </summary>
-        public float MaxClamp { get => m_maxClamp; set => SetColor(m_minClamp, value, m_colorMode); }
+        public float MaxClamp { get => m_maxClamp; set => SetColorRange(m_minClamp, value); }
 
         /// <summary>
-        /// The ColorMode applied
+        /// The Transfer function bound to this SubDataset. Can be null (used then another algorithm, e.g, a grayscale algorithm)
         /// </summary>
-        public ColorMode ColorMode { get => m_colorMode; set => SetColor(m_minClamp, m_minClamp, value); }
+        public TransferFunction TransferFunction
+        {
+            get => m_tf;
+            set
+            {
+                m_tf = value;
+                foreach(var l in m_listeners)
+                    l.OnTransferFunctionChange(this, m_tf);
+            }
+        }
 
         /// <summary>
         /// The minimum amplitude found in this SubDataset
@@ -184,12 +192,7 @@ namespace Sereno.Datasets
         /// The maximum ampliude found in this SubDataset
         /// </summary>
         public float MaxAmplitude { get => m_maxAmplitude; set => m_maxAmplitude = value; }
-
-        /// <summary>
-        /// The Transfer function bound to this object
-        /// </summary>
-        public TFTexture TFTexture {get => m_tfTexture; set => m_tfTexture = value;}
-
+        
         /// <summary>
         /// The Rotation Quaternion array. Rotation[0] == w, Rotation[1] = i, Rotation[2] = j, Rotation[3] = k
         /// </summary>

@@ -145,7 +145,7 @@ namespace Sereno.SciVis
             m_outlineColor = m_dataProvider.GetHeadsetColor(-1);
         }
 
-        public void OnColorRangeChange(SubDataset dataset, float min, float max, ColorMode mode)
+        public void OnColorRangeChange(SubDataset dataset, float min, float max)
         {
         }
 
@@ -191,6 +191,11 @@ namespace Sereno.SciVis
             }
         }
 
+        public void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)
+        {
+            //TODO
+        }
+
         void LateUpdate()
         {
             //Update the 3D texture
@@ -198,12 +203,11 @@ namespace Sereno.SciVis
             {
                 if(m_sm.TextureColor != null)
                 {
-                    m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGFloat, true);
-                    m_texture3D.wrapModeU = TextureWrapMode.Clamp;
-                    m_texture3D.wrapModeV = TextureWrapMode.Clamp;
-                    m_texture3D.wrapModeW = TextureWrapMode.Clamp;
-
-                    m_texture3D.SetPixels(m_sm.TextureColor);
+                    m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.ARGB32, false);
+                    m_texture3D.wrapModeU  = TextureWrapMode.Clamp;
+                    m_texture3D.wrapModeV  = TextureWrapMode.Clamp;
+                    m_texture3D.wrapModeW  = TextureWrapMode.Clamp;
+                    m_texture3D.SetPixels32(m_sm.TextureColor);
                     m_texture3D.Apply();
                     m_sm.TextureColor = null;
                 }
@@ -239,7 +243,6 @@ namespace Sereno.SciVis
 
         private void UpdateMaterial()
         {
-            m_material.SetTexture("_TFTexture", m_sm.VTKSubDataset.TFTexture.Texture);
             m_material.SetTexture("_TextureData", m_texture3D);
             m_material.SetFloat("_MaxDimension", Math.Max(Math.Max(m_sm.Dimensions.x, m_sm.Dimensions.y), m_sm.Dimensions.z));
 

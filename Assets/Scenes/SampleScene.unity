@@ -463,7 +463,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   VTKSMGameObject: {fileID: 4757634199374474188, guid: 640e0d42fa907e4429749e5e66efad2b,
     type: 3}
-  DesiredVTKDensity: 64
+  DesiredVTKDensity: 128
   IPHeaderText: {fileID: 1485060047}
   IPValueText: {fileID: 509925753}
   UserEntityColor: {fileID: 4150286224854448785, guid: 67cc0d25ddf97f7409bfa82fdbcdfb42,

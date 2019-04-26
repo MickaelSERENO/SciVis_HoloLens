@@ -205,6 +205,7 @@ namespace Sereno
             m_client = new VFVClient(this);
             m_client.AddListener(new ClientStatusCallback(OnConnectionStatus));
             m_client.Connect();
+
 #if TEST
             AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
             addVTKMsg.DataID = 0;
@@ -311,14 +312,13 @@ namespace Sereno
             while(m_vtkDatasetsLoaded.Count > 0)
             {
                 VTKDataset d = m_vtkDatasetsLoaded.Dequeue();
-                for(int i = 0; i < d.SubDatasets.Count; i++)
-                    d.GetSubDataset(i).UpdateGraphics();
                 m_datasets.Add(d.ID, d);
             }
             
             while(m_vtkSMLoaded.Count > 0)
             {
                 VTKUnitySmallMultiple sm = m_vtkSMLoaded.Dequeue();
+                sm.VTKSubDataset.TransferFunction = new TriangularGTF(new float[] { 0.5f, 0.5f }, new float[] { 0.5f, 0.5f }, 1.0f);
                 var gameObject = Instantiate(VTKSMGameObject);
                 gameObject.transform.parent = transform;
                 gameObject.Init(sm, this);
