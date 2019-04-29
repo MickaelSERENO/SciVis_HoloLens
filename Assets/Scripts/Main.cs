@@ -318,7 +318,8 @@ namespace Sereno
             while(m_vtkSMLoaded.Count > 0)
             {
                 VTKUnitySmallMultiple sm = m_vtkSMLoaded.Dequeue();
-                sm.VTKSubDataset.TransferFunction = new TriangularGTF(new float[] { 0.5f, 0.5f }, new float[] { 0.5f, 0.5f }, 1.0f);
+                TriangularGTF gtf = new TriangularGTF(new float[] { 0.5f, 0.5f }, new float[] { 0.5f, 0.5f }, 1.0f);
+                sm.VTKSubDataset.TransferFunction = gtf;
                 var gameObject = Instantiate(VTKSMGameObject);
                 gameObject.transform.parent = transform;
                 gameObject.Init(sm, this);

@@ -53,16 +53,14 @@ namespace Sereno.SciVis
                 return -1;
 
             float r0 = 1.0f/grad;
-            float[] r1 = new float[values.Length-1];
-            for(uint i = 0; i < values.Length-1; i++)
-                r1[i] = 0.0f;
             float r1Mag = 0;
 
             for(uint i = 0; i < values.Length-1; i++)
             {
-                r1[i] = r0*m_scale[i]*(values[i] - m_center[i]);
-                r1Mag += r1[i]*r1[i];
+                float r1 = r0*m_scale[i]*(values[i] - m_center[i]);
+                r1Mag += r1*r1;
             }
+
             return (float)Math.Min(m_alphaMax*Math.Exp(-r1Mag), 1.0f);
         }
 
@@ -70,10 +68,17 @@ namespace Sereno.SciVis
         /// Compute the t parameter used for Colors
         /// </summary>
         /// <param name="values">The values to take account of</param>
-        /// <returns>values[0]</returns>
+        /// <returns>length(values)/(values.length) with values a vector where gradient is discarded (i.e, we take into account indices from 0 to values.length - 2) </returns>
         public override float ComputeColor(float[] values)
         {
-            return values[0];
+            if(values.Length == 1)
+                return values[0];
+
+            float mag = 0;
+            for(int i = 0; i < values.Length-1; i++)
+                mag += values[i]*values[i];
+            mag = (float)(Math.Sqrt(mag/(values.Length-1)));
+            return mag;
         }
 
         /// <summary>

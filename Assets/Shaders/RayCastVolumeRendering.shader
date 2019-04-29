@@ -9,7 +9,6 @@
     {
 		Tags{ "Queue" = "Transparent" "RenderType" = "Transparent" }
 		
-		LOD 100
 		Lighting Off
 		Cull Off
 		ZWrite Off
@@ -184,8 +183,8 @@
 				int startValidity = 0;
 				for (; !tValidity[startValidity] && startValidity < 6; startValidity++);
 
-				if (startValidity == 6)
-					discard;
+				if(startValidity == 6)
+					return fragColor;
 
 				//If yes, look at the starting and end points
 				float minT = t[startValidity];
@@ -206,7 +205,7 @@
 					minT = 0;
 
 				float3 rayPos        = rayOrigin.xyz + minT * rayNormal;
-				const float rayStep = 0.50 / _MaxDimension;
+				const float rayStep  = 1.0 / _MaxDimension;
 				float3 rayStepNormal = rayStep*rayNormal;
 
 				float2 uvDepth = input.uvDepth;
@@ -219,27 +218,25 @@
 #endif
 				//Between -1 and 1.0
 				depthPos = 2.0*depthPos-1.0;
+				uvDepth  = 2.0*uvDepth -1.0;
 
-				uvDepth = 2.0*uvDepth - 1.0;
 				float4 endRayDepth = mul(input.invMVP, float4(uvDepth, depthPos, 1.0));
 				endRayDepth /= endRayDepth.w;
 
-				float maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos)-0.01; 
-				if (maxDepthDisplacement < 0) //Apply a small epsilon
-					discard;
+				float maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos); 
+				if (maxDepthDisplacement < 0)
+					return fragColor;
 
-				//Ray marching algorithm
 				rayPos += 0.5;
-
 				//Ray marching algorithm
-				for(float j = min(maxDepthDisplacement, maxT-minT); j >= 0;
-					j -= rayStep, rayPos += rayStepNormal)
+				for(float j = min(maxDepthDisplacement, maxT-minT); j >= 0; j -= rayStep, rayPos += rayStepNormal)
 				{
-					float4 tfColor = tex3Dlod(_TextureData, float4(rayPos.x, rayPos.y, rayPos.z, 0.0));
+					float4 tfColor = tex3Dlod(_TextureData, float4(rayPos.xyz, 0.0));
 
-					tfColor.a *= 0.5; //Apply the modification of raystep for stability
+					//tfColor.a *= 1.0 ; //Apply the modification of raystep for stability
 					float4 col = float4(tfColor.xyz, 1.0);
 					fragColor = fragColor + (1 - fragColor.a)*tfColor.a*col;
+					
 					//If enough contribution
 					if (fragColor.a > 0.95)
 					{

@@ -103,8 +103,8 @@ namespace Sereno.SciVis
             //Determine the minimum and maximum values
             float maxVal = float.MinValue;
             float minVal = float.MaxValue;
-            m_minGrad    = minVal;
-            m_maxGrad    = maxVal;
+            m_minGrad    = float.MaxValue;
+            m_maxGrad    = float.MinValue;
 
             //Amplitude values
             for(UInt32 i = 0; i < val.NbValues; i++)
@@ -128,25 +128,32 @@ namespace Sereno.SciVis
             ComputeValues(descPts, fieldValue, val, mask);
 
             //Gradient values
-            float[] minMax = new float[2];
-            object lockObject = new object();
-            Parallel.For(1, m_dimensions[2]-1,
-                () => new float[2] { minVal, maxVal },
+            //Compute maximum and minimum gradient values
+            /*object lockObject = new object(); //This if used as a lock
+
+            Parallel.For(1, descPts.Size[2]-1,
+                () => new float[2] { float.MaxValue, float.MinValue },
                 (k, loopState, partialRes) =>
                 {
-                    for(UInt32 j = 1; j < m_dimensions[1]-1; j++)
-                        for(UInt32 i = 1; i < m_dimensions[0]-1; i++)
+                    for(UInt32 j = 1; j < descPts.Size[1]-1; j++)
+                        for(UInt32 i = 1; i < descPts.Size[0]-1; i++)
                         {
-                            Int64 indX1 = (i-1)+m_dimensions[0]*j+m_dimensions[1]*m_dimensions[0]*k;
-                            Int64 indX2 = (i+1)+m_dimensions[0]*j+m_dimensions[1]*m_dimensions[0]*k;
-                            Int64 indY1 = i+m_dimensions[0]*(j-1)+m_dimensions[1]*m_dimensions[0]*k;
-                            Int64 indY2 = i+m_dimensions[0]*(j+1)+m_dimensions[1]*m_dimensions[0]*k;
-                            Int64 indZ1 = i+m_dimensions[0]*j+m_dimensions[1]*m_dimensions[0]*(k-1);
-                            Int64 indZ2 = i+m_dimensions[0]*j+m_dimensions[1]*m_dimensions[0]*(k+1);
+                            UInt64 fieldOff = (UInt64)(i + j*descPts.Size[0] + k*descPts.Size[1]*descPts.Size[0]);
 
-                            Vector3 grad = new Vector3((float)(m_values[indX1] - m_values[indX2])/(2.0f*m_spacing[0]),
-                                                       (float)(m_values[indY1] - m_values[indY2])/(2.0f*m_spacing[1]),
-                                                       (float)(m_values[indZ1] - m_values[indZ2])/(2.0f*m_spacing[2]));
+                            //Check the mask
+                            if(mask != null && *(mask + fieldOff) == 0)
+                                continue;
+
+                            UInt64 indX1 = (UInt64)((i-1)+descPts.Size[0]*j+descPts.Size[1]*descPts.Size[0]*k);
+                            UInt64 indX2 = (UInt64)((i+1)+descPts.Size[0]*j+descPts.Size[1]*descPts.Size[0]*k);
+                            UInt64 indY1 = (UInt64)(i+descPts.Size[0]*(j-1)+descPts.Size[1]*descPts.Size[0]*k);
+                            UInt64 indY2 = (UInt64)(i+descPts.Size[0]*(j+1)+descPts.Size[1]*descPts.Size[0]*k);
+                            UInt64 indZ1 = (UInt64)(i+descPts.Size[0]*j+descPts.Size[1]*descPts.Size[0]*(k-1));
+                            UInt64 indZ2 = (UInt64)(i+descPts.Size[0]*j+descPts.Size[1]*descPts.Size[0]*(k+1));
+
+                            Vector3 grad = new Vector3((float)((val.ReadAsDouble(fieldValue.NbValuesPerTuple*indX1) - val.ReadAsDouble(fieldValue.NbValuesPerTuple*indX2))/(2.0f*descPts.Spacing[0])),
+                                                       (float)((val.ReadAsDouble(fieldValue.NbValuesPerTuple*indY1) - val.ReadAsDouble(fieldValue.NbValuesPerTuple*indY2))/(2.0f*descPts.Spacing[1])),
+                                                       (float)((val.ReadAsDouble(fieldValue.NbValuesPerTuple*indZ1) - val.ReadAsDouble(fieldValue.NbValuesPerTuple*indZ2))/(2.0f*descPts.Spacing[2])));
 
                             float gradMag = grad.magnitude;
                             if(gradMag < partialRes[0])
@@ -164,7 +171,7 @@ namespace Sereno.SciVis
                         m_minGrad = Math.Min(m_minGrad, partialRes[0]);
                         m_maxGrad = Math.Max(m_maxGrad, partialRes[1]);
                     }
-                });
+                });*/
             //Compute the gradient
             ComputeGradients(descPts, fieldValue, val, mask);
             UpdateRangeColor(m_vtkSubDataset.MinClamp, m_vtkSubDataset.MaxClamp);
@@ -213,7 +220,8 @@ namespace Sereno.SciVis
                         float a = tf.ComputeAlpha(ind);
 
                         Color c   = SciVisColor.GenColor(tf.ColorMode, t);
-                        colors[i] = new Color32((byte)(255.0f*c.r), (byte)(255.0f*c.b), (byte)(255.0f*c.g), (byte)(255.0f*a));
+                        colors[i] = c;
+                        colors[i].a = (byte)(255.0f*a);
                     }
                 });
             }
@@ -252,7 +260,7 @@ namespace Sereno.SciVis
                         //Value
                         float c = (float)val.ReadAsDouble(fieldOff*fieldValue.NbValuesPerTuple);
                         c = (c - minVal) / (maxVal-minVal);
-                        m_values[colorValueOff] = Math.Min(Math.Max(c, 0), 1.0f);
+                        m_values[colorValueOff] = c;
                     }
                 }
             });
@@ -268,12 +276,68 @@ namespace Sereno.SciVis
         private unsafe void ComputeGradients(VTKStructuredPoints descPts, VTKFieldValue fieldValue, VTKValue val, byte* mask)
         {
             //When gradient is computable
+            object lockObject = new object();
+            Parallel.For(1,m_dimensions[2]-1,
+                () => new float[2] { float.MaxValue, float.MinValue },
+                (k, loopState, partialRes) =>
+                {
+                    for(UInt32 j = 1; j < m_dimensions.y-1; j++)
+                    {
+                        for(UInt32 i = 1; i < m_dimensions.x-1; i++)
+                        {
+                            UInt64 fieldOff      = (UInt64)(i*m_offset.x + j*m_offset.y + k*m_offset.z);
+                            UInt64 colorValueOff = (UInt64)(i+m_dimensions.x*j+m_dimensions.x*m_dimensions.y*k);
+
+                            //Check the mask
+                            if(mask != null && *(mask + fieldOff) == 0)
+                            {
+                                m_grads[colorValueOff]  = 0.0f;
+                                continue;
+                            }
+
+                            //Gradient
+                            UInt64 indX1 = colorValueOff-1;
+                            UInt64 indX2 = colorValueOff+1;
+                            UInt64 indY1 = colorValueOff - (UInt64)(m_dimensions[0]);
+                            UInt64 indY2 = colorValueOff + (UInt64)(m_dimensions[0]);
+                            UInt64 indZ1 = colorValueOff - (UInt64)(m_dimensions[1]*m_dimensions[0]);
+                            UInt64 indZ2 = colorValueOff + (UInt64)(m_dimensions[1]*m_dimensions[0]);
+
+                            Vector3 grad = new Vector3((float)(m_values[indX2] - m_values[indX1])/(2.0f*m_spacing[0]),
+                                                       (float)(m_values[indY2] - m_values[indY1])/(2.0f*m_spacing[1]),
+                                                       (float)(m_values[indZ2] - m_values[indZ1])/(2.0f*m_spacing[2]));
+
+                            m_grads[colorValueOff] = grad.magnitude;
+
+                            float gradMag = grad.magnitude;
+                            if(gradMag < partialRes[0])
+                                partialRes[0] = gradMag;
+                            if(gradMag > partialRes[1])
+                                partialRes[1] = gradMag;
+                        }
+                    }
+                    return partialRes;
+                },
+                (partialRes) =>
+                {
+                    lock(lockObject)
+                    {
+                        m_minGrad = Math.Min(m_minGrad, partialRes[0]);
+                        m_maxGrad = Math.Max(m_maxGrad, partialRes[1]);
+                    }
+                });
+
             Parallel.For(1, m_dimensions.z-1, k => 
             {
                 for(UInt32 j = 1; j < m_dimensions.y-1; j++)
                 {
                     for(UInt32 i = 1; i < m_dimensions.x-1; i++)
                     {
+                        UInt64 colorValueOff = (UInt64)(i+m_dimensions.x*j+m_dimensions.x*m_dimensions.y*k);
+                        m_grads[colorValueOff] = m_grads[colorValueOff]/m_maxGrad;
+
+                        //This was based on maxGrad == maxGrad in the whole field
+                        /*
                         UInt64 fieldOff      = (UInt64)(i*m_offset.x + j*m_offset.y + k*m_offset.z);
                         UInt64 colorValueOff = (UInt64)(i+m_dimensions.x*j+m_dimensions.x*m_dimensions.y*k);
 
@@ -285,18 +349,18 @@ namespace Sereno.SciVis
                         }
 
                         //Gradient
-                        Int64 indX1 = (i-1) + m_dimensions[0]*j     + m_dimensions[1]*m_dimensions[0]*k;
-                        Int64 indX2 = (i+1) + m_dimensions[0]*j     + m_dimensions[1]*m_dimensions[0]*k;
-                        Int64 indY1 = i     + m_dimensions[0]*(j-1) + m_dimensions[1]*m_dimensions[0]*k;
-                        Int64 indY2 = i     + m_dimensions[0]*(j+1) + m_dimensions[1]*m_dimensions[0]*k;
-                        Int64 indZ1 = i     + m_dimensions[0]*j     + m_dimensions[1]*m_dimensions[0]*(k-1);
-                        Int64 indZ2 = i     + m_dimensions[0]*j     + m_dimensions[1]*m_dimensions[0]*(k+1);
+                        UInt64 indX1 = colorValueOff-1;
+                        UInt64 indX2 = colorValueOff+1;
+                        UInt64 indY1 = colorValueOff - (UInt64)(m_dimensions[0]);
+                        UInt64 indY2 = colorValueOff + (UInt64)(m_dimensions[0]);
+                        UInt64 indZ1 = colorValueOff - (UInt64)(m_dimensions[1]*m_dimensions[0]);
+                        UInt64 indZ2 = colorValueOff + (UInt64)(m_dimensions[1]*m_dimensions[0]);
 
                         Vector3 grad = new Vector3((float)(m_values[indX2] - m_values[indX1])/(2.0f*m_spacing[0]),
                                                    (float)(m_values[indY2] - m_values[indY1])/(2.0f*m_spacing[1]),
                                                    (float)(m_values[indZ2] - m_values[indZ1])/(2.0f*m_spacing[2]));
 
-                        m_grads[colorValueOff] = Math.Min((float)grad.magnitude/m_maxGrad, 1.0f);
+                        m_grads[colorValueOff] = grad.magnitude/m_maxGrad;*/
                     }
                 }
             });
