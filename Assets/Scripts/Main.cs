@@ -53,12 +53,17 @@ namespace Sereno
         /// <summary>
         /// Maximum number of retry for importing anchor data
         /// </summary>
-        const int MAX_IMPORT_ANCHOR_DATA_RETRY = 3;
+        const int MAX_IMPORT_ANCHOR_DATA_RETRY = 5;
 
         /// <summary>
         /// The headset size
         /// </summary>
-        const float HEADSET_SIZE = 0.30f;
+        const float HEADSET_SIZE = 0.20f;
+
+        /// <summary>
+        /// Offset to apply for glyphs to be put on top of the head
+        /// </summary>
+        const float HEADSET_TOP = 0.15f;
 
         /* Private attributes*/
         #region 
@@ -222,54 +227,39 @@ namespace Sereno
         /// </summary>
         private void HandleAnchor()
         {
-            lock(this)
+            //Export the anchor coordinate system
+            if(m_anchorCommunication == AnchorCommunication.EXPORT)
             {
-                //Export the anchor coordinate system
-                if(m_anchorCommunication == AnchorCommunication.EXPORT)
-                {
 #if !UNITY_EDITOR
-                    RecreateRootAnchorGO();
+                RecreateRootAnchorGO();
 
-                    m_transferBatch = new WorldAnchorTransferBatch();
-                    m_transferBatch.AddWorldAnchor("rootAnchor", m_rootAnchorGO.GetComponent<UnityEngine.XR.WSA.WorldAnchor>());
+                m_transferBatch = new WorldAnchorTransferBatch();
+                m_transferBatch.AddWorldAnchor("rootAnchor", m_rootAnchorGO.GetComponent<UnityEngine.XR.WSA.WorldAnchor>());
 
-                    WorldAnchorTransferBatch.ExportAsync(m_transferBatch, OnExportDataAvailable, OnExportComplete);
+                WorldAnchorTransferBatch.ExportAsync(m_transferBatch, OnExportDataAvailable, OnExportComplete);
 #endif
-                    m_anchorCommunication = AnchorCommunication.NONE;
-                }
+                m_anchorCommunication = AnchorCommunication.NONE;
+            }
 
-                //Import the incoming data segment
-                else if(m_anchorCommunication == AnchorCommunication.IMPORT)
-                {
-                    Debug.Log("Finish importing data");
+            //Import the incoming data segment
+            else if(m_anchorCommunication == AnchorCommunication.IMPORT)
+            {
+                Debug.Log("Finish importing data");
+                m_anchorCommunication   = AnchorCommunication.NONE;
 #if !UNITY_EDITOR
-                    if(m_importAnchorData == null)
-                    {
-                        m_importAnchorData = new byte[m_importAnchorSize];
-                        long i = 0;
-                        while(m_anchorImportSegments.Count > 0)
-                        {
-                            byte[] seg = m_anchorImportSegments.Dequeue();
-                            seg.CopyTo(m_importAnchorData, i);
-                            i+=seg.Length;
-                        }
-                    }
-
-                    if(m_importAnchorDataRetry == 0)
-                    {
-                        m_importAnchorDataRetry = MAX_IMPORT_ANCHOR_DATA_RETRY;
-                        m_importAnchorData = null;
-                        m_anchorImportSegments.Clear();
-                    }
-                    else 
-                    {
-                        m_importAnchorDataRetry--;
-                        WorldAnchorTransferBatch.ImportAsync(m_importAnchorData, OnImportComplete);
-                    }
+                m_importAnchorData = new byte[m_importAnchorSize];
+                long i = 0;
+                while(m_anchorImportSegments.Count > 0)
+                {
+                    byte[] seg = m_anchorImportSegments.Dequeue();
+                    seg.CopyTo(m_importAnchorData, i);
+                    i+=seg.Length;
+                }
+                
+                WorldAnchorTransferBatch.ImportAsync(m_importAnchorData, OnImportComplete);
 #else
-                    m_anchorImportSegments.Clear();
+                m_anchorImportSegments.Clear();
 #endif
-                }
             }
         }
 
@@ -290,7 +280,7 @@ namespace Sereno
                 {
                     if(m_textValues.IPStr.Length > 0)
                     {
-                        IPHeaderText.text = "Headset IP adress:";
+                        IPHeaderText.text = "Headset IP address:";
                         IPValueText.text  = m_textValues.IPStr;
                     }
                     else
@@ -342,6 +332,13 @@ namespace Sereno
                 m_headsetGlyphs.Add(go);
             }
 
+            //Remove the excedant
+            while(m_headsetStatus.Count < m_headsetGlyphs.Count)
+            {
+                Destroy(m_headsetGlyphs[m_headsetGlyphs.Count-1]);
+                m_headsetGlyphs.RemoveAt(m_headsetGlyphs.Count-1);
+            }
+
             //hide the useless ones
             for(int i = m_headsetStatus.Count; i < m_headsetGlyphs.Count; i++)
                 m_headsetGlyphs[i].SetActive(false);
@@ -357,14 +354,14 @@ namespace Sereno
                 
                 m_headsetGlyphs[i].transform.localPosition = new Vector3(m_headsetStatus[i].Position[0],
                                                                          m_headsetStatus[i].Position[1],
-                                                                         m_headsetStatus[i].Position[2]) + m_headsetGlyphs[i].transform.forward*(-HEADSET_SIZE/2.0f); //Middle of the head
+                                                                         m_headsetStatus[i].Position[2]) + m_headsetGlyphs[i].transform.forward*(-HEADSET_SIZE/2.0f) + //Middle of the head
+                                                                                                           m_headsetGlyphs[i].transform.up*(HEADSET_TOP);  //Top of the head
 
                 //Update the glyph color
-                m_headsetGlyphs[i].GetComponent<MeshRenderer>().material.color = new Color(((m_headsetStatus[i].Color >> 24) & 0xff)/255.0f,
-                                                                                            ((m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
-                                                                                            ((m_headsetStatus[i].Color >> 8)  & 0xff)/255.0f);
-
-
+                m_headsetGlyphs[i].GetComponent<MeshRenderer>().material.color = new Color( ((byte)(m_headsetStatus[i].Color >> 24) & 0xff)/255.0f,
+                                                                                            ((byte)(m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
+                                                                                            ((byte)(m_headsetStatus[i].Color >> 8)  & 0xff)/255.0f);
+                
                 //Update the glyph shape
                 MeshFilter mf = m_headsetGlyphs[i].GetComponent<MeshFilter>();
                 switch(m_headsetStatus[i].CurrentAction)
@@ -395,9 +392,13 @@ namespace Sereno
             {
                 HeadsetUpdateData headsetData = new HeadsetUpdateData();
 
-                headsetData.Position = new float[3]{Camera.main.transform.localPosition[0] - m_rootAnchorGO.transform.localPosition[0],
-                                                    Camera.main.transform.localPosition[1] - m_rootAnchorGO.transform.localPosition[1],
-                                                    Camera.main.transform.localPosition[2] - m_rootAnchorGO.transform.localPosition[2]};
+                Vector3 position = new Vector3(Camera.main.transform.position[0] - m_rootAnchorGO.transform.position[0],
+                                               Camera.main.transform.position[1] - m_rootAnchorGO.transform.position[1],
+                                               Camera.main.transform.position[2] - m_rootAnchorGO.transform.position[2]);
+
+                headsetData.Position = new float[3] {Vector3.Dot(position, m_rootAnchorGO.transform.right),
+                                                     Vector3.Dot(position, m_rootAnchorGO.transform.up),
+                                                     Vector3.Dot(position, m_rootAnchorGO.transform.forward)};
 
                 Quaternion rel = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * Camera.main.transform.localRotation;
                 headsetData.Rotation = new float[4]{rel[3], rel[0], rel[1], rel[2]};
@@ -575,9 +576,9 @@ namespace Sereno
                 {
                     foreach(HeadsetStatus status in m_headsetStatus)
                         if(status.ID == headsetID)
-                            return new Color(((status.Color >> 24) & 0xff)/255.0f,
-                                             ((status.Color >> 16) & 0xff)/255.0f,
-                                             ((status.Color >> 8)  & 0xff)/255.0f);
+                            return new Color(((byte)(status.Color >> 24) & 0xff)/255.0f,
+                                             ((byte)(status.Color >> 16) & 0xff)/255.0f,
+                                             ((byte)(status.Color >> 8)  & 0xff)/255.0f);
 
                     return new Color(0.0f, 0.0f, 1.0f);
                 }
@@ -636,20 +637,23 @@ namespace Sereno
         private void RecreateRootAnchorGO()
         {
             //Initial the Anchor game object
-            if(m_rootAnchorGO != null)
+            lock(this)
             {
-                transform.parent = null;
-                Destroy(m_rootAnchorGO);
+                if(m_rootAnchorGO != null)
+                {
+                    transform.parent = null;
+                    Destroy(m_rootAnchorGO);
+                }
+
+                //Create the GameObject and attach the transfer batch
+                m_rootAnchorGO = new GameObject();
+                m_rootAnchorGO.AddComponent<UnityEngine.XR.WSA.WorldAnchor>();
+
+                transform.parent = m_rootAnchorGO.transform;
+                transform.localPosition = new Vector3(0, 0, 0);
+                transform.localRotation = Quaternion.identity;
+                transform.localScale    = new Vector3(1, 1, 1);
             }
-
-            //Create the GameObject and attach the transfer batch
-            m_rootAnchorGO = new GameObject();
-            m_rootAnchorGO.AddComponent<UnityEngine.XR.WSA.WorldAnchor>();
-
-            transform.parent = m_rootAnchorGO.transform;
-            transform.localPosition = new Vector3(0, 0, 0);
-            transform.localRotation = Quaternion.identity;
-            transform.localScale    = new Vector3(1, 1, 1);
         }
 
         /* Anchoring import/export callbacks */
@@ -670,11 +674,6 @@ namespace Sereno
         private void OnExportComplete(SerializationCompletionReason completionReason)
         {
             m_client.SendAnchoringDataStatus(completionReason == SerializationCompletionReason.Succeeded);
-            lock(this)
-            {
-                m_transferBatch.Dispose();
-                m_transferBatch = null;
-            }
         }
 
         /// <summary>
@@ -688,6 +687,16 @@ namespace Sereno
             if(completionReason != SerializationCompletionReason.Succeeded)
             {
                 Debug.LogWarning("Error, could not import anchoring data... " + completionReason);
+                if(m_importAnchorDataRetry > 0)
+                {
+                    m_importAnchorDataRetry--;
+                    WorldAnchorTransferBatch.ImportAsync(m_importAnchorData, OnImportComplete);
+                }
+                else
+                {
+                    m_importAnchorData      = null;
+                    m_importAnchorDataRetry = MAX_IMPORT_ANCHOR_DATA_RETRY;
+                }
                 return;
             }
 
@@ -697,7 +706,6 @@ namespace Sereno
 
             //Lock the object
             deserializedTransferBatch.LockObject("rootAnchor", m_rootAnchorGO);
-            m_anchorCommunication = AnchorCommunication.NONE;
             m_importAnchorData      = null;
             m_importAnchorDataRetry = MAX_IMPORT_ANCHOR_DATA_RETRY;
 

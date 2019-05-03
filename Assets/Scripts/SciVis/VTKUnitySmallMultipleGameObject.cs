@@ -134,11 +134,12 @@ namespace Sereno.SciVis
                                                (m_sm.DescPts.Size[1]/m_sm.Dimensions.y)/maxRatio,
                                                (m_sm.DescPts.Size[2]/m_sm.Dimensions.z)/maxRatio);
 
-            //Update position / rotation
+            //Update position / rotation / scaling
             lock(m_sm)
             {
                 OnRotationChange(m_sm.VTKSubDataset, m_sm.VTKSubDataset.Rotation);
                 OnPositionChange(m_sm.VTKSubDataset, m_sm.VTKSubDataset.Position);
+                OnScaleChange(m_sm.VTKSubDataset, m_sm.VTKSubDataset.Scale);
                 m_sm.VTKSubDataset.AddListener(this);
             }
 

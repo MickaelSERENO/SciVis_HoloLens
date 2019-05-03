@@ -367,8 +367,8 @@ namespace Sereno.Network.MessageHandler
                 m_byteArrayPos = 0;
             }
 
-            for(; m_byteArrayPos < m_byteArray.Length && newOffset < data.Length;)
-                m_byteArray[m_byteArrayPos++] = data[newOffset++];
+            for(; m_byteArrayPos < m_byteArray.Length && newOffset < data.Length; m_byteArrayPos++, newOffset++)
+                m_byteArray[m_byteArrayPos] = data[newOffset];
 
             if(m_byteArrayPos == m_byteArray.Length)
             {

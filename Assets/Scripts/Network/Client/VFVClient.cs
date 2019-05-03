@@ -30,7 +30,7 @@ namespace Sereno.Network
         //Has the connection message being sent?
         private bool          m_headsetConnectionSent = false;
 
-        public VFVClient(IMessageBufferCallback clbk) : base("192.168.1.132", 8000)
+        public VFVClient(IMessageBufferCallback clbk) : base("192.168.43.44", 8000)
         {
             m_msgBuf = new MessageBuffer();
             base.AddListener(new ClientStatusCallback(OnConnectionStatus));
@@ -89,8 +89,11 @@ namespace Sereno.Network
             WriteInt32(data, offset, seg.Length);
             offset += 4;
 
-            Send(data);
-            Send(seg);
+            lock(m_writeThread)
+            {
+                Send(data);
+                Send(seg);
+            }
         }
 
         /// <summary>

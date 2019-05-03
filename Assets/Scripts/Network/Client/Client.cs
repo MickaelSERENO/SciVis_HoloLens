@@ -63,7 +63,7 @@ namespace Sereno.Network
 		/// <summary>
 		/// The Client thread used to handle data sent to the Server
 		/// </summary>
-		private Thread           m_writeThread    = null;
+		protected Thread           m_writeThread    = null;
 
         /// <summary>
         /// Is this Client closed ?

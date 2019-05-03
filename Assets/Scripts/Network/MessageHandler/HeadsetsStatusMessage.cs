@@ -106,7 +106,7 @@ namespace Sereno.Network.MessageHandler
                 if(id < 3) //Color / ID
                     return (byte)'I';
 
-                if(id < 6) //Position
+                else if(id < 6) //Position
                     return (byte)'f';
 
                 else if(id < 10) //Rotation
