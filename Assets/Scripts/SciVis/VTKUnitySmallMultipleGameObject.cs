@@ -152,12 +152,21 @@ namespace Sereno.SciVis
 
         public void OnOwnerIDChange(SubDataset dataset, int ownerID)
         {
+            Debug.Log($"New owner : {ownerID}");
             lock(this)
             {
-                if(m_dataProvider != null)
+                if(ownerID == -1)
                 {
                     m_updateOutlineColor = true;
-                    m_outlineColor = m_dataProvider.GetHeadsetColor(ownerID);
+                    m_outlineColor = Color.blue;
+                }
+                else
+                {
+                    if(m_dataProvider != null)
+                    {
+                        m_updateOutlineColor = true;
+                        m_outlineColor = m_dataProvider.GetHeadsetColor(ownerID);
+                    }
                 }
             }
         }
@@ -228,7 +237,10 @@ namespace Sereno.SciVis
                 m_updateS = false;
 
                 if(m_updateOutlineColor)
-                    m_outline.GetComponent<MeshRenderer>().material.color = m_outlineColor;
+                {
+                    foreach(var comp in m_outline.transform.GetComponentsInChildren<MeshRenderer>())
+                        comp.material.color = m_outlineColor;
+                }
                 m_updateOutlineColor = false;
             }
 

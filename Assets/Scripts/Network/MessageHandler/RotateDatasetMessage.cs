@@ -28,6 +28,11 @@ namespace Sereno.Network.MessageHandler
         /// </summary>
         public Int32 HeadsetID;
 
+        /// <summary>
+        /// Is the translation done into the public workspace?
+        /// </summary>
+        public byte InPublic;
+
         public RotateDatasetMessage(ServerType type) : base(type)
         {}
 
@@ -35,12 +40,14 @@ namespace Sereno.Network.MessageHandler
         {
             if(Cursor <= 2)
                 return (byte)'I';
+            else if(Cursor == 3)
+                return (byte)'b';
             return (byte)'f';
         }
 
         public override void Push(float value)
         {
-            Quaternion[Cursor-3] = value;
+            Quaternion[Cursor-4] = value;
             base.Push(value);
         }
 
@@ -56,9 +63,15 @@ namespace Sereno.Network.MessageHandler
             base.Push(value);
         }
 
+        public override void Push(byte value)
+        {
+            InPublic = value;
+            base.Push(value);
+        }
+
         public override Int32 GetMaxCursor()
         {
-            return 6;
+            return 7;
         }
     }
 }

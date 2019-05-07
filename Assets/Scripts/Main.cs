@@ -70,7 +70,7 @@ namespace Sereno
         /// <summary>
         /// The Dataset currently parsed. The key represents the datase ID
         /// </summary>
-        private Dictionary<Int32, Dataset> m_datasets = new Dictionary<Int32, Dataset>();
+        private Dictionary<Int32, DatasetMetaData> m_datasets = new Dictionary<Int32, DatasetMetaData>();
 
         /// <summary>
         /// Dataset loaded that needed to be visualized (in construction GameObject. Needed to be read in the main thread.
@@ -302,7 +302,7 @@ namespace Sereno
             while(m_vtkDatasetsLoaded.Count > 0)
             {
                 VTKDataset d = m_vtkDatasetsLoaded.Dequeue();
-                m_datasets.Add(d.ID, d);
+                m_datasets.Add(d.ID, new DatasetMetaData(d));
             }
             
             while(m_vtkSMLoaded.Count > 0)
@@ -358,9 +358,9 @@ namespace Sereno
                                                                                                            m_headsetGlyphs[i].transform.up*(HEADSET_TOP);  //Top of the head
 
                 //Update the glyph color
-                m_headsetGlyphs[i].GetComponent<MeshRenderer>().material.color = new Color( ((byte)(m_headsetStatus[i].Color >> 24) & 0xff)/255.0f,
-                                                                                            ((byte)(m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
-                                                                                            ((byte)(m_headsetStatus[i].Color >> 8)  & 0xff)/255.0f);
+                m_headsetGlyphs[i].GetComponent<MeshRenderer>().material.color = new Color(((byte)(m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
+                                                                                           ((byte)(m_headsetStatus[i].Color >> 8)  & 0xff)/255.0f,
+                                                                                           ((byte)(m_headsetStatus[i].Color >> 0)  & 0xff)/255.0f);
                 
                 //Update the glyph shape
                 MeshFilter mf = m_headsetGlyphs[i].GetComponent<MeshFilter>();
@@ -479,22 +479,22 @@ namespace Sereno
         public void OnRotateDataset(MessageBuffer messageBuffer, RotateDatasetMessage msg)
         {
             Debug.Log("Received rotation event");
-            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID])
-                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].Rotation = msg.Quaternion;
+            lock(m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID])
+                m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID].Rotation = msg.Quaternion;
         }
 
         public void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg)
         {
             Debug.Log($"Received movement event : {msg.Position[0]}, {msg.Position[1]}, {msg.Position[2]}");
-            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID])
-                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].Position = msg.Position;
+            lock(m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID])
+                m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID].Position = msg.Position;
         }
 
         public void OnScaleDataset(MessageBuffer messageBuffer, ScaleDatasetMessage msg)
         {
             Debug.Log($"Received Scale event : {msg.Scale[0]}, {msg.Scale[1]}, {msg.Scale[2]}");
-            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID])
-                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].Scale = msg.Scale;
+            lock(m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID])
+                m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID].Scale = msg.Scale;
         }
 
 
@@ -562,7 +562,10 @@ namespace Sereno
 
         public void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg)
         {
-            //TODO
+            lock(this)
+            {
+                m_datasets[msg.DatasetID].Dataset.SubDatasets[msg.SubDatasetID].OwnerID = msg.HeadsetID;
+            }
         }
         #endregion
 
@@ -576,9 +579,9 @@ namespace Sereno
                 {
                     foreach(HeadsetStatus status in m_headsetStatus)
                         if(status.ID == headsetID)
-                            return new Color(((byte)(status.Color >> 24) & 0xff)/255.0f,
-                                             ((byte)(status.Color >> 16) & 0xff)/255.0f,
-                                             ((byte)(status.Color >> 8)  & 0xff)/255.0f);
+                            return new Color(((byte)(status.Color >> 16) & 0xff)/255.0f,
+                                             ((byte)(status.Color >> 8)  & 0xff)/255.0f,
+                                             ((byte)(status.Color >> 0)  & 0xff)/255.0f);
 
                     return new Color(0.0f, 0.0f, 1.0f);
                 }

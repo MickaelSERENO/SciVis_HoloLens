@@ -123,6 +123,23 @@ namespace Sereno.Datasets
         }
 
         /// <summary>
+        /// Copy constructor
+        /// </summary>
+        /// <param name="copy"></param>
+        public SubDataset(SubDataset copy)
+        {
+            m_parent       = copy.m_parent;
+            m_minClamp     = copy.m_minClamp;
+            m_minAmplitude = copy.m_minAmplitude;
+            m_maxClamp     = copy.m_maxClamp;
+            m_maxAmplitude = copy.m_maxAmplitude;
+            m_ownerID      = copy.m_ownerID;
+            m_position     = (float[])m_position.Clone();
+            m_rotation     = (float[])m_rotation.Clone();
+            m_scale        = (float[])m_scale.Clone();
+        }
+
+        /// <summary>
         /// Set the color of this SubDataset
         /// </summary>
         /// <param name="min">The minimum clamping (values below that should be clamped)</param>
