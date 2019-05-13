@@ -7,7 +7,7 @@ namespace Sereno.SciVis
     /// <summary>
     /// Visualization of VTK Unity Small Multiple
     /// </summary>
-    public class VTKUnitySmallMultipleGameObject : MonoBehaviour, ISubDatasetCallback
+    public class VTKUnitySmallMultipleGameObject : MonoBehaviour, IChangeInternalState, ISubDatasetCallback
     {
         /// <summary>
         /// Material to use
@@ -134,16 +134,21 @@ namespace Sereno.SciVis
                                                (m_sm.DescPts.Size[1]/m_sm.Dimensions.y)/maxRatio,
                                                (m_sm.DescPts.Size[2]/m_sm.Dimensions.z)/maxRatio);
 
+            LinkToSM();
+
+            m_outlineColor = m_dataProvider.GetHeadsetColor(-1);
+        }
+
+        private void LinkToSM()
+        {
             //Update position / rotation / scaling
             lock(m_sm)
             {
-                OnRotationChange(m_sm.VTKSubDataset, m_sm.VTKSubDataset.Rotation);
-                OnPositionChange(m_sm.VTKSubDataset, m_sm.VTKSubDataset.Position);
-                OnScaleChange(m_sm.VTKSubDataset, m_sm.VTKSubDataset.Scale);
-                m_sm.VTKSubDataset.AddListener(this);
+                OnRotationChange(m_sm.InternalState, m_sm.InternalState.Rotation);
+                OnPositionChange(m_sm.InternalState, m_sm.InternalState.Position);
+                OnScaleChange(m_sm.InternalState, m_sm.InternalState.Scale);
+                m_sm.InternalState.AddListener(this);
             }
-
-            m_outlineColor = m_dataProvider.GetHeadsetColor(-1);
         }
 
         public void OnColorRangeChange(SubDataset dataset, float min, float max)
@@ -306,6 +311,17 @@ namespace Sereno.SciVis
                 m_mesh.vertices  = meshPos;
                 //m_mesh.triangles = meshFaces;
                 m_mesh.UploadMeshData(false);
+            }
+        }
+
+
+        public void SetSubDatasetState(SubDataset sd)
+        {
+            lock(m_sm)
+            {
+                m_sm.InternalState.RemoveListener(this);
+                m_sm.InternalState = sd;
+                LinkToSM();
             }
         }
     }

@@ -11,12 +11,12 @@ namespace Sereno.Datasets
         /// <summary>
         /// Value for subdatasets in public state
         /// </summary>
-        public const int VISIBILITY_PUBLIC  = 0;
+        public const int VISIBILITY_PUBLIC  = 1;
 
         /// <summary>
         /// Value for subdatasets in private state
         /// </summary>
-        public const int VISIBILITY_PRIVATE = 1;
+        public const int VISIBILITY_PRIVATE = 0;
 
         /// <summary>
         /// The public subdataset state
@@ -46,16 +46,21 @@ namespace Sereno.Datasets
         /// <summary>
         /// Get the public sub dataset state
         /// </summary>
-        SubDataset SubDatasetPublicState { get => m_publicSD; }
+        public SubDataset SubDatasetPublicState { get => m_publicSD; }
 
         /// <summary>
         /// Get the private sub dataset state
         /// </summary>
-        SubDataset SubDatasetPrivateState { get => m_privateSD; }
+        public SubDataset SubDatasetPrivateState { get => m_privateSD; }
+
+        /// <summary>
+        /// Get the current subdataset state based on the visibility
+        /// </summary>
+        public SubDataset CurrentSubDataset { get => Visibility == VISIBILITY_PUBLIC ? m_publicSD : m_privateSD; }
 
         /// <summary>
         /// The visibility of the subdataset (see VISIBILITY_PUBLIC and VISIBILITY_PRIVATE)
         /// </summary>
-        int Visibility { get => m_visibility; set => m_visibility = value; }
+        public int Visibility { get => m_visibility; set => m_visibility = value; }
     }
 }

@@ -20,6 +20,11 @@ namespace Sereno.SciVis
         private VTKSubDataset m_vtkSubDataset;
 
         /// <summary>
+        /// The internal state of this small multiple
+        /// </summary>
+        private SubDataset m_internalState;
+
+        /// <summary>
         /// The value currently in use. Size : density.x*density.y*density.z
         /// </summary>
         private float[] m_values = null;
@@ -78,6 +83,7 @@ namespace Sereno.SciVis
                                               Vector3Int offset, Vector3Int dimensions, byte* mask)
         {
             subDataset.AddListener(this);
+            m_internalState = subDataset;
 
             //Copy the variables
             m_values        = new float[dimensions.x*dimensions.y*dimensions.z];
@@ -433,6 +439,21 @@ namespace Sereno.SciVis
         /// </summary>
         /// <returns>The VTKSubDataset bound to this Small Multiple</returns>
         public VTKSubDataset VTKSubDataset {get => m_vtkSubDataset;}
+
+        /// <summary>
+        /// The SubDataset representing this Small Multiple
+        /// </summary>
+        public SubDataset InternalState
+        {
+            get => m_internalState;
+            set
+            {
+                if(m_internalState != null)
+                    m_internalState.RemoveListener(this);
+                m_internalState = value;
+                m_internalState.AddListener(this);
+            }
+        }
 
         /// <summary>
         /// The three axis dimensions

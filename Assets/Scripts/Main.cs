@@ -85,7 +85,12 @@ namespace Sereno
         /// <summary>
         /// All the dataset game objects
         /// </summary>
-        private Queue<MonoBehaviour> m_datasetGameObjects = new Queue<MonoBehaviour>();
+        private List<MonoBehaviour> m_datasetGameObjects = new List<MonoBehaviour>();
+
+        /// <summary>
+        /// Dictionary linking subdataset to objects which we can change the internal status
+        /// </summary>
+        private Dictionary<SubDataset, IChangeInternalState> m_changeInternalStates = new Dictionary<SubDataset, IChangeInternalState>();
 
         /// <summary>
         /// The Server Client. 
@@ -136,8 +141,7 @@ namespace Sereno
         /// List of GameObject representing the headset colors
         /// </summary>
         private List<GameObject> m_headsetGlyphs = new List<GameObject>();
-
-
+        
         /// <summary>
         /// The final import anchor data once created. Need to be kept because of the number of retry.
         /// </summary>
@@ -313,8 +317,9 @@ namespace Sereno
                 var gameObject = Instantiate(VTKSMGameObject);
                 gameObject.transform.parent = transform;
                 gameObject.Init(sm, this);
+                m_changeInternalStates.Add(sm.VTKSubDataset, gameObject);
 
-                m_datasetGameObjects.Enqueue(gameObject);
+                m_datasetGameObjects.Add(gameObject);
             }
         }
 
@@ -479,24 +484,36 @@ namespace Sereno
         public void OnRotateDataset(MessageBuffer messageBuffer, RotateDatasetMessage msg)
         {
             Debug.Log("Received rotation event");
-            lock(m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID])
-                m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID].Rotation = msg.Quaternion;
+            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset)
+                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset.Rotation = msg.Quaternion;
         }
 
         public void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg)
         {
             Debug.Log($"Received movement event : {msg.Position[0]}, {msg.Position[1]}, {msg.Position[2]}");
-            lock(m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID])
-                m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID].Position = msg.Position;
+            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset)
+                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset.Position = msg.Position;
         }
 
         public void OnScaleDataset(MessageBuffer messageBuffer, ScaleDatasetMessage msg)
         {
             Debug.Log($"Received Scale event : {msg.Scale[0]}, {msg.Scale[1]}, {msg.Scale[2]}");
-            lock(m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID])
-                m_datasets[msg.DataID].Dataset.SubDatasets[msg.SubDataID].Scale = msg.Scale;
+            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset)
+                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset.Scale = msg.Scale;
         }
-
+        
+        public void OnSetVisibilityDataset(MessageBuffer messageBuffer, VisibilityMessage msg)
+        {
+            lock(this)
+            {
+                SubDatasetMetaData metaData = m_datasets[msg.DataID].SubDatasets[msg.SubDataID];
+                if(metaData != null)
+                {
+                    metaData.Visibility = msg.Visibility;
+                    m_changeInternalStates[metaData.SubDatasetPublicState].SetSubDatasetState(metaData.CurrentSubDataset);
+                }
+            }
+        }
 
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
         {
@@ -619,11 +636,9 @@ namespace Sereno
 
                     //Datasets
                     m_vtkSMLoaded.Clear();
-                    while(m_datasetGameObjects.Count > 0)
-                    {
-                        var gameObject = m_datasetGameObjects.Dequeue();
+                    foreach(var gameObject in m_datasetGameObjects)
                         Destroy(gameObject);
-                    }
+                    
                     m_vtkDatasetsLoaded.Clear();
                     m_datasets.Clear();
                     
