@@ -12,7 +12,6 @@ using System.Net.Sockets;
 using System.Net;
 using UnityEngine.XR.WSA.Sharing;
 
-
 namespace Sereno
 {
     public class IPTextValue
@@ -66,7 +65,7 @@ namespace Sereno
         const float HEADSET_TOP = 0.15f;
 
         /* Private attributes*/
-        #region 
+#region 
         /// <summary>
         /// The Dataset currently parsed. The key represents the datase ID
         /// </summary>
@@ -337,13 +336,6 @@ namespace Sereno
                 m_headsetGlyphs.Add(go);
             }
 
-            //Remove the excedant
-            while(m_headsetStatus.Count < m_headsetGlyphs.Count)
-            {
-                Destroy(m_headsetGlyphs[m_headsetGlyphs.Count-1]);
-                m_headsetGlyphs.RemoveAt(m_headsetGlyphs.Count-1);
-            }
-
             //hide the useless ones
             for(int i = m_headsetStatus.Count; i < m_headsetGlyphs.Count; i++)
                 m_headsetGlyphs[i].SetActive(false);
@@ -584,7 +576,7 @@ namespace Sereno
                 m_datasets[msg.DatasetID].Dataset.SubDatasets[msg.SubDatasetID].OwnerID = msg.HeadsetID;
             }
         }
-        #endregion
+#endregion
 
         public Color GetHeadsetColor(int headsetID)
         {
@@ -655,23 +647,20 @@ namespace Sereno
         private void RecreateRootAnchorGO()
         {
             //Initial the Anchor game object
-            lock(this)
+            if(m_rootAnchorGO != null)
             {
-                if(m_rootAnchorGO != null)
-                {
-                    transform.parent = null;
-                    Destroy(m_rootAnchorGO);
-                }
-
-                //Create the GameObject and attach the transfer batch
-                m_rootAnchorGO = new GameObject();
-                m_rootAnchorGO.AddComponent<UnityEngine.XR.WSA.WorldAnchor>();
-
-                transform.parent = m_rootAnchorGO.transform;
-                transform.localPosition = new Vector3(0, 0, 0);
-                transform.localRotation = Quaternion.identity;
-                transform.localScale    = new Vector3(1, 1, 1);
+                transform.parent = null;
+                Destroy(m_rootAnchorGO);
             }
+
+            //Create the GameObject and attach the transfer batch
+            m_rootAnchorGO = new GameObject();
+            m_rootAnchorGO.AddComponent<UnityEngine.XR.WSA.WorldAnchor>();
+
+            transform.parent = m_rootAnchorGO.transform;
+            transform.localPosition = new Vector3(0, 0, 0);
+            transform.localRotation = Quaternion.identity;
+            transform.localScale    = new Vector3(1, 1, 1);
         }
 
         /* Anchoring import/export callbacks */
@@ -730,6 +719,6 @@ namespace Sereno
             m_anchorImportSegments.Clear();
         }
 
-        #endregion
+#endregion
     }
 }

@@ -31,7 +31,7 @@ namespace Sereno.Datasets
         /// <summary>
         /// The subdataset visibility
         /// </summary>
-        private int        m_visibility;
+        private int        m_visibility = VISIBILITY_PUBLIC;
 
         /// <summary>
         /// Constructor.

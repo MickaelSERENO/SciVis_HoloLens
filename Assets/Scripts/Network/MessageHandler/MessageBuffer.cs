@@ -365,7 +365,7 @@ namespace Sereno.Network.MessageHandler
         /// <param name="val">The value parsed (if any)</param>
         /// <param name="newOffset">The new offset to apply</param>
         /// <returns>true if enough data was pushed to parsed a byte array value, false otherwise</returns>
-        private bool ReadByteArray(byte[] data, int offset, out byte[] arr, out Int32 newOffset)
+        private unsafe bool ReadByteArray(byte[] data, int offset, out byte[] arr, out Int32 newOffset)
         {
             newOffset = offset;
             arr       = null;
@@ -378,8 +378,11 @@ namespace Sereno.Network.MessageHandler
                 m_byteArrayPos = 0;
             }
 
-            for(; m_byteArrayPos < m_byteArray.Length && newOffset < data.Length; m_byteArrayPos++, newOffset++)
-                m_byteArray[m_byteArrayPos] = data[newOffset];
+            fixed(byte* pData = data, pByteArray = m_byteArray)
+            {
+                for(; m_byteArrayPos < m_byteArray.Length && newOffset < data.Length; m_byteArrayPos++, newOffset++)
+                    pByteArray[m_byteArrayPos] = pData[newOffset];
+            }
 
             if(m_byteArrayPos == m_byteArray.Length)
             {
@@ -387,6 +390,7 @@ namespace Sereno.Network.MessageHandler
                 m_byteArray = null;
                 return true;
             }
+            
             return false;
         }
 
