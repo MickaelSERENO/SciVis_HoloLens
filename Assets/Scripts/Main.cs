@@ -1,4 +1,7 @@
-﻿using System.Net.Security;
+﻿#define TEST
+#define CHI2020
+
+using System.Net.Security;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -150,10 +153,15 @@ namespace Sereno
         /// Actual number of remaining retrying to import the anchor data
         /// </summary>
         private int    m_importAnchorDataRetry = MAX_IMPORT_ANCHOR_DATA_RETRY;
-#endregion
+        #endregion
 
         /* Public attributes*/
-#region
+        #region
+        /// <summary>
+        /// The Default SubDataset Game object. Only display the bounding box of the subdataset
+        /// </summary>
+        public DefaultSubDatasetGameObject DefaultSubDatasetGO;
+
         /// <summary>
         /// Prefab of VTKUnitySmallMultipleGameObject correctly configured
         /// </summary>
@@ -305,21 +313,31 @@ namespace Sereno
             while(m_vtkDatasetsLoaded.Count > 0)
             {
                 VTKDataset d = m_vtkDatasetsLoaded.Dequeue();
-                m_datasets.Add(d.ID, new DatasetMetaData(d));
+#if CHI2020
+                foreach (SubDataset sd in d.SubDatasets)
+                {
+                    DefaultSubDatasetGameObject gameObject = Instantiate(DefaultSubDatasetGO);
+                    gameObject.transform.parent = transform;
+                    gameObject.Init(sd, this);
+                    m_changeInternalStates.Add(sd, gameObject);
+                }
+#endif
             }
-            
+
+#if !CHI2020
             while(m_vtkSMLoaded.Count > 0)
             {
                 VTKUnitySmallMultiple sm = m_vtkSMLoaded.Dequeue();
                 TriangularGTF gtf = new TriangularGTF(new float[] { 0.5f, 0.5f }, new float[] { 0.5f, 0.5f }, 1.0f);
                 sm.VTKSubDataset.TransferFunction = gtf;
-                var gameObject = Instantiate(VTKSMGameObject);
+                VTKUnitySmallMultipleGameObject gameObject = Instantiate(VTKSMGameObject);
                 gameObject.transform.parent = transform;
                 gameObject.Init(sm, this);
                 m_changeInternalStates.Add(sm.VTKSubDataset, gameObject);
 
                 m_datasetGameObjects.Add(gameObject);
             }
+#endif
         }
 
         /// <summary>
@@ -454,9 +472,12 @@ namespace Sereno
 
             //Create the Dataset
             VTKDataset dataset = new VTKDataset(msg.DataID, parser, ptValues, cellValues);
-            lock(this)
+            lock (this)
+            {
                 m_vtkDatasetsLoaded.Enqueue(dataset);
-
+                m_datasets.Add(dataset.ID, new DatasetMetaData(dataset));
+            }
+#if !CHI2020
             //Create the associate visualization
             //if(parser.GetDatasetType() == VTKDatasetType.VTK_STRUCTURED_GRID)
             {
@@ -471,6 +492,7 @@ namespace Sereno
                     }
                 }
             }
+#endif
         }
 
         public void OnRotateDataset(MessageBuffer messageBuffer, RotateDatasetMessage msg)
@@ -496,6 +518,7 @@ namespace Sereno
         
         public void OnSetVisibilityDataset(MessageBuffer messageBuffer, VisibilityMessage msg)
         {
+#if !CHI2020
             lock(this)
             {
                 SubDatasetMetaData metaData = m_datasets[msg.DataID].SubDatasets[msg.SubDataID];
@@ -505,6 +528,7 @@ namespace Sereno
                     m_changeInternalStates[metaData.SubDatasetPublicState].SetSubDatasetState(metaData.CurrentSubDataset);
                 }
             }
+#endif
         }
 
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)

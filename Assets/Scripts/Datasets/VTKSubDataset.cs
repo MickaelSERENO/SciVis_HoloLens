@@ -1,11 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-using Sereno.SciVis;
-using System.Threading.Tasks;
-
-namespace Sereno.Datasets
+﻿namespace Sereno.Datasets
 {
     public class VTKSubDataset : SubDataset
     {

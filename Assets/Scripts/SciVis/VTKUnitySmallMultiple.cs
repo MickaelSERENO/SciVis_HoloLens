@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿#define CHI2020 //This define a part of the project for CHI2020
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;

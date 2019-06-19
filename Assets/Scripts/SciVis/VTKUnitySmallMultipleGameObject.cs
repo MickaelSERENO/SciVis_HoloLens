@@ -7,7 +7,7 @@ namespace Sereno.SciVis
     /// <summary>
     /// Visualization of VTK Unity Small Multiple
     /// </summary>
-    public class VTKUnitySmallMultipleGameObject : MonoBehaviour, IChangeInternalState, ISubDatasetCallback
+    public class VTKUnitySmallMultipleGameObject : DefaultSubDatasetGameObject
     {
         /// <summary>
         /// Material to use
@@ -15,19 +15,9 @@ namespace Sereno.SciVis
         public Material ColorMaterial = null;
 
         /// <summary>
-        /// The Outline gameobject
-        /// </summary>
-        public GameObject Outline = null;
-        
-        /// <summary>
         /// The mesh to use
         /// </summary>
         private Mesh m_mesh = null;
-
-        /// <summary>
-        /// The outline gameobject created from "Outline"
-        /// </summary>
-        private GameObject m_outline;
 
         /// <summary>
         /// The material in use (copy from the Material setted in the Unity Editor)
@@ -45,57 +35,12 @@ namespace Sereno.SciVis
         private VTKUnitySmallMultiple m_sm;
 
         /// <summary>
-        /// The new Quaternion received from the SmallMultiple.
-        /// </summary>
-        private Quaternion m_newQ;
-
-        /// <summary>
-        /// The new position received from the SmallMultiple.
-        /// </summary>
-        private Vector3 m_newP;
-
-        /// <summary>
-        /// The new scale received from the SmallMultiple
-        /// </summary>
-        private Vector3 m_newS;
-
-        /// <summary>
-        /// Should we update the rotation quaternion?
-        /// </summary>
-        private bool m_updateQ = false;
-
-        /// <summary>
-        /// Should we update the 3D position?
-        /// </summary>
-        private bool m_updateP = false;
-
-        /// <summary>
-        /// Should we update the 3D scaling?
-        /// </summary>
-        private bool m_updateS = false;
-
-        /// <summary>
-        /// Object providing the needed data
-        /// </summary>
-        private IDataProvider m_dataProvider = null;
-
-        /// <summary>
-        /// The new outline color to apply
-        /// </summary>
-        private Color m_outlineColor;
-
-        /// <summary>
-        /// Should we update the outline color?
-        /// </summary>
-        private bool m_updateOutlineColor = false;
-
-        /// <summary>
         /// Initialize the visualization
         /// </summary>
         /// <param name="sm">The small multiple data to use</param>
         public void Init(VTKUnitySmallMultiple sm, IDataProvider provider)
         {
-            m_dataProvider = provider;
+            base.Init(sm.InternalState, provider);
             m_sm = sm;
 
             m_material = new Material(ColorMaterial);            
@@ -139,78 +84,10 @@ namespace Sereno.SciVis
             m_outlineColor = m_dataProvider.GetHeadsetColor(-1);
         }
 
-        private void LinkToSM()
+        public override void LateUpdate()
         {
-            //Update position / rotation / scaling
-            lock(m_sm)
-            {
-                OnRotationChange(m_sm.InternalState, m_sm.InternalState.Rotation);
-                OnPositionChange(m_sm.InternalState, m_sm.InternalState.Position);
-                OnScaleChange(m_sm.InternalState, m_sm.InternalState.Scale);
-                m_sm.InternalState.AddListener(this);
-            }
-        }
+            base.LateUpdate();
 
-        public void OnColorRangeChange(SubDataset dataset, float min, float max)
-        {
-        }
-
-        public void OnOwnerIDChange(SubDataset dataset, int ownerID)
-        {
-            Debug.Log($"New owner : {ownerID}");
-            lock(this)
-            {
-                if(ownerID == -1)
-                {
-                    m_updateOutlineColor = true;
-                    m_outlineColor = Color.blue;
-                }
-                else
-                {
-                    if(m_dataProvider != null)
-                    {
-                        m_updateOutlineColor = true;
-                        m_outlineColor = m_dataProvider.GetHeadsetColor(ownerID);
-                    }
-                }
-            }
-        }
-
-        public void OnPositionChange(SubDataset dataset, float[] position)
-        {
-            lock(this)
-            {
-                m_updateP = true;
-                m_newP    = new Vector3(position[0], position[1], position[2]); 
-            }
-        }
-
-        public void OnRotationChange(SubDataset dataset, float[] rotationQuaternion)
-        {
-            lock(this)
-            {
-                m_newQ = new Quaternion(rotationQuaternion[1],
-                                        rotationQuaternion[2],
-                                        rotationQuaternion[3],
-                                        rotationQuaternion[0]); 
-                m_updateQ = true;
-            }        
-        }
-
-        public void OnScaleChange(SubDataset dataset, float[] scale)
-        {
-            lock(this)
-            {
-                m_newS    = new Vector3(scale[0], scale[1], scale[2]);
-                m_updateS = true;
-            }
-        }
-
-        public void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)
-        {}
-
-        void LateUpdate()
-        {
             //Update the 3D texture
             lock(m_sm)
             {
@@ -224,29 +101,6 @@ namespace Sereno.SciVis
                     m_texture3D.Apply();
                     m_sm.TextureColor = null;
                 }
-            }
-
-            //Update the 3D transform of this game object
-            lock(this)
-            {
-                if(m_updateP)
-                    transform.localPosition = m_newP;
-                m_updateP = false;
-
-                if(m_updateQ)
-                    transform.localRotation = m_newQ;
-                m_updateQ = false;
-
-                if(m_updateS)
-                    transform.localScale = m_newS;
-                m_updateS = false;
-
-                if(m_updateOutlineColor)
-                {
-                    foreach(var comp in m_outline.transform.GetComponentsInChildren<MeshRenderer>())
-                        comp.material.color = m_outlineColor;
-                }
-                m_updateOutlineColor = false;
             }
 
             //Draw the GameObject
@@ -311,17 +165,6 @@ namespace Sereno.SciVis
                 m_mesh.vertices  = meshPos;
                 //m_mesh.triangles = meshFaces;
                 m_mesh.UploadMeshData(false);
-            }
-        }
-
-
-        public void SetSubDatasetState(SubDataset sd)
-        {
-            lock(m_sm)
-            {
-                m_sm.InternalState.RemoveListener(this);
-                m_sm.InternalState = sd;
-                LinkToSM();
             }
         }
     }
