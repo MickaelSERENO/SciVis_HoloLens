@@ -1,0 +1,11 @@
+This project is about a user study comparing multiple 3D selection technique.
+
+Multiple C++ and C# dependencies must be compiled for WSA x86 platforms and put into Assets/Plugins/WSA/x86 folder:
+    https://github.com/MickaelSERENO/HoloLens_HandDetector (the HandDetector_Native.dll and HandDetector_Native.winmd, and HandDetector.dll files)
+    https://github.com/MickaelSERENO/VTKParser (the serenoVTKParser.dll file)
+
+This work also requires the SciVis_Server application and the SciVis_Android application to be fully functionnal
+
+Once the Visual Studio build is created, you have to manually modify the appxmanifest to add the following capabilities:
+<rescap:Capability Name="perceptionSensorsExperimental" />
+with rescap declared as xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
