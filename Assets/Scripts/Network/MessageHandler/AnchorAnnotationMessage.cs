@@ -68,9 +68,16 @@ namespace Sereno.Network.MessageHandler
         public override void Push(float value)
         {
             if(Cursor <= 7 && Cursor >= 5)
-                LocalPosition[Cursor - 4] = value;
+                LocalPosition[Cursor - 5] = value;
         }
-        
+
+        public override void Push(byte value)
+        {
+            if (Cursor == 4)
+                InPublic = value;
+            base.Push(value);
+        }
+
         public override Int32 GetMaxCursor()
         {
             return 7;
