@@ -1,8 +1,10 @@
 ﻿#define TEST
 #define CHI2020
 
-using System.Net.Security;
-using System.Collections;
+#if ENABLE_WINMD_SUPPORT
+using Windows.Perception.Spatial;
+#endif
+
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,10 +12,13 @@ using Sereno.SciVis;
 using Sereno.Network;
 using Sereno.Datasets;
 using Sereno.Network.MessageHandler;
+using Sereno.Unity.HandDetector;
+using Sereno.Pointing;
 using System;
 using System.Net.Sockets;
 using System.Net;
 using UnityEngine.XR.WSA.Sharing;
+using System.Runtime.InteropServices;
 
 namespace Sereno
 {
@@ -87,7 +92,7 @@ namespace Sereno
         /// <summary>
         /// All the dataset game objects
         /// </summary>
-        private List<MonoBehaviour> m_datasetGameObjects = new List<MonoBehaviour>();
+        private List<DefaultSubDatasetGameObject> m_datasetGameObjects = new List<DefaultSubDatasetGameObject>();
 
         /// <summary>
         /// Dictionary linking subdataset to objects which we can change the internal status
@@ -153,6 +158,58 @@ namespace Sereno
         /// Actual number of remaining retrying to import the anchor data
         /// </summary>
         private int    m_importAnchorDataRetry = MAX_IMPORT_ANCHOR_DATA_RETRY;
+
+        /// <summary>
+        /// The selected pointing interaction technique
+        /// </summary>
+        private PointingIT m_enumPointingIT = PointingIT.NONE;
+
+        /// <summary>
+        /// What is the dataset being annotated?
+        /// </summary>
+        private DefaultSubDatasetGameObject m_datasetInAnnotation = null;
+
+        /// <summary>
+        /// The HandDetector provider
+        /// </summary>
+        private HandDetectorProvider m_hdProvider = new HandDetectorProvider();
+        
+#if ENABLE_WINMD_SUPPORT
+        /// <summary>
+        /// The root spatial coordinate system created by Unity
+        /// </summary>
+        private SpatialCoordinateSystem m_spatialCoordinateSystem = null;
+#endif
+
+        /// <summary>
+        /// The current pointing interaction technique in use.
+        /// </summary>
+        private IPointingIT m_currentPointingIT = null;
+
+        /// <summary>
+        /// The game object being target by the pointing interaction technique
+        /// </summary>
+        private DefaultSubDatasetGameObject m_targetedGameObject = null;
+
+        /// <summary>
+        /// Was the client connected once?
+        /// </summary>
+        private bool m_wasConnected = false;
+
+        /// <summary>
+        /// Is the connection lost?
+        /// </summary>
+        private bool m_connectionLost = false;
+
+        /// <summary>
+        /// The SubDataset waiting for an annotation selection
+        /// </summary>
+        private SubDatasetMetaData m_sdWaitingAnnotation = null;
+
+        /// <summary>
+        /// The pointing interaction technique in wait for annotation being loaded
+        /// </summary>
+        private PointingIT m_pointingIDWaitingAnnotation = PointingIT.NONE;
         #endregion
 
         /* Public attributes*/
@@ -206,6 +263,21 @@ namespace Sereno
         /// The "Rotate" glyph displayed above characters
         /// </summary>
         public Mesh RotateGlyph;
+
+        /// <summary>
+        /// The Go-Go GameObject
+        /// </summary>
+        public ARGoGo GoGoGameObject;
+
+        /// <summary>
+        /// The ARWIM Prefab
+        /// </summary>
+        public ARWIM ARWIMPrefab;
+
+        /// <summary>
+        /// a stupid cube prefab
+        /// </summary>
+        public GameObject CubePrefab;
 #endregion
 
         void Start()
@@ -222,6 +294,18 @@ namespace Sereno
             m_client.AddListener(new ClientStatusCallback(OnConnectionStatus));
             m_client.Connect();
 
+            //Start the hand detector
+            m_hdProvider.Smoothness = 0.50f;
+            m_hdProvider.InitializeHandDetector();
+
+            //Initialize our selection techniques
+            GoGoGameObject.Init(m_hdProvider);
+            GoGoGameObject.transform.parent = null;
+            GoGoGameObject.transform.position = new Vector3(0, 0, 0);
+            GoGoGameObject.transform.rotation = Quaternion.identity;
+            GoGoGameObject.gameObject.SetActive(false);
+
+            CurrentPointingIT = PointingIT.GOGO;
 #if TEST
             AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
             addVTKMsg.DataID = 0;
@@ -230,6 +314,20 @@ namespace Sereno
             addVTKMsg.Path = "Agulhas_10_resampled.vtk";
             addVTKMsg.PtFieldValueIndices = new int[] { 0 };
             OnAddVTKDataset(null, addVTKMsg);
+
+            MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+            moveVTKMsg.DataID = 0;
+            moveVTKMsg.SubDataID = 0;
+            moveVTKMsg.Position = new float[3] { -1, -1, -1 };
+            moveVTKMsg.InPublic = 1;
+            moveVTKMsg.HeadsetID = -1;
+            OnMoveDataset(null, moveVTKMsg);
+
+            StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_CREATE_ANNOTATION);
+            annotMsg.DatasetID    = 0;
+            annotMsg.SubDatasetID = 0;
+            annotMsg.PointingID = PointingIT.WIM;
+            OnStartAnnotation(null, annotMsg);
 #endif
         }
 
@@ -309,22 +407,29 @@ namespace Sereno
         /// </summary>
         private void HandleDatasetsLoaded()
         {
+            if(m_connectionLost)
+            {
+                foreach (var go in m_datasetGameObjects)
+                    Destroy(go);
+                m_datasetGameObjects.Clear();
+                CurrentPointingIT = PointingIT.NONE;
+            }
+
             //Load what the server thread loaded regarding vtk datasets
-            while(m_vtkDatasetsLoaded.Count > 0)
+#if CHI2020
+            while (m_vtkDatasetsLoaded.Count > 0)
             {
                 VTKDataset d = m_vtkDatasetsLoaded.Dequeue();
-#if CHI2020
                 foreach (SubDataset sd in d.SubDatasets)
                 {
                     DefaultSubDatasetGameObject gameObject = Instantiate(DefaultSubDatasetGO);
                     gameObject.transform.parent = transform;
                     gameObject.Init(sd, this);
                     m_changeInternalStates.Add(sd, gameObject);
+                    m_datasetGameObjects.Add(gameObject);
                 }
-#endif
             }
-
-#if !CHI2020
+#else
             while(m_vtkSMLoaded.Count > 0)
             {
                 VTKUnitySmallMultiple sm = m_vtkSMLoaded.Dequeue();
@@ -338,6 +443,22 @@ namespace Sereno
                 m_datasetGameObjects.Add(gameObject);
             }
 #endif
+
+            if(m_sdWaitingAnnotation != null)
+            {
+                foreach(DefaultSubDatasetGameObject go in m_datasetGameObjects)
+                {
+                    if (go.SubDatasetState == m_sdWaitingAnnotation.CurrentSubDataset)
+                    {
+                        //If currently in an annotation this will cancel the previous one
+                        m_datasetInAnnotation = go;
+                        CurrentPointingIT = m_pointingIDWaitingAnnotation;
+                        m_sdWaitingAnnotation = null;
+                        m_pointingIDWaitingAnnotation = PointingIT.NONE;
+                        break;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -422,9 +543,23 @@ namespace Sereno
             }
         }
 
+        private void HandleSpatialCoordinateSystem()
+        {
+#if ENABLE_WINMD_SUPPORT
+            if (m_spatialCoordinateSystem == null)
+            {
+                //Get the Spatial Coordinate System pointer
+                IntPtr spatialCoordinateSystemPtr = UnityEngine.XR.WSA.WorldManager.GetNativeISpatialCoordinateSystemPtr();
+                m_spatialCoordinateSystem = Marshal.GetObjectForIUnknown(spatialCoordinateSystemPtr) as SpatialCoordinateSystem;
+                m_hdProvider.SetSpatialCoordinateSystem(m_spatialCoordinateSystem);
+            }
+#endif
+        }
+
         // Update is called once per frame
         void Update()
         {
+            HandleSpatialCoordinateSystem();
             lock(this)
             {
                 HandleAnchor();
@@ -435,7 +570,24 @@ namespace Sereno
             }
         }
 
-         
+        void LateUpdate()
+        {
+            lock(this)
+            {
+                m_targetedGameObject = null;
+
+                //Update intersection between each datasets rendered and the selected pointing interaction technique
+                if (m_currentPointingIT != null && m_currentPointingIT.TargetPositionIsValid)
+                {
+                    Vector3 targetPos = m_currentPointingIT.TargetPosition;
+                    if(targetPos.x >= -0.5f && targetPos.x <= 0.5f &&
+                       targetPos.y >= -0.5f && targetPos.y <= 0.5f &&
+                       targetPos.z >= -0.5f && targetPos.z <= 0.5f)
+                        m_targetedGameObject = m_currentPointingIT.CurrentSubDataset;
+                }
+            }
+        }
+                 
         public void OnDestroy()
         {
             m_client.Close();
@@ -600,6 +752,34 @@ namespace Sereno
                 m_datasets[msg.DatasetID].Dataset.SubDatasets[msg.SubDatasetID].OwnerID = msg.HeadsetID;
             }
         }
+
+        public void OnStartAnnotation(MessageBuffer messageBuffer, StartAnnotationMessage msg)
+        {
+            lock(this)
+            {
+                bool foundGO = false;
+                //Search got the current DefaultSubDatasetGameObject being in annotation
+                SubDatasetMetaData sd = m_datasets[msg.DatasetID].SubDatasets[msg.SubDatasetID];
+                foreach(DefaultSubDatasetGameObject go in m_datasetGameObjects)
+                {
+                    if(go.SubDatasetState == sd.CurrentSubDataset)
+                    {
+                        //If currently in an annotation this will cancel the previous one
+                        m_datasetInAnnotation = go;
+                        CurrentPointingIT = msg.PointingID;
+                        foundGO = true;
+                        break;
+                    }
+                }
+
+                //Let the main thread hand this after datasets are loaded (we are waiting for a loading)
+                if(!foundGO)
+                {
+                    m_pointingIDWaitingAnnotation = msg.PointingID;
+                    m_sdWaitingAnnotation         = sd;
+                }
+            }
+        }
 #endregion
 
         public Color GetHeadsetColor(int headsetID)
@@ -621,6 +801,88 @@ namespace Sereno
             }
         }
 
+        public DefaultSubDatasetGameObject GetTargetedGameObject()
+        {
+            lock(this)
+                return m_targetedGameObject;
+        }
+
+        /// <summary>
+        /// The current pointing interaction technique in use
+        /// </summary>
+        public PointingIT CurrentPointingIT
+        {
+            get
+            {
+                return m_enumPointingIT;
+            }
+
+            set
+            {
+                //Unregister
+                if(m_currentPointingIT != null)
+                    m_currentPointingIT.OnSelection -= OnPointingSelection;
+
+                //Destroy prefabs
+                switch(m_enumPointingIT)
+                {
+                    case PointingIT.WIM:
+                        Destroy((ARWIM)m_currentPointingIT);
+                        break;
+                    case PointingIT.GOGO:
+                        GoGoGameObject.gameObject.SetActive(false);
+                        break;
+                }
+
+                m_currentPointingIT = null;
+
+                m_enumPointingIT = value;
+
+                //Set the m_currentPointingIT variable (and treat the new one)
+                switch (m_enumPointingIT)
+                {
+                    case PointingIT.NONE:
+                        break;
+
+                    case PointingIT.GOGO: //Reuse the GoGoGameObject
+                        m_currentPointingIT = GoGoGameObject;
+                        GoGoGameObject.CurrentSubDataset = m_datasetInAnnotation;
+                        GoGoGameObject.gameObject.SetActive(true);
+                        break;
+
+                    case PointingIT.WIM: //Create a new WIM with the correct copy
+                    {
+                        if(m_datasetGameObjects.Count > 0)
+                        {
+                            ARWIM go = Instantiate(ARWIMPrefab);
+                            go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.15f, 0.15f, 0.15f));
+                            go.gameObject.SetActive(true);
+                            m_currentPointingIT = go;
+                        }
+                        break;
+                    }
+
+                    case PointingIT.MANUAL:
+                        break;
+                }
+
+                //Register
+                if(m_currentPointingIT != null)
+                    m_currentPointingIT.OnSelection += OnPointingSelection;
+            }
+        }
+
+        /// <summary>
+        /// What to do when a new selection has been done using an interaction pointing technique?
+        /// </summary>
+        /// <param name="pointingIT">The pointing interaction technique calling this method</param>
+        private void OnPointingSelection(IPointingIT pointingIT)
+        {
+            GameObject go = Instantiate(CubePrefab, pointingIT.TargetPosition, Quaternion.identity);
+            go.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
+            go.transform.SetParent(transform, false);
+        }
+
         /// <summary>
         /// Handles changement in the connection status
         /// </summary>
@@ -632,14 +894,19 @@ namespace Sereno
             {
                 m_textValues.EnableTexts = true;
                 String txt = "";
-                if(status == ConnectionStatus.CONNECTED)
-                    txt = IPAddress.Parse(((IPEndPoint)s.LocalEndPoint).Address.ToString()).ToString();
-                
-                //Clear everything
-                else
+                if (status == ConnectionStatus.CONNECTED)
                 {
+                    m_wasConnected = true;
+                    txt = IPAddress.Parse(((IPEndPoint)s.LocalEndPoint).Address.ToString()).ToString();
+                }
+
+                //Clear everything
+                else if(m_wasConnected)
+                {
+                    m_connectionLost = true;
+
                     //Restore anchor data
-                    if(m_transferBatch != null)
+                    if (m_transferBatch != null)
                     {
                         m_transferBatch.Dispose();
                         m_transferBatch = null;
@@ -652,12 +919,10 @@ namespace Sereno
 
                     //Datasets
                     m_vtkSMLoaded.Clear();
-                    foreach(var gameObject in m_datasetGameObjects)
-                        Destroy(gameObject);
-                    
+
                     m_vtkDatasetsLoaded.Clear();
                     m_datasets.Clear();
-                    
+
                     txt = "";
                 }
                 if(txt != m_textValues.IPStr)

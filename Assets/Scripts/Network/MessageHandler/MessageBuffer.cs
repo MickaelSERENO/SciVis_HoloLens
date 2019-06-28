@@ -80,6 +80,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed containing the owner information</param>
         void OnSetVisibilityDataset(MessageBuffer messageBuffer, VisibilityMessage msg);
+
+        /// <summary>
+        /// Function called when a start annotation command has been submited
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed containing information about the pointing interaction technique to use and the dataset to manipulate</param>
+        void OnStartAnnotation(MessageBuffer messageBuffer, StartAnnotationMessage msg);
     }
 
     /// <summary>
@@ -431,6 +438,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_SET_VISIBILITY_DATASET:
                     m_msg = new VisibilityMessage(ServerType.GET_SET_VISIBILITY_DATASET);
+                    break;
+                case ServerType.GET_CREATE_ANNOTATION:
+                    m_msg = new StartAnnotationMessage(ServerType.GET_CREATE_ANNOTATION);
                     break;
             }
         }

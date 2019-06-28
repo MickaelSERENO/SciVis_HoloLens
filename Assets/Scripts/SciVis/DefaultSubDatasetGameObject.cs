@@ -16,6 +16,11 @@ namespace Sereno.SciVis
         public GameObject Outline = null;
 
         /// <summary>
+        /// The Color to apply when the GameObject is being targeted
+        /// </summary>
+        public Color ColorOnTargetPointingIT = new Color(1.0f, 1.0f, 1.0f);
+
+        /// <summary>
         /// The SubDataset bound
         /// </summary>
         protected SubDataset m_sd = null;
@@ -69,22 +74,29 @@ namespace Sereno.SciVis
         /// Should we update the 3D scaling?
         /// </summary>
         protected bool m_updateS = false;
+
+        /// <summary>
+        /// Is this GameObject targeted?
+        /// </summary>
+        protected bool m_isTargeted = false;
         
+        /// <summary>
+        /// Is this GameObject a miniature
+        /// </summary>
+        protected bool m_isMiniature = false;
+
         /// <summary>
         /// Initialize the visualization. Call this method only once please.
         /// </summary>
         /// <param name="sd">The sub dataset to use</param>
-        public void Init(SubDataset sd, IDataProvider provider)
+        public void Init(SubDataset sd, IDataProvider provider, bool isMiniature = false)
         {
             m_dataProvider = provider;
             m_sd = sd;
+            m_isMiniature = isMiniature;
 
             //Add external 3D objects
-            m_outline = GameObject.Instantiate(Outline);
-            m_outline.transform.parent = transform;
-            m_outline.transform.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
-            m_outline.transform.localScale = new Vector3(1, 1, 1);
-            m_outline.transform.localRotation = Quaternion.identity;
+            m_outline = Outline;
 
             LinkToSM();
 
@@ -179,25 +191,72 @@ namespace Sereno.SciVis
             //Update the 3D transform of this game object
             lock (this)
             {
-                if (m_updateP)
-                    transform.localPosition = m_newP;
-                m_updateP = false;
-
-                if (m_updateQ)
-                    transform.localRotation = m_newQ;
-                m_updateQ = false;
-
-                if (m_updateS)
-                    transform.localScale = m_newS;
-                m_updateS = false;
-
-                if (m_updateOutlineColor)
+                if (m_dataProvider.GetTargetedGameObject() == this)
                 {
-                    foreach (var comp in m_outline.transform.GetComponentsInChildren<MeshRenderer>())
-                        comp.material.color = m_outlineColor;
+                    if (!m_isTargeted)
+                    {
+                        foreach (var comp in m_outline.transform.GetComponentsInChildren<MeshRenderer>())
+                            comp.material.color = ColorOnTargetPointingIT;
+                        m_updateOutlineColor = true;
+                        m_isTargeted = true;
+                    }
                 }
-                m_updateOutlineColor = false;
+                else
+                    m_isTargeted = false;
+
+
+                if (!m_isMiniature)
+                {
+                    if (m_updateP)
+                        transform.localPosition = m_newP;
+                    m_updateP = false;
+
+                    if (m_updateQ)
+                        transform.localRotation = m_newQ;
+                    m_updateQ = false;
+
+                    if (m_updateS)
+                        transform.localScale = m_newS;
+                    m_updateS = false;
+                                       
+                    if (m_updateOutlineColor && !m_isTargeted)
+                    {
+                        foreach (var comp in m_outline.transform.GetComponentsInChildren<MeshRenderer>())
+                            comp.material.color = m_outlineColor;
+                        m_updateOutlineColor = false;
+                    }
+                }
             }
+        }
+
+        /// <summary>
+        /// Create a new miniature. Updates on the subdataset states will also change this miniature. However linking to another SubDataset will break the link between these objects!
+        /// </summary>
+        /// <returns>The created GameObject</returns>
+        public virtual DefaultSubDatasetGameObject CreateMiniature()
+        {
+            DefaultSubDatasetGameObject go = GameObject.Instantiate(this);
+            go.Init(m_sd, m_dataProvider);
+
+
+            return go;
+        }
+
+        /// <summary>
+        /// Is this GameObject targeted?
+        /// </summary>
+        public bool IsTargeted
+        {
+            get { return m_isTargeted; }
+        }
+
+        /// <summary>
+        /// The SubDataset current state being used
+        /// </summary>
+        public SubDataset SubDatasetState
+        {
+            get { return m_sd; }
+            set { SetSubDatasetState(value); }
         }
     }
 }

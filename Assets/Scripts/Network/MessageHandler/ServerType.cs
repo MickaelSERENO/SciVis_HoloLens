@@ -15,5 +15,6 @@ namespace Sereno.Network.MessageHandler
         GET_SUBDATASET_OWNER  = 8, //The subdataset modification owner
         GET_ON_SCALE_DATASET  = 9, //Scale a dataset
         GET_SET_VISIBILITY_DATASET = 10, /*!< Set the dataset visibility*/
+        GET_CREATE_ANNOTATION = 11, /*!< Start to create an annotation on a specific dataset*/
     }
 }

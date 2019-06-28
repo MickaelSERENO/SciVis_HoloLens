@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using System.Threading.Tasks;
 
 #if ENABLE_WINMD_SUPPORT
 using Sereno.HandDetector;
@@ -24,7 +25,7 @@ namespace Sereno.Unity.HandDetector
         /// <summary>
         /// The hand detector object
         /// </summary>
-        private HandDetector.HandDetector m_handDetector = null;
+        private Sereno.HandDetector.HandDetector m_handDetector = null;
 #endif
 
         /// <summary>
@@ -59,7 +60,7 @@ namespace Sereno.Unity.HandDetector
         {
 #if ENABLE_WINMD_SUPPORT
             //Create the HandDetector object
-            m_handDetector = await HandDetector.HandDetector.CreateAsync(null);
+            m_handDetector = await Sereno.HandDetector.HandDetector.CreateAsync(null);
             await m_handDetector.InitializeAsync(this);
 #endif
         }
@@ -195,6 +196,54 @@ namespace Sereno.Unity.HandDetector
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Get the hands that are not on the body.
+        /// </summary>
+        /// <param name="minMagnitude">The minimum magnitude between the camera and the valid hands along the z and x axis</param>
+        /// <returns>The list of hands not on the body</returns>
+        public List<HandDetected> GetHandsNotOnBody(float minMagnitude)
+        {
+            List<HandDetected> validHDs = new List<HandDetected>();
+            foreach (HandDetected hd in HandsDetected)
+            {
+                if (hd.IsValid)
+                {
+                    Vector3 distBody = (hd.Position - Camera.main.transform.position);
+                    Vector2 distBody2D = new Vector2(distBody.x, distBody.z);
+                    if (distBody2D.magnitude > minMagnitude) //Discard detection that may be the chest "on the body"
+                    {
+                        validHDs.Add(hd);
+                    }
+                }
+            }
+
+            return validHDs;
+        }
+
+        /// <summary>
+        /// Get the farthest hand along the camera forward axis from a list of valids hands
+        /// </summary>
+        /// <param name="validHDs">The valid hands</param>
+        /// <returns>The farthest hands or null if the list is empty</returns>
+        public HandDetected GetFarthestHand(List<HandDetected> validHDs)
+        {
+            if (validHDs.Count == 0)
+                return null;
+
+            HandDetected hd = validHDs[0];
+            float posZ = (Camera.main.transform.localRotation * (hd.Position - Camera.main.transform.localPosition)).z;
+            for (int i = 1; i < validHDs.Count; i++)
+            {
+                float tempPosZ = Vector3.Dot(Camera.main.transform.forward, validHDs[i].Position - Camera.main.transform.localPosition);
+                if (posZ < tempPosZ)
+                {
+                    posZ = tempPosZ;
+                    hd = validHDs[i];
+                }
+            }
+            return hd;
         }
 #endif
 
