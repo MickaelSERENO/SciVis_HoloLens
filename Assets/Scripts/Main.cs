@@ -323,10 +323,11 @@ namespace Sereno
             moveVTKMsg.HeadsetID = -1;
             OnMoveDataset(null, moveVTKMsg);
 
-            StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_CREATE_ANNOTATION);
+            StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
             annotMsg.DatasetID    = 0;
             annotMsg.SubDatasetID = 0;
-            annotMsg.PointingID = PointingIT.WIM;
+            annotMsg.PointingID   = PointingIT.WIM;
+            annotMsg.InPublic     = 1;
             OnStartAnnotation(null, annotMsg);
 #endif
         }
@@ -650,22 +651,25 @@ namespace Sereno
         public void OnRotateDataset(MessageBuffer messageBuffer, RotateDatasetMessage msg)
         {
             Debug.Log("Received rotation event");
-            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset)
-                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset.Rotation = msg.Quaternion;
+            SubDataset sd = (msg.InPublic == 1) ? m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPublicState : m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPrivateState;
+            lock (sd)
+                sd.Rotation = msg.Quaternion;
         }
 
         public void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg)
         {
             Debug.Log($"Received movement event : {msg.Position[0]}, {msg.Position[1]}, {msg.Position[2]}");
-            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset)
-                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset.Position = msg.Position;
+            SubDataset sd = (msg.InPublic == 1) ? m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPublicState : m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPrivateState;
+            lock(sd)
+                sd.Position = msg.Position;
         }
 
         public void OnScaleDataset(MessageBuffer messageBuffer, ScaleDatasetMessage msg)
         {
             Debug.Log($"Received Scale event : {msg.Scale[0]}, {msg.Scale[1]}, {msg.Scale[2]}");
-            lock(m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset)
-                m_datasets[msg.DataID].SubDatasets[msg.SubDataID].CurrentSubDataset.Scale = msg.Scale;
+            SubDataset sd = (msg.InPublic == 1) ? m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPublicState : m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPrivateState;
+            lock (sd)
+                sd.Scale = msg.Scale;
         }
         
         public void OnSetVisibilityDataset(MessageBuffer messageBuffer, VisibilityMessage msg)
@@ -674,13 +678,18 @@ namespace Sereno
             lock(this)
             {
                 SubDatasetMetaData metaData = m_datasets[msg.DataID].SubDatasets[msg.SubDataID];
-                if(metaData != null)
-                {
-                    metaData.Visibility = msg.Visibility;
-                    m_changeInternalStates[metaData.SubDatasetPublicState].SetSubDatasetState(metaData.CurrentSubDataset);
-                }
+                SetVisibilityDataset(metaData, msg.Visibility);
             }
 #endif
+        }
+
+        public void SetVisibilityDataset(SubDatasetMetaData metaData, int visibility)
+        {
+            if (metaData != null)
+            {
+                metaData.Visibility = visibility;
+                m_changeInternalStates[metaData.SubDatasetPublicState].SetSubDatasetState(metaData.CurrentSubDataset);
+            }
         }
 
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
@@ -760,6 +769,12 @@ namespace Sereno
                 bool foundGO = false;
                 //Search got the current DefaultSubDatasetGameObject being in annotation
                 SubDatasetMetaData sd = m_datasets[msg.DatasetID].SubDatasets[msg.SubDatasetID];
+
+                //Check visibility
+                int msgVisibility = (msg.InPublic == 1 ? SubDatasetMetaData.VISIBILITY_PUBLIC : SubDatasetMetaData.VISIBILITY_PRIVATE);
+                if(sd.Visibility != msgVisibility)
+                    SetVisibilityDataset(sd, msgVisibility);
+
                 foreach(DefaultSubDatasetGameObject go in m_datasetGameObjects)
                 {
                     if(go.SubDatasetState == sd.CurrentSubDataset)
@@ -780,7 +795,29 @@ namespace Sereno
                 }
             }
         }
-#endregion
+
+        public void OnAnchorAnnotation(MessageBuffer messageBuffer, AnchorAnnotationMessage msg)
+        {
+            lock(this)
+            {
+                SubDatasetMetaData metaData = m_datasets[msg.DatasetID].SubDatasets[msg.SubDatasetID];
+                SubDataset sd = (msg.InPublic == 1 ? metaData.SubDatasetPublicState : metaData.SubDatasetPrivateState);
+
+                sd.AddAnnotation(new Annotation(msg.LocalPosition));
+
+                CurrentPointingIT = PointingIT.NONE; //No more annotations to add
+            }
+        }
+        
+        public void OnClearAnnotations(MessageBuffer messageBuffer, ClearAnnotationsMessage msg)
+        {
+            SubDatasetMetaData metaData = m_datasets[msg.DatasetID].SubDatasets[msg.SubDatasetID];
+            SubDataset sd = (msg.InPublic == 1 ? metaData.SubDatasetPublicState : metaData.SubDatasetPrivateState);
+
+            sd.ClearAnnotations();
+        }
+
+        #endregion
 
         public Color GetHeadsetColor(int headsetID)
         {
@@ -1007,7 +1044,7 @@ namespace Sereno
 
             m_anchorImportSegments.Clear();
         }
-
-#endregion
+        
+        #endregion
     }
 }

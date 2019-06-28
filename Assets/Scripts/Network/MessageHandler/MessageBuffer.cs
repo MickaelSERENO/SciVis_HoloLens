@@ -87,6 +87,20 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed containing information about the pointing interaction technique to use and the dataset to manipulate</param>
         void OnStartAnnotation(MessageBuffer messageBuffer, StartAnnotationMessage msg);
+
+        /// <summary>
+        /// Function called when a new anchored annotation command has been submited
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnAnchorAnnotation(MessageBuffer messageBuffer, AnchorAnnotationMessage msg);
+
+        /// <summary>
+        /// Function called when a new clear annotations command has been submited
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnClearAnnotations(MessageBuffer messageBuffer, ClearAnnotationsMessage msg);
     }
 
     /// <summary>
@@ -257,6 +271,18 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_SET_VISIBILITY_DATASET:
                             foreach(var l in m_listeners)
                                 l.OnSetVisibilityDataset(this, (VisibilityMessage)m_msg);
+                            break;
+                        case ServerType.GET_START_ANNOTATION:
+                            foreach (var l in m_listeners)
+                                l.OnStartAnnotation(this, (StartAnnotationMessage)m_msg);
+                            break;
+                        case ServerType.GET_ANCHOR_ANNOTATION:
+                            foreach (var l in m_listeners)
+                                l.OnAnchorAnnotation(this, (AnchorAnnotationMessage)m_msg);
+                            break;
+                        case ServerType.GET_CLEAR_ANNOTATIONS:
+                            foreach (var l in m_listeners)
+                                l.OnClearAnnotations(this, (ClearAnnotationsMessage)m_msg);
                             break;
                         default:
                             break;
@@ -439,8 +465,14 @@ namespace Sereno.Network.MessageHandler
                 case ServerType.GET_SET_VISIBILITY_DATASET:
                     m_msg = new VisibilityMessage(ServerType.GET_SET_VISIBILITY_DATASET);
                     break;
-                case ServerType.GET_CREATE_ANNOTATION:
-                    m_msg = new StartAnnotationMessage(ServerType.GET_CREATE_ANNOTATION);
+                case ServerType.GET_START_ANNOTATION:
+                    m_msg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
+                    break;
+                case ServerType.GET_ANCHOR_ANNOTATION:
+                    m_msg = new AnchorAnnotationMessage(ServerType.GET_ANCHOR_ANNOTATION);
+                    break;
+                case ServerType.GET_CLEAR_ANNOTATIONS:
+                    m_msg = new ClearAnnotationsMessage(ServerType.GET_CLEAR_ANNOTATIONS);
                     break;
             }
         }

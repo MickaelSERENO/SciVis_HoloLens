@@ -21,6 +21,11 @@ namespace Sereno.SciVis
         public Color ColorOnTargetPointingIT = new Color(1.0f, 1.0f, 1.0f);
 
         /// <summary>
+        /// the annotation prefab to use
+        /// </summary>
+        public AnnotationGameObject AnnotationPrefab = null;
+
+        /// <summary>
         /// The SubDataset bound
         /// </summary>
         protected SubDataset m_sd = null;
@@ -86,6 +91,26 @@ namespace Sereno.SciVis
         protected bool m_isMiniature = false;
 
         /// <summary>
+        /// Has the SubDataset state changed?
+        /// </summary>
+        protected bool m_sdChanged = false;
+
+        /// <summary>
+        /// List of annotations game object created
+        /// </summary>
+        protected List<AnnotationGameObject> m_annotationGOs = new List<AnnotationGameObject>();
+
+        /// <summary>
+        /// List of annotation where a GameObject is needed to be created
+        /// </summary>
+        private List<Annotation> m_annotationGOsInRemoving = new List<Annotation>();
+
+        /// <summary>
+        /// List of annotation where a GameObject is needed to be created
+        /// </summary>
+        private List<Annotation> m_annotationGOsInCreation = new List<Annotation>();
+
+        /// <summary>
         /// Initialize the visualization. Call this method only once please.
         /// </summary>
         /// <param name="sd">The sub dataset to use</param>
@@ -97,6 +122,10 @@ namespace Sereno.SciVis
 
             //Add external 3D objects
             m_outline = Outline;
+            m_outline.transform.SetParent(transform);
+            m_outline.transform.localPosition = new Vector3(0, 0, 0);
+            m_outline.transform.localScale = new Vector3(1, 1, 1);
+            m_outline.transform.localRotation = Quaternion.identity;
 
             LinkToSM();
 
@@ -112,11 +141,10 @@ namespace Sereno.SciVis
                 OnPositionChange(m_sd, m_sd.Position);
                 OnScaleChange(m_sd, m_sd.Scale);
                 m_sd.AddListener(this);
+                m_sdChanged = true;
             }
         }
-
-
-
+        
         public virtual void OnColorRangeChange(SubDataset dataset, float min, float max)
         {
         }
@@ -176,6 +204,17 @@ namespace Sereno.SciVis
         {
         }
 
+        public void OnAddAnnotation(SubDataset dataset, Annotation annot)
+        {
+            m_annotationGOsInCreation.Add(annot);
+        }
+
+        public void OnClearAnnotations(SubDataset dataset)
+        {
+            foreach (Annotation annot in dataset.Annotations)
+                m_annotationGOsInRemoving.Add(annot);
+        }
+
         public void SetSubDatasetState(SubDataset sd)
         {
             lock (m_sd)
@@ -203,8 +242,7 @@ namespace Sereno.SciVis
                 }
                 else
                     m_isTargeted = false;
-
-
+                
                 if (!m_isMiniature)
                 {
                     if (m_updateP)
@@ -225,9 +263,46 @@ namespace Sereno.SciVis
                             comp.material.color = m_outlineColor;
                         m_updateOutlineColor = false;
                     }
+                    
+                    if(m_sdChanged)
+                    {
+                        //Destroy every annotation GO
+                        foreach (AnnotationGameObject go in m_annotationGOs)
+                            Destroy(go);
+                        m_annotationGOs.Clear();
+
+                        //Create every Annotations
+                        foreach(Annotation annot in m_sd.Annotations)
+                            CreateAnnotationGO(annot);
+
+                        m_sdChanged = false;
+                        m_annotationGOsInCreation.Clear();
+                    }
+                    else
+                    {
+                        //Create annotation game object received asynchronously
+                        foreach (Annotation annot in m_annotationGOsInCreation)
+                            CreateAnnotationGO(annot);
+                        m_annotationGOsInCreation.Clear();
+
+                        //Delete annotation game object received asynchronously
+                        foreach (Annotation annot in m_annotationGOsInRemoving)
+                        {
+                            for (int i = 0; i < m_annotationGOs.Count; i++)
+                            {
+                                if(m_annotationGOs[i].Annotation == annot)
+                                {
+                                    Destroy(m_annotationGOs[i]);
+                                    m_annotationGOs.RemoveAt(i);
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+
 
         /// <summary>
         /// Create a new miniature. Updates on the subdataset states will also change this miniature. However linking to another SubDataset will break the link between these objects!
@@ -235,11 +310,37 @@ namespace Sereno.SciVis
         /// <returns>The created GameObject</returns>
         public virtual DefaultSubDatasetGameObject CreateMiniature()
         {
-            DefaultSubDatasetGameObject go = GameObject.Instantiate(this);
-            go.Init(m_sd, m_dataProvider);
+            GameObject go = new GameObject();
+            DefaultSubDatasetGameObject defaultSDGO = go.AddComponent<DefaultSubDatasetGameObject>();
+            defaultSDGO.Outline = Instantiate(Outline);
+            defaultSDGO.Init(m_sd, m_dataProvider, true);
+            
+            return defaultSDGO;
+        }
 
+        /// <summary>
+        /// Create an annotation GameObject
+        /// </summary>
+        /// <param name="annot">The annotation model data</param>
+        private void CreateAnnotationGO(Annotation annot)
+        {
+            bool found = false;
+            foreach(AnnotationGameObject go in m_annotationGOs)
+            {
+                if(go.Annotation == annot)
+                {
+                    found = true;
+                    break;
+                }
+            }
 
-            return go;
+            if (!found)
+            {
+                AnnotationGameObject go = Instantiate(AnnotationPrefab);
+                go.transform.SetParent(transform);
+                go.Init(annot);
+                m_annotationGOs.Add(go);
+            }
         }
 
         /// <summary>

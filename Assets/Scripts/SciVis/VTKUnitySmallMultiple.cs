@@ -430,6 +430,12 @@ namespace Sereno.SciVis
             UpdateRangeColor(m_vtkSubDataset.MinClamp, m_vtkSubDataset.MaxClamp);
         }
 
+        public void OnAddAnnotation(SubDataset dataset, Annotation annot)
+        {}
+
+        public void OnClearAnnotations(SubDataset dataset)
+        {}
+
         /// <summary>
         /// The 3D Texure Color computed. This array has to be used along a transfer function
         /// </summary>

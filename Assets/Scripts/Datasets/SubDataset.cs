@@ -51,6 +51,19 @@ namespace Sereno.Datasets
         /// <param name="dataset">The dataset being modified</param>
         /// <param name="ownerID">The new owner ID</param>
         void OnOwnerIDChange(SubDataset dataset, int ownerID);
+
+        /// <summary>
+        /// Called when a new annotation has been added
+        /// </summary>
+        /// <param name="dataset">The dataset being modified</param>
+        /// <param name="annot">The annotation local space</param>
+        void OnAddAnnotation(SubDataset dataset, Annotation annot);
+
+        /// <summary>
+        /// Called when annotations are about to be cleaned
+        /// </summary>
+        /// <param name="dataset">The SubDataset being modified</param>
+        void OnClearAnnotations(SubDataset dataset);
     }
 
     public class SubDataset
@@ -88,7 +101,12 @@ namespace Sereno.Datasets
         /// <summary>
         /// The Owner ID
         /// </summary>
-        protected int       m_ownerID;
+        protected int m_ownerID;
+
+        /// <summary>
+        /// List of created annotations
+        /// </summary>
+        protected List<Annotation> m_annotations = new List<Annotation>();
         
         /// <summary>
         /// The Quaternion rotation
@@ -150,6 +168,21 @@ namespace Sereno.Datasets
             foreach(var l in m_listeners)
                 l.OnColorRangeChange(this, min, max);
         }
+
+        public void AddAnnotation(Annotation annot)
+        {
+            m_annotations.Add(annot);
+            foreach (var l in m_listeners)
+                l.OnAddAnnotation(this, annot);
+        }
+
+        public void ClearAnnotations()
+        {
+            foreach (var l in m_listeners)
+                l.OnClearAnnotations(this);
+            m_annotations.Clear();
+        }
+
 
         /// <summary>
         /// Add a callback listener
@@ -265,6 +298,14 @@ namespace Sereno.Datasets
                 foreach(var l in m_listeners)
                     l.OnOwnerIDChange(this, m_ownerID);
             }
+        }
+
+        /// <summary>
+        /// The list of annotation. Please, do not modify the list (but list's items can)
+        /// </summary>
+        public List<Annotation> Annotations
+        {
+            get => m_annotations;
         }
     }
 }

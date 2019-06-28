@@ -23,6 +23,11 @@ namespace Sereno.Network.MessageHandler
         public Int32 SubDatasetID;
 
         /// <summary>
+        /// Is this Annotation start to be created in the public space?
+        /// </summary>
+        public byte InPublic;
+
+        /// <summary>
         /// Ths Interaction technique ID
         /// </summary>
         public PointingIT PointingID;
@@ -34,6 +39,8 @@ namespace Sereno.Network.MessageHandler
         {
             if (Cursor <= 2)
                 return (byte)'I';
+            else if (Cursor == 3)
+                return (byte)'b';
             return 0;
         }
 
@@ -47,10 +54,17 @@ namespace Sereno.Network.MessageHandler
                 PointingID = (PointingIT)value;
             base.Push(value);
         }
+
+        public override void Push(byte value)
+        {
+            if (Cursor == 3)
+                InPublic = value;
+            base.Push(value);
+        }
         
         public override Int32 GetMaxCursor()
         {
-            return 2;
+            return 3;
         }
     }
 }

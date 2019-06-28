@@ -46,6 +46,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Outline: {fileID: 3691428218523606972}
   ColorOnTargetPointingIT: {r: 1, g: 1, b: 1, a: 1}
+  AnnotationPrefab: {fileID: 6123219202065968192, guid: 798de7a281fa88d489dadaa6f225b2c2,
+    type: 3}
 --- !u!1001 &3692070205737189652
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -182,11 +182,15 @@ namespace Sereno.SciVis
         /// <returns>The created GameObject</returns>
         public override DefaultSubDatasetGameObject CreateMiniature()
         {
-            VTKUnitySmallMultipleGameObject go = GameObject.Instantiate(this);
-            go.Init(m_sm, m_dataProvider, true);
-            go.m_texture3D = m_texture3D;
+            GameObject go = new GameObject();
 
-            return go;
+            VTKUnitySmallMultipleGameObject vtkSDGO = go.AddComponent<VTKUnitySmallMultipleGameObject>();
+            vtkSDGO.Outline = Instantiate(Outline);
+            vtkSDGO.Init(m_sm, m_dataProvider, true);
+
+            vtkSDGO.m_texture3D = m_texture3D;
+
+            return vtkSDGO;
         }
     }
 }
