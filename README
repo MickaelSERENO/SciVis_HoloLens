@@ -9,3 +9,5 @@ This work also requires the SciVis_Server application and the SciVis_Android app
 Once the Visual Studio build is created, you have to manually modify the appxmanifest to add the following capabilities:
 <rescap:Capability Name="perceptionSensorsExperimental" />
 with rescap declared as xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+
+Because of how the HoloLens works, the server IP address is hardcoded. You can set it in Assets/Scripts/VFVClient.cs (the constructor of VFVClient).
