@@ -96,6 +96,11 @@ namespace Sereno.SciVis
             }
         }
 
+        public override void OnDestroy()
+        {
+            base.OnDestroy();
+        }
+
         public override void LateUpdate()
         {
             base.LateUpdate();

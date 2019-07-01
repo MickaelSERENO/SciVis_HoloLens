@@ -1,24 +1,25 @@
-﻿#define TEST
+﻿//#define TEST
 #define CHI2020
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
 #endif
 
-using System.Collections.Generic;
-using UnityEngine;
-
-using Sereno.SciVis;
-using Sereno.Network;
 using Sereno.Datasets;
+using Sereno.Network;
 using Sereno.Network.MessageHandler;
-using Sereno.Unity.HandDetector;
 using Sereno.Pointing;
+using Sereno.SciVis;
+using Sereno.Unity.HandDetector;
 using System;
-using System.Net.Sockets;
+using System.Collections.Generic;
 using System.Net;
-using UnityEngine.XR.WSA.Sharing;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using UnityEngine;
+using UnityEngine.XR.WSA.Sharing;
 
 namespace Sereno
 {
@@ -103,6 +104,11 @@ namespace Sereno
         /// The Server Client. 
         /// </summary>
         private VFVClient m_client;
+
+        /// <summary>
+        /// The client headset ID
+        /// </summary>
+        private int m_headsetID = -1;
 
         /// <summary>
         /// The client color
@@ -202,6 +208,11 @@ namespace Sereno
         private bool m_connectionLost = false;
 
         /// <summary>
+        /// The SubDataset in annotation
+        /// </summary>
+        private SubDatasetMetaData m_sdInAnnotation = null;
+
+        /// <summary>
         /// The SubDataset waiting for an annotation selection
         /// </summary>
         private SubDatasetMetaData m_sdWaitingAnnotation = null;
@@ -209,7 +220,12 @@ namespace Sereno
         /// <summary>
         /// The pointing interaction technique in wait for annotation being loaded
         /// </summary>
-        private PointingIT m_pointingIDWaitingAnnotation = PointingIT.NONE;
+        private PointingIT m_waitingPointingID = PointingIT.NONE;
+
+        /// <summary>
+        /// Should we update the pointing ID
+        /// </summary>
+        private bool m_updatePointingID = false;
         #endregion
 
         /* Public attributes*/
@@ -278,7 +294,7 @@ namespace Sereno
         /// a stupid cube prefab
         /// </summary>
         public GameObject CubePrefab;
-#endregion
+        #endregion
 
         void Start()
         {
@@ -305,30 +321,51 @@ namespace Sereno
             GoGoGameObject.transform.rotation = Quaternion.identity;
             GoGoGameObject.gameObject.SetActive(false);
 
-            CurrentPointingIT = PointingIT.GOGO;
+            CurrentPointingIT = PointingIT.NONE;
 #if TEST
-            AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
-            addVTKMsg.DataID = 0;
-            addVTKMsg.NbCellFieldValueIndices = 0;
-            addVTKMsg.NbPtFieldValueIndices   = 1;
-            addVTKMsg.Path = "Agulhas_10_resampled.vtk";
-            addVTKMsg.PtFieldValueIndices = new int[] { 0 };
-            OnAddVTKDataset(null, addVTKMsg);
+            Task t = new Task( () =>
+            {
+                AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
+                addVTKMsg.DataID = 0;
+                addVTKMsg.NbCellFieldValueIndices = 0;
+                addVTKMsg.NbPtFieldValueIndices = 1;
+                addVTKMsg.Path = "Agulhas_10_resampled.vtk";
+                addVTKMsg.PtFieldValueIndices = new int[] { 0 };
+                OnAddVTKDataset(null, addVTKMsg);
 
-            MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
-            moveVTKMsg.DataID = 0;
-            moveVTKMsg.SubDataID = 0;
-            moveVTKMsg.Position = new float[3] { -1, -1, -1 };
-            moveVTKMsg.InPublic = 1;
-            moveVTKMsg.HeadsetID = -1;
-            OnMoveDataset(null, moveVTKMsg);
+                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                moveVTKMsg.DataID = 0;
+                moveVTKMsg.SubDataID = 0;
+                moveVTKMsg.Position = new float[3] { -1, -1, -1 };
+                moveVTKMsg.InPublic = 1;
+                moveVTKMsg.HeadsetID = -1;
+                OnMoveDataset(null, moveVTKMsg);
 
-            StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
-            annotMsg.DatasetID    = 0;
-            annotMsg.SubDatasetID = 0;
-            annotMsg.PointingID   = PointingIT.WIM;
-            annotMsg.InPublic     = 1;
-            OnStartAnnotation(null, annotMsg);
+                StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
+                annotMsg.DatasetID = 0;
+                annotMsg.SubDatasetID = 0;
+                annotMsg.PointingID = PointingIT.WIM;
+                annotMsg.InPublic = 1;
+                OnStartAnnotation(null, annotMsg);
+
+                ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
+                scaleMsg.DataID = 0;
+                scaleMsg.SubDataID = 0;
+                scaleMsg.HeadsetID = -1;
+                scaleMsg.Scale = new float[3] { 0.25f, 0.25f, 0.25f };
+                scaleMsg.InPublic = 1;
+                OnScaleDataset(null, scaleMsg);
+
+                //AnchorAnnotationMessage anchorAnnot = new AnchorAnnotationMessage(ServerType.GET_ANCHOR_ANNOTATION);
+                //anchorAnnot.AnnotationID = 0;
+                //anchorAnnot.DatasetID = 0;
+                //anchorAnnot.SubDatasetID = 0;
+                //anchorAnnot.HeadsetID = -1;
+                //anchorAnnot.LocalPosition = new float[3] { 0.5f, 0.5f, 0.5f };
+                //anchorAnnot.InPublic = 1;
+                //OnAnchorAnnotation(null, anchorAnnot);
+            });
+            t.Start();
 #endif
         }
 
@@ -444,21 +481,39 @@ namespace Sereno
                 m_datasetGameObjects.Add(gameObject);
             }
 #endif
+        }
 
-            if(m_sdWaitingAnnotation != null)
+        private void HandlePointingID()
+        {
+            if (m_updatePointingID)
             {
-                foreach(DefaultSubDatasetGameObject go in m_datasetGameObjects)
+                if (m_sdWaitingAnnotation != null)
                 {
-                    if (go.SubDatasetState == m_sdWaitingAnnotation.CurrentSubDataset)
+                    foreach (DefaultSubDatasetGameObject go in m_datasetGameObjects)
                     {
-                        //If currently in an annotation this will cancel the previous one
-                        m_datasetInAnnotation = go;
-                        CurrentPointingIT = m_pointingIDWaitingAnnotation;
-                        m_sdWaitingAnnotation = null;
-                        m_pointingIDWaitingAnnotation = PointingIT.NONE;
-                        break;
+                        if (go.SubDatasetState == m_sdWaitingAnnotation.CurrentSubDataset)
+                        {
+                            //If currently in an annotation this will cancel the previous one
+                            m_datasetInAnnotation = go;
+                            CurrentPointingIT = m_waitingPointingID;
+                            m_sdInAnnotation = m_sdWaitingAnnotation;
+
+                            m_sdWaitingAnnotation = null;
+                            m_waitingPointingID = PointingIT.NONE;
+                            break;
+                        }
                     }
                 }
+
+                else
+                {
+                    m_datasetInAnnotation = null;
+                    CurrentPointingIT     = m_waitingPointingID;
+                    m_sdInAnnotation      = null;
+                    m_waitingPointingID   = PointingIT.NONE;
+                }
+
+                m_updatePointingID = false;
             }
         }
 
@@ -563,9 +618,10 @@ namespace Sereno
             HandleSpatialCoordinateSystem();
             lock(this)
             {
+                HandleDatasetsLoaded();
+                HandlePointingID();
                 HandleAnchor();
                 HandleIPTxt();
-                HandleDatasetsLoaded();
                 HandleHeadsetStatusLoaded();
                 HandleHeadsetStatusSending();
             }
@@ -581,7 +637,7 @@ namespace Sereno
                 if (m_currentPointingIT != null && m_currentPointingIT.TargetPositionIsValid)
                 {
                     Vector3 targetPos = m_currentPointingIT.TargetPosition;
-                    if(targetPos.x >= -0.5f && targetPos.x <= 0.5f &&
+                    if (targetPos.x >= -0.5f && targetPos.x <= 0.5f &&
                        targetPos.y >= -0.5f && targetPos.y <= 0.5f &&
                        targetPos.z >= -0.5f && targetPos.z <= 0.5f)
                         m_targetedGameObject = m_currentPointingIT.CurrentSubDataset;
@@ -719,9 +775,12 @@ namespace Sereno
                     m_textValues.EnableTexts = true;
                 }
             }
+
             m_clientColor = new Color32((byte)((msg.Color >> 16) & 0xff),
                                         (byte)((msg.Color >> 8 ) & 0xff),
                                         (byte)(msg.Color & 0xff), 255);
+
+            m_headsetID = msg.ID;
 
             //Send anchor dataset to the server. 
             //The server will store that and send that information to other headsets if needed
@@ -766,7 +825,6 @@ namespace Sereno
         {
             lock(this)
             {
-                bool foundGO = false;
                 //Search got the current DefaultSubDatasetGameObject being in annotation
                 SubDatasetMetaData sd = m_datasets[msg.DatasetID].SubDatasets[msg.SubDatasetID];
 
@@ -775,24 +833,10 @@ namespace Sereno
                 if(sd.Visibility != msgVisibility)
                     SetVisibilityDataset(sd, msgVisibility);
 
-                foreach(DefaultSubDatasetGameObject go in m_datasetGameObjects)
-                {
-                    if(go.SubDatasetState == sd.CurrentSubDataset)
-                    {
-                        //If currently in an annotation this will cancel the previous one
-                        m_datasetInAnnotation = go;
-                        CurrentPointingIT = msg.PointingID;
-                        foundGO = true;
-                        break;
-                    }
-                }
-
-                //Let the main thread hand this after datasets are loaded (we are waiting for a loading)
-                if(!foundGO)
-                {
-                    m_pointingIDWaitingAnnotation = msg.PointingID;
-                    m_sdWaitingAnnotation         = sd;
-                }
+                //If currently in an annotation this will cancel the previous one
+                m_waitingPointingID = msg.PointingID;
+                m_sdWaitingAnnotation = sd;
+                m_updatePointingID = true;
             }
         }
 
@@ -804,8 +848,6 @@ namespace Sereno
                 SubDataset sd = (msg.InPublic == 1 ? metaData.SubDatasetPublicState : metaData.SubDatasetPrivateState);
 
                 sd.AddAnnotation(new Annotation(msg.LocalPosition));
-
-                CurrentPointingIT = PointingIT.NONE; //No more annotations to add
             }
         }
         
@@ -915,9 +957,15 @@ namespace Sereno
         /// <param name="pointingIT">The pointing interaction technique calling this method</param>
         private void OnPointingSelection(IPointingIT pointingIT)
         {
-            GameObject go = Instantiate(CubePrefab, pointingIT.TargetPosition, Quaternion.identity);
-            go.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
-            go.transform.SetParent(transform, false);
+            lock (this)
+            {
+                if (pointingIT.TargetPositionIsValid)
+                {
+                    m_client.SendAnchorAnnotation(m_sdInAnnotation, new float[3] { pointingIT.TargetPosition.x, pointingIT.TargetPosition.y, pointingIT.TargetPosition.z });
+                    m_updatePointingID = true;
+                    m_waitingPointingID = PointingIT.NONE;
+                }
+            }
         }
 
         /// <summary>

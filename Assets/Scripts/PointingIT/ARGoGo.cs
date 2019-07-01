@@ -176,7 +176,12 @@ namespace Sereno.Pointing
 
         public bool TargetPositionIsValid
         {
-            get { return m_isHandDetected; }
+            get
+            {
+                return m_isHandDetected && m_targetPosition.x <= 0.5f && m_targetPosition.x >= -0.5f &&
+                                           m_targetPosition.y <= 0.5f && m_targetPosition.y >= -0.5f &&
+                                           m_targetPosition.z <= 0.5f && m_targetPosition.z >= -0.5f;
+            }
         }
 
         public DefaultSubDatasetGameObject CurrentSubDataset

@@ -225,6 +225,16 @@ namespace Sereno.SciVis
             }
         }
 
+        public virtual void OnDestroy()
+        {
+            Destroy(m_outline);
+            if(!m_isMiniature)
+            {
+                foreach (var annot in m_annotationGOs)
+                    Destroy(annot);
+            }
+        }
+
         public virtual void LateUpdate()
         {
             //Update the 3D transform of this game object

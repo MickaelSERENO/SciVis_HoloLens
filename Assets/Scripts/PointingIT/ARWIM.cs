@@ -91,6 +91,12 @@ namespace Sereno.Pointing
             m_gestureRecognizer.StartCapturingGestures();
         }
 
+        void OnDestroy()
+        {
+            Destroy(m_wim);
+            Destroy(HandPositionGO);
+        }
+
         // Start is called before the first frame update
         void Start()
         {
@@ -175,7 +181,9 @@ namespace Sereno.Pointing
 
         public bool TargetPositionIsValid
         {
-            get { return m_isHandDetected; }
+            get { return m_isHandDetected && m_targetPosition.x <= 0.5f && m_targetPosition.x >= -0.5f &&
+                                             m_targetPosition.y <= 0.5f && m_targetPosition.y >= -0.5f &&
+                                             m_targetPosition.z <= 0.5f && m_targetPosition.z >= -0.5f; }
         }
 
         public DefaultSubDatasetGameObject CurrentSubDataset

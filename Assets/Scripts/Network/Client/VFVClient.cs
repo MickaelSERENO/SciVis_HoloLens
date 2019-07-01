@@ -3,6 +3,7 @@ using System;
 
 using Sereno.Network.MessageHandler;
 using System.Net.Sockets;
+using Sereno.Datasets;
 
 namespace Sereno.Network
 {
@@ -14,7 +15,8 @@ namespace Sereno.Network
         SEND_IDENT_HOLOLENS = 0,
         SEND_UPDATE_HEADSET = 5,
         SEND_ANCHORING_DATA_SEGMENT = 7,
-        SEND_ANCHORING_DATA_STATUS  = 8
+        SEND_ANCHORING_DATA_STATUS  = 8,
+        SEND_ANCHOR_ANNOTATION = 15,
     }
 
     /// <summary> 
@@ -111,6 +113,33 @@ namespace Sereno.Network
 
             //Succeed status
             data[offset++] = (byte)(succeed ? 1 : 0);
+
+            Send(data);
+        }
+
+        public void SendAnchorAnnotation(SubDatasetMetaData sd, float[] position)
+        {
+            byte[] data = new byte[2 + 2*4 + 1 + 3*4];
+            Int32 offset = 0;
+
+            //Type
+            WriteInt16(data, offset, (Int16)VFVSendCommand.SEND_ANCHOR_ANNOTATION);
+            offset += 2;
+
+            //DatasetID
+            WriteInt32(data, offset, sd.CurrentSubDataset.Parent.ID);
+            offset += 4;
+
+            //SubDataset ID
+            WriteInt32(data, offset, sd.SubDatasetPublicState.Parent.GetSubDatasetID(sd.SubDatasetPublicState));
+            offset += 4;
+
+            //Public state
+            byte inPublic = (byte)(sd.CurrentSubDataset == sd.SubDatasetPrivateState ? 0 : 1);
+            data[offset++] = inPublic;
+
+            for (int i = 0; i < 3; i++, offset += sizeof(float))
+                WriteFloat(data, offset, position[i]); 
 
             Send(data);
         }

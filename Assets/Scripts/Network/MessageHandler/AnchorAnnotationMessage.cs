@@ -69,6 +69,7 @@ namespace Sereno.Network.MessageHandler
         {
             if(Cursor <= 7 && Cursor >= 5)
                 LocalPosition[Cursor - 5] = value;
+            base.Push(value);
         }
 
         public override void Push(byte value)

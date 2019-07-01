@@ -223,7 +223,7 @@ namespace Sereno.Unity.HandDetector
         }
 
         /// <summary>
-        /// Get the farthest hand along the camera forward axis from a list of valids hands
+        /// Get the farthest hand along the camera up axis from a list of valids hands
         /// </summary>
         /// <param name="validHDs">The valid hands</param>
         /// <returns>The farthest hands or null if the list is empty</returns>
@@ -233,13 +233,13 @@ namespace Sereno.Unity.HandDetector
                 return null;
 
             HandDetected hd = validHDs[0];
-            float posZ = (Camera.main.transform.localRotation * (hd.Position - Camera.main.transform.localPosition)).z;
+            float posY = validHDs[0].Position.y;
             for (int i = 1; i < validHDs.Count; i++)
             {
-                float tempPosZ = Vector3.Dot(Camera.main.transform.forward, validHDs[i].Position - Camera.main.transform.localPosition);
-                if (posZ < tempPosZ)
+                float tempPosY = validHDs[i].Position.y;
+                if (posY < tempPosY)
                 {
-                    posZ = tempPosZ;
+                    posY = tempPosY;
                     hd = validHDs[i];
                 }
             }

@@ -180,7 +180,7 @@ namespace Sereno.Network.MessageHandler
                 }
 
                 //Read the buffer and send the correct type to the associated servermessage
-                while(m_msg != null && m_msg.GetMaxCursor() >= m_msg.Cursor)
+                while(m_msg != null && m_msg.GetMaxCursor() >= m_msg.Cursor && bufPos < buf.Length)
                 {
                     switch(m_msg.GetCurrentType())
                     {
