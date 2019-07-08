@@ -56,7 +56,7 @@ namespace Sereno.Network
         /// <param name="updateData">The data to stream</param>
         public void SendHeadsetUpdateData(HeadsetUpdateData updateData)
         {
-            byte[] data = new byte[2 + 3*4 + 4*4];
+            byte[] data = new byte[2 + 3*4 + 4*4 + 3*4 + 1 + 3*4 + 3*4];
             Int32 offset = 0;
 
             //Type
@@ -70,6 +70,29 @@ namespace Sereno.Network
             //Rotation
             for(int i = 0; i < 4; i++, offset += 4)
                 WriteFloat(data, offset, updateData.Rotation[i]);
+
+            //PointingIT
+            WriteInt32(data, offset, (Int32)updateData.PointingIT);
+            offset += 4;
+
+            //Pointing Dataset's ID
+            WriteInt32(data, offset, updateData.PointingDatasetID);
+            offset += 4;
+
+            //Pointing SubDataset's ID
+            WriteInt32(data, offset, updateData.PointingSubDatasetID);
+            offset += 4;
+
+            //Pointing in public space
+            data[offset++] = (byte)(updateData.PointingInPublic ? 1 : 0);
+
+            //Pointing's position
+            for (int i = 0; i < 3; i++, offset += 4)
+                WriteFloat(data, offset, updateData.PointingLocalSDPosition[i]);
+
+            //The headset starting position when the pointing interaction technique was created
+            for (int i = 0; i < 3; i++, offset += 4)
+                WriteFloat(data, offset, updateData.PointingHeadsetStartPosition[i]);
 
             Send(data);
         }

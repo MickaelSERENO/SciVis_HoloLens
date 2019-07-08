@@ -51,6 +51,27 @@ namespace Sereno
         IMPORT  //Import the anchor
     }
 
+    /// <summary>
+    /// Class storing GameObjects per Headset
+    /// </summary>
+    public class HeadsetGameObjects
+    {
+        /// <summary>
+        /// The Headset GameObject
+        /// </summary>
+        public GameObject Headset;
+
+        /// <summary>
+        /// The floating glyph game object
+        /// </summary>
+        public GameObject Glyph;
+
+        /// <summary>
+        /// The AR workspace awareness pointing game object
+        /// </summary>
+        public ARCollabPointingIT ARPointingGO;
+    }
+
     public class Main : MonoBehaviour, IMessageBufferCallback, IDataProvider
     {
         /// <summary>
@@ -153,7 +174,7 @@ namespace Sereno
         /// <summary>
         /// List of GameObject representing the headset colors
         /// </summary>
-        private List<GameObject> m_headsetGlyphs = new List<GameObject>();
+        private List<HeadsetGameObjects> m_headsetGameObjects = new List<HeadsetGameObjects>();
         
         /// <summary>
         /// The final import anchor data once created. Need to be kept because of the number of retry.
@@ -291,9 +312,24 @@ namespace Sereno
         public ARWIM ARWIMPrefab;
 
         /// <summary>
+        /// The ARWIMRay Prefab object
+        /// </summary>
+        public ARWIMRay ARWIMRayPrefab;
+
+        /// <summary>
+        /// The ARManual Prefab
+        /// </summary>
+        public ARManual ARManualPrefab;
+
+        /// <summary>
         /// a stupid cube prefab
         /// </summary>
         public GameObject CubePrefab;
+
+        /// <summary>
+        /// The AR Collaborator pointing IT prefab
+        /// </summary>
+        public ARCollabPointingIT ARCollabPointingITPrefab;
         #endregion
 
         void Start()
@@ -311,7 +347,7 @@ namespace Sereno
             m_client.Connect();
 
             //Start the hand detector
-            m_hdProvider.Smoothness = 0.50f;
+            m_hdProvider.Smoothness = 0.70f;
             m_hdProvider.InitializeHandDetector();
 
             //Initialize our selection techniques
@@ -341,14 +377,7 @@ namespace Sereno
                 moveVTKMsg.HeadsetID = -1;
                 OnMoveDataset(null, moveVTKMsg);
 
-                StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
-                annotMsg.DatasetID = 0;
-                annotMsg.SubDatasetID = 0;
-                annotMsg.PointingID = PointingIT.WIM;
-                annotMsg.InPublic = 1;
-                OnStartAnnotation(null, annotMsg);
-
-                ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
+                /*ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
                 scaleMsg.SubDataID = 0;
                 scaleMsg.HeadsetID = -1;
@@ -356,17 +385,59 @@ namespace Sereno
                 scaleMsg.InPublic = 1;
                 OnScaleDataset(null, scaleMsg);
 
-                //AnchorAnnotationMessage anchorAnnot = new AnchorAnnotationMessage(ServerType.GET_ANCHOR_ANNOTATION);
-                //anchorAnnot.AnnotationID = 0;
-                //anchorAnnot.DatasetID = 0;
-                //anchorAnnot.SubDatasetID = 0;
-                //anchorAnnot.HeadsetID = -1;
-                //anchorAnnot.LocalPosition = new float[3] { 0.5f, 0.5f, 0.5f };
-                //anchorAnnot.InPublic = 1;
-                //OnAnchorAnnotation(null, anchorAnnot);
-            });
+                StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
+                annotMsg.DatasetID = 0;
+                annotMsg.SubDatasetID = 0;
+                annotMsg.PointingID = PointingIT.WIM_RAY;
+                annotMsg.InPublic = 1;
+                OnStartAnnotation(null, annotMsg);*/
+
+                //Headset Status
+                HeadsetsStatusMessage headsetStatusMsg = new HeadsetsStatusMessage(ServerType.GET_HEADSETS_STATUS);
+                headsetStatusMsg.HeadsetsStatus = new HeadsetStatus[1];
+                HeadsetStatus headsetStatus = new HeadsetStatus();
+                headsetStatus.Color = (int)0x00ff0000;
+                headsetStatus.ID = 2;
+                headsetStatus.Position = new float[3] { 1, 1, 1 };
+                headsetStatus.Rotation = new float[4] { 1, 0, 0, 0 };
+                headsetStatus.PointingIT = PointingIT.GOGO;
+                headsetStatus.PointingDatasetID    = 0;
+                headsetStatus.PointingSubDatasetID = 0;
+                headsetStatus.PointingInPublic = true;
+                headsetStatus.PointingLocalSDPosition = new float[3] { 0, 0, 0 };
+                headsetStatus.PointingHeadsetStartPosition = new float[3] { 1, 1, 1 };
+                headsetStatusMsg.HeadsetsStatus[0] = headsetStatus;
+                OnHeadsetsStatus(null, headsetStatusMsg);
+
+                /*AnchorAnnotationMessage anchorAnnot = new AnchorAnnotationMessage(ServerType.GET_ANCHOR_ANNOTATION);
+                anchorAnnot.AnnotationID = 0;
+                anchorAnnot.DatasetID = 0;
+                anchorAnnot.SubDatasetID = 0;
+                anchorAnnot.HeadsetID = -1;
+                anchorAnnot.LocalPosition = new float[3] { 0.5f, 0.5f, 0.5f };
+                anchorAnnot.InPublic = 1;
+                OnAnchorAnnotation(null, anchorAnnot);*/
+            }
+            );
             t.Start();
 #endif
+        }
+
+        /// <summary>
+        /// Get the SubDataset GameObject affiliated to a SubDataset
+        /// </summary>
+        /// <param name="sd">The SubDataset affiliated to a GameObject</param>
+        /// <returns>null if no game object is found, the DefaultSubDatasetGameObject otherwise</returns>
+        private DefaultSubDatasetGameObject GetSDGameObject(SubDataset sd)
+        {
+            foreach (DefaultSubDatasetGameObject go in m_datasetGameObjects)
+            {
+                if (go.SubDatasetState == sd)
+                {
+                    return go;
+                }
+            }
+            return null;
         }
 
         /// <summary>
@@ -448,7 +519,7 @@ namespace Sereno
             if(m_connectionLost)
             {
                 foreach (var go in m_datasetGameObjects)
-                    Destroy(go);
+                    Destroy(go.gameObject);
                 m_datasetGameObjects.Clear();
                 CurrentPointingIT = PointingIT.NONE;
             }
@@ -489,19 +560,16 @@ namespace Sereno
             {
                 if (m_sdWaitingAnnotation != null)
                 {
-                    foreach (DefaultSubDatasetGameObject go in m_datasetGameObjects)
-                    {
-                        if (go.SubDatasetState == m_sdWaitingAnnotation.CurrentSubDataset)
-                        {
-                            //If currently in an annotation this will cancel the previous one
-                            m_datasetInAnnotation = go;
-                            CurrentPointingIT = m_waitingPointingID;
-                            m_sdInAnnotation = m_sdWaitingAnnotation;
+                    DefaultSubDatasetGameObject sdGo = GetSDGameObject(m_sdWaitingAnnotation.CurrentSubDataset);
 
-                            m_sdWaitingAnnotation = null;
-                            m_waitingPointingID = PointingIT.NONE;
-                            break;
-                        }
+                    if (sdGo != null)
+                    {
+                        m_datasetInAnnotation = sdGo;
+                        CurrentPointingIT     = m_waitingPointingID;
+                        m_sdInAnnotation      = m_sdWaitingAnnotation;
+
+                        m_sdWaitingAnnotation = null;
+                        m_waitingPointingID   = PointingIT.NONE;
                     }
                 }
 
@@ -524,38 +592,57 @@ namespace Sereno
         {
             //Load the headset status
             //Create enough GameObjects
-            while(m_headsetStatus.Count > m_headsetGlyphs.Count)
+            while(m_headsetStatus.Count > m_headsetGameObjects.Count)
             {
-                GameObject go = Instantiate(UserEntityColor);
-                go.transform.parent = this.transform;
-                m_headsetGlyphs.Add(go);
+                GameObject headset = new GameObject();
+                headset.transform.SetParent(this.transform, false);
+
+                GameObject glyph = Instantiate(UserEntityColor);
+                glyph.transform.SetParent(headset.transform, false);
+
+                ARCollabPointingIT arCollabGO = Instantiate(ARCollabPointingITPrefab);
+                arCollabGO.transform.SetParent(null, false);
+
+                HeadsetGameObjects go = new HeadsetGameObjects() { Headset = headset, Glyph = glyph, ARPointingGO = arCollabGO };
+                
+                //Affiliate correctly the pointing tehcnique and the glyph
+                go.ARPointingGO.HeadsetTransform = go.Headset.transform;
+
+                m_headsetGameObjects.Add(go);
             }
 
             //hide the useless ones
-            for(int i = m_headsetStatus.Count; i < m_headsetGlyphs.Count; i++)
-                m_headsetGlyphs[i].SetActive(false);
+            for (int i = m_headsetStatus.Count; i < m_headsetGameObjects.Count; i++)
+            {
+                m_headsetGameObjects[i].Glyph.SetActive(false);
+                m_headsetGameObjects[i].ARPointingGO.PointingIT = PointingIT.NONE;
+            }
 
             //Change the color, shape and the position/rotation of each character's glyph
-            for(int i = 0; i < m_headsetStatus.Count; i++)
+            for(int i = 0; i < m_headsetGameObjects.Count; i++)
             {
                 //Update the glyph position / rotation
-                m_headsetGlyphs[i].transform.localRotation = new Quaternion(m_headsetStatus[i].Rotation[1],
-                                                                            m_headsetStatus[i].Rotation[2],
-                                                                            m_headsetStatus[i].Rotation[3],
-                                                                            m_headsetStatus[i].Rotation[0]);
-                
-                m_headsetGlyphs[i].transform.localPosition = new Vector3(m_headsetStatus[i].Position[0],
-                                                                         m_headsetStatus[i].Position[1],
-                                                                         m_headsetStatus[i].Position[2]) + m_headsetGlyphs[i].transform.forward*(-HEADSET_SIZE/2.0f) + //Middle of the head
-                                                                                                           m_headsetGlyphs[i].transform.up*(HEADSET_TOP);  //Top of the head
+                m_headsetGameObjects[i].Headset.transform.localRotation = new Quaternion(m_headsetStatus[i].Rotation[1],
+                                                                                       m_headsetStatus[i].Rotation[2],
+                                                                                       m_headsetStatus[i].Rotation[3],
+                                                                                       m_headsetStatus[i].Rotation[0]);
+
+                m_headsetGameObjects[i].Headset.transform.localPosition = new Vector3(m_headsetStatus[i].Position[0],
+                                                                                      m_headsetStatus[i].Position[1],
+                                                                                      m_headsetStatus[i].Position[2]);
+
+                m_headsetGameObjects[i].Glyph.transform.localPosition  = m_headsetGameObjects[i].Headset.transform.forward*(-HEADSET_SIZE/2.0f) + //Middle of the head
+                                                                         m_headsetGameObjects[i].Headset.transform.up*(HEADSET_TOP);  //Top of the head
 
                 //Update the glyph color
-                m_headsetGlyphs[i].GetComponent<MeshRenderer>().material.color = new Color(((byte)(m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
-                                                                                           ((byte)(m_headsetStatus[i].Color >> 8)  & 0xff)/255.0f,
-                                                                                           ((byte)(m_headsetStatus[i].Color >> 0)  & 0xff)/255.0f);
-                
+                m_headsetGameObjects[i].Glyph.GetComponent<MeshRenderer>().material.color = new Color(((byte)(m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
+                                                                                                      ((byte)(m_headsetStatus[i].Color >> 8)  & 0xff)/255.0f,
+                                                                                                      ((byte)(m_headsetStatus[i].Color >> 0)  & 0xff)/255.0f);
+
+                m_headsetGameObjects[i].Glyph.SetActive(true);
+
                 //Update the glyph shape
-                MeshFilter mf = m_headsetGlyphs[i].GetComponent<MeshFilter>();
+                MeshFilter mf = m_headsetGameObjects[i].Glyph.GetComponent<MeshFilter>();
                 switch(m_headsetStatus[i].CurrentAction)
                 {
                     case HeadsetCurrentAction.MOVING:
@@ -571,7 +658,31 @@ namespace Sereno
                         mf.mesh = NothingGlyph;
                         break;
                 }
+
+                if (m_headsetStatus[i].ID != m_headsetID)
+                {
+                    //Update the pointing interaction technique
+                    m_headsetGameObjects[i].ARPointingGO.PointingIT = m_headsetStatus[i].PointingIT;
+                    m_headsetGameObjects[i].ARPointingGO.SubDatasetGameObject = (m_headsetStatus[i].PointingInPublic ? GetSDGameObject(GetSubDataset(m_headsetStatus[i].PointingDatasetID, m_headsetStatus[i].PointingSubDatasetID, true)) : null);
+                    m_headsetGameObjects[i].ARPointingGO.TargetPosition = new Vector3(m_headsetStatus[i].PointingLocalSDPosition[0], m_headsetStatus[i].PointingLocalSDPosition[1], m_headsetStatus[i].PointingLocalSDPosition[2]);
+                    m_headsetGameObjects[i].ARPointingGO.HeadsetStartPosition = new Vector3(m_headsetStatus[i].PointingHeadsetStartPosition[0], m_headsetStatus[i].PointingHeadsetStartPosition[1], m_headsetStatus[i].PointingHeadsetStartPosition[2]);
+                }
             }
+        }
+
+        /// <summary>
+        /// Get the relative position from the anchor
+        /// </summary>
+        /// <param name="position">The position to evaluate</param>
+        /// <returns>the x, y and z component of the position regarding the root anchor game object</returns>
+        private float[] GetRelativePositionToAnchor(Vector3 position)
+        {
+            //The relative position (taking acount the headset's orientation, i.e., new coordinate system)
+            Vector3 relPos = position - m_rootAnchorGO.transform.position;
+
+            return new float[3] {Vector3.Dot(relPos, m_rootAnchorGO.transform.right),
+                                 Vector3.Dot(relPos, m_rootAnchorGO.transform.up),
+                                 Vector3.Dot(relPos, m_rootAnchorGO.transform.forward)};
         }
 
         /// <summary>
@@ -584,16 +695,26 @@ namespace Sereno
             {
                 HeadsetUpdateData headsetData = new HeadsetUpdateData();
 
-                Vector3 position = new Vector3(Camera.main.transform.position[0] - m_rootAnchorGO.transform.position[0],
-                                               Camera.main.transform.position[1] - m_rootAnchorGO.transform.position[1],
-                                               Camera.main.transform.position[2] - m_rootAnchorGO.transform.position[2]);
-
-                headsetData.Position = new float[3] {Vector3.Dot(position, m_rootAnchorGO.transform.right),
-                                                     Vector3.Dot(position, m_rootAnchorGO.transform.up),
-                                                     Vector3.Dot(position, m_rootAnchorGO.transform.forward)};
-
+                headsetData.Position = GetRelativePositionToAnchor(Camera.main.transform.position);
+                
+                //The relative orientation
                 Quaternion rel = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * Camera.main.transform.localRotation;
                 headsetData.Rotation = new float[4]{rel[3], rel[0], rel[1], rel[2]};
+
+                //The current pointing data
+                headsetData.PointingIT = CurrentPointingIT;
+                if(CurrentPointingIT != PointingIT.NONE && m_sdInAnnotation != null && m_currentPointingIT != null)
+                {
+                    SubDataset curSD = m_sdInAnnotation.SubDatasetPublicState;
+                    headsetData.PointingDatasetID    = curSD.Parent.ID;
+                    headsetData.PointingSubDatasetID = curSD.Parent.SubDatasets.FindIndex(s => s == curSD);
+                    headsetData.PointingInPublic     = (curSD == m_sdInAnnotation.SubDatasetPublicState);
+
+                    for (int i = 0; i < 3; i++)
+                        headsetData.PointingLocalSDPosition[i] = m_currentPointingIT.TargetPosition[i];
+
+                    headsetData.PointingHeadsetStartPosition = GetRelativePositionToAnchor(m_currentPointingIT.HeadsetStartPosition);
+                }
 
                 m_client.SendHeadsetUpdateData(headsetData);
             }
@@ -704,10 +825,31 @@ namespace Sereno
 #endif
         }
 
+        /// <summary>
+        /// Get the SubDataset targeted by the dataset ID, subdataset ID and public/private status
+        /// </summary>
+        /// <param name="datasetID"></param>
+        /// <param name="subDatasetID"></param>
+        /// <param name="inPublic"></param>
+        /// <returns>The SubDataset found with the correct IDs, null otherwise</returns>
+        private SubDataset GetSubDataset(int datasetID, int subDatasetID, bool inPublic)
+        {
+            if (datasetID < 0 || subDatasetID < 0)
+                return null;
+
+            if (m_datasets.Count <= datasetID)
+                return null;
+
+            if(m_datasets[datasetID].SubDatasets.Count <= subDatasetID)
+                return null;
+
+            return inPublic ? m_datasets[datasetID].SubDatasets[subDatasetID].SubDatasetPublicState : m_datasets[datasetID].SubDatasets[subDatasetID].SubDatasetPrivateState;
+        }
+
         public void OnRotateDataset(MessageBuffer messageBuffer, RotateDatasetMessage msg)
         {
             Debug.Log("Received rotation event");
-            SubDataset sd = (msg.InPublic == 1) ? m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPublicState : m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPrivateState;
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID, msg.InPublic != 0);
             lock (sd)
                 sd.Rotation = msg.Quaternion;
         }
@@ -715,17 +857,23 @@ namespace Sereno
         public void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg)
         {
             Debug.Log($"Received movement event : {msg.Position[0]}, {msg.Position[1]}, {msg.Position[2]}");
-            SubDataset sd = (msg.InPublic == 1) ? m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPublicState : m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPrivateState;
-            lock(sd)
-                sd.Position = msg.Position;
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID, msg.InPublic != 0);
+            if (sd != null)
+            {
+                lock (sd)
+                    sd.Position = msg.Position;
+            }
         }
 
         public void OnScaleDataset(MessageBuffer messageBuffer, ScaleDatasetMessage msg)
         {
             Debug.Log($"Received Scale event : {msg.Scale[0]}, {msg.Scale[1]}, {msg.Scale[2]}");
-            SubDataset sd = (msg.InPublic == 1) ? m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPublicState : m_datasets[msg.DataID].SubDatasets[msg.SubDataID].SubDatasetPrivateState;
-            lock (sd)
-                sd.Scale = msg.Scale;
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID, msg.InPublic != 0);
+            if (sd != null)
+            {
+                lock (sd)
+                    sd.Scale = msg.Scale;
+            }
         }
         
         public void OnSetVisibilityDataset(MessageBuffer messageBuffer, VisibilityMessage msg)
@@ -844,19 +992,18 @@ namespace Sereno
         {
             lock(this)
             {
-                SubDatasetMetaData metaData = m_datasets[msg.DatasetID].SubDatasets[msg.SubDatasetID];
-                SubDataset sd = (msg.InPublic == 1 ? metaData.SubDatasetPublicState : metaData.SubDatasetPrivateState);
-
-                sd.AddAnnotation(new Annotation(msg.LocalPosition));
+                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID, msg.InPublic != 0);
+                if(sd != null)
+                    sd.AddAnnotation(new Annotation(msg.LocalPosition));
             }
         }
         
         public void OnClearAnnotations(MessageBuffer messageBuffer, ClearAnnotationsMessage msg)
         {
-            SubDatasetMetaData metaData = m_datasets[msg.DatasetID].SubDatasets[msg.SubDatasetID];
-            SubDataset sd = (msg.InPublic == 1 ? metaData.SubDatasetPublicState : metaData.SubDatasetPrivateState);
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID, msg.InPublic != 0);
 
-            sd.ClearAnnotations();
+            if(sd != null)
+                sd.ClearAnnotations();
         }
 
         #endregion
@@ -906,10 +1053,16 @@ namespace Sereno
                 switch(m_enumPointingIT)
                 {
                     case PointingIT.WIM:
-                        Destroy((ARWIM)m_currentPointingIT);
+                        Destroy(((ARWIM)m_currentPointingIT).gameObject);
+                        break;
+                    case PointingIT.WIM_RAY:
+                        Destroy(((ARWIMRay)m_currentPointingIT).gameObject);
                         break;
                     case PointingIT.GOGO:
                         GoGoGameObject.gameObject.SetActive(false);
+                        break;
+                    case PointingIT.MANUAL:
+                        Destroy(((ARManual)m_currentPointingIT).gameObject);
                         break;
                 }
 
@@ -934,7 +1087,19 @@ namespace Sereno
                         if(m_datasetGameObjects.Count > 0)
                         {
                             ARWIM go = Instantiate(ARWIMPrefab);
-                            go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.15f, 0.15f, 0.15f));
+                            go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.30f, 0.30f, 0.30f));
+                            go.gameObject.SetActive(true);
+                            m_currentPointingIT = go;
+                        }
+                        break;
+                    }
+
+                    case PointingIT.WIM_RAY:
+                    {
+                        if(m_datasetGameObjects.Count > 0)
+                        {
+                            ARWIMRay go = Instantiate(ARWIMRayPrefab);
+                            go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.30f, 0.30f, 0.30f));
                             go.gameObject.SetActive(true);
                             m_currentPointingIT = go;
                         }
@@ -942,6 +1107,13 @@ namespace Sereno
                     }
 
                     case PointingIT.MANUAL:
+                        if (m_datasetGameObjects.Count > 0)
+                        {
+                            ARManual go = Instantiate(ARManualPrefab);
+                            go.Init(m_hdProvider, m_datasetInAnnotation);
+                            go.gameObject.SetActive(true);
+                            m_currentPointingIT = go;
+                        }
                         break;
                 }
 

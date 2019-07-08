@@ -211,7 +211,7 @@ namespace Sereno.Unity.HandDetector
                 if (hd.IsValid)
                 {
                     Vector3 distBody = (hd.Position - Camera.main.transform.position);
-                    Vector2 distBody2D = new Vector2(distBody.x, distBody.z);
+                    Vector2 distBody2D = new Vector2(-Vector3.Dot(distBody, Camera.main.transform.right), Vector3.Dot(distBody, Camera.main.transform.forward));
                     if (distBody2D.magnitude > minMagnitude) //Discard detection that may be the chest "on the body"
                     {
                         validHDs.Add(hd);
@@ -233,13 +233,13 @@ namespace Sereno.Unity.HandDetector
                 return null;
 
             HandDetected hd = validHDs[0];
-            float posY = validHDs[0].Position.y;
+            float posZ = Vector3.Dot(Camera.main.transform.forward, validHDs[0].Position - Camera.main.transform.position);
             for (int i = 1; i < validHDs.Count; i++)
             {
-                float tempPosY = validHDs[i].Position.y;
-                if (posY < tempPosY)
+                float tempPosZ = Vector3.Dot(Camera.main.transform.forward, validHDs[i].Position - Camera.main.transform.position);
+                if (posZ < tempPosZ)
                 {
-                    posY = tempPosY;
+                    posZ = tempPosZ;
                     hd = validHDs[i];
                 }
             }

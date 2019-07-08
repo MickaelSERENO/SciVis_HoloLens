@@ -26,6 +26,11 @@ namespace Sereno.SciVis
         public AnnotationGameObject AnnotationPrefab = null;
 
         /// <summary>
+        /// The Miniature prefab
+        /// </summary>
+        public DefaultSubDatasetGameObject DefaultMiniaturePrefab;
+
+        /// <summary>
         /// The SubDataset bound
         /// </summary>
         protected SubDataset m_sd = null;
@@ -320,9 +325,7 @@ namespace Sereno.SciVis
         /// <returns>The created GameObject</returns>
         public virtual DefaultSubDatasetGameObject CreateMiniature()
         {
-            GameObject go = new GameObject();
-            DefaultSubDatasetGameObject defaultSDGO = go.AddComponent<DefaultSubDatasetGameObject>();
-            defaultSDGO.Outline = Instantiate(Outline);
+            DefaultSubDatasetGameObject defaultSDGO = Instantiate(DefaultMiniaturePrefab);
             defaultSDGO.Init(m_sd, m_dataProvider, true);
             
             return defaultSDGO;
@@ -347,7 +350,7 @@ namespace Sereno.SciVis
             if (!found)
             {
                 AnnotationGameObject go = Instantiate(AnnotationPrefab);
-                go.transform.SetParent(transform);
+                go.transform.SetParent(transform, false);
                 go.Init(annot);
                 m_annotationGOs.Add(go);
             }

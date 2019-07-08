@@ -42,6 +42,11 @@ namespace Sereno.Pointing
         private HandDetectorProvider m_hdProvider = null;
 
         /// <summary>
+        /// The headset start position when the interaction technique was created
+        /// </summary>
+        private Vector3 m_headsetStartPosition = new Vector3(0, 0, 0);
+
+        /// <summary>
         /// The GameObject representing the ray
         /// </summary>
         public GameObject RayObject = null;
@@ -61,7 +66,18 @@ namespace Sereno.Pointing
         /// </summary>
         private DefaultSubDatasetGameObject m_currentSubDataset = null;
 
+        /// <summary>
+        /// The headset transform. By default it will be the main camera
+        /// </summary>
+        private Transform m_headsetTransform = null;
+
         public event OnSelection OnSelection;
+
+        private void Awake()
+        {
+            if(m_headsetTransform == null)
+                m_headsetTransform = Camera.main.transform;
+        }
 
         public void Init(HandDetectorProvider hd)
         {
@@ -70,13 +86,13 @@ namespace Sereno.Pointing
             m_gestureRecognizer.SetRecognizableGestures(GestureSettings.Tap | GestureSettings.Hold | GestureSettings.ManipulationTranslate);
             m_gestureRecognizer.Tapped += OnTap;
             m_gestureRecognizer.StartCapturingGestures();
+
+            m_headsetStartPosition = m_headsetTransform.transform.position;
         }
 
-        // Start is called before the first frame update
         void Start()
         {}
 
-        // Update is called once per frame
         void Update()
         {
 #if ENABLE_WINMD_SUPPORT
@@ -84,8 +100,6 @@ namespace Sereno.Pointing
             {
                 lock (m_hdProvider)
                 {
-                    //Update the gameobjects
-                    RayObject.SetActive(false);
                     List<HandDetected> validHDs = m_hdProvider.GetHandsNotOnBody(0.10f);
 
                     if (validHDs.Count > 0)
@@ -96,36 +110,34 @@ namespace Sereno.Pointing
                         RayObject.SetActive(true);
 
                         //Pointing
-                        Vector3 anchorPoint = Camera.main.transform.localPosition + new Vector3(0, -0.20f, 0);
+                        Vector3 anchorPoint = Camera.main.transform.position + new Vector3(0, -0.20f, 0);
                         Vector3 pointDir = (hd.Position - anchorPoint).normalized;
 
                         if (m_pointingDir.x == 0 && m_pointingDir.y == 0 && m_pointingDir.z == 0)
-                        {
                             m_pointingDir = pointDir;
-                            RayObject.transform.up = m_pointingDir;
-                        }
                         else
-                        {
                             m_pointingDir = (1.0f - 0.8f) * pointDir + 0.8f * m_pointingDir; //Apply a strong "smoothing"
-                            RayObject.transform.up = m_pointingDir;
-                        }
-                        RayObject.transform.localPosition = anchorPoint + RayObject.transform.up * RayObject.transform.localScale.y;
-                        PosObject.transform.localPosition = anchorPoint + m_pointingDir * (20.0f * Math.Max((anchorPoint - hd.Position).magnitude, 0.3f) - 6.0f);
 
-                        m_handPosition  = hd.Position;
-                        if (m_currentSubDataset)
-                            m_targetPosition = m_currentSubDataset.transform.worldToLocalMatrix.MultiplyPoint3x4(PosObject.transform.localPosition);
+                        m_handPosition   = hd.Position;
+                        m_targetPosition = anchorPoint + m_pointingDir * (20.0f * Math.Max((anchorPoint - hd.Position).magnitude, 0.3f) - 6.0f);
+                        m_targetPosition = m_currentSubDataset.transform.worldToLocalMatrix.MultiplyPoint3x4(m_targetPosition);
                     }
                 }
             }
-#else
-            if(m_currentSubDataset != null)
-            {
-                m_targetPosition = m_currentSubDataset.transform.worldToLocalMatrix.MultiplyPoint3x4(PosObject.transform.localPosition);
-                m_isHandDetected = RayObject.activeInHierarchy && PosObject.activeInHierarchy;
-                m_pointingDir    = RayObject.transform.up;
-            }
 #endif
+            //We do this because it permits to use the same code for both the local user and the remote collaborators embodiement
+            if (m_currentSubDataset)
+            {
+                Vector3 anchorPoint = m_headsetTransform.position + new Vector3(0, -0.20f, 0);
+                Vector3 targetPos = m_currentSubDataset.transform.localToWorldMatrix.MultiplyPoint3x4(m_targetPosition);
+
+                Vector3 rayVec = targetPos - anchorPoint;
+                rayVec = rayVec.normalized;
+
+                RayObject.transform.up = rayVec;
+                RayObject.transform.localPosition = anchorPoint + RayObject.transform.up * RayObject.transform.localScale.y;
+                PosObject.transform.localPosition = targetPos;
+            }
         }
 
         /// <summary>
@@ -172,6 +184,7 @@ namespace Sereno.Pointing
         public Vector3 TargetPosition
         {
             get { return m_targetPosition; }
+            set { m_targetPosition = value; }
         }
 
         public bool TargetPositionIsValid
@@ -189,5 +202,13 @@ namespace Sereno.Pointing
             get { return m_currentSubDataset; }
             set { m_currentSubDataset = value; }
         }
+
+        public Transform HeadsetTransform
+        {
+            get { return m_headsetTransform; }
+            set { m_headsetTransform = value; }
+        }
+
+        public Vector3 HeadsetStartPosition { get => m_headsetStartPosition; set => m_headsetStartPosition = value; }
     }
 }

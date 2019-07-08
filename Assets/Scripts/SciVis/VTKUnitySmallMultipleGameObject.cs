@@ -16,6 +16,11 @@ namespace Sereno.SciVis
         public Material ColorMaterial = null;
 
         /// <summary>
+        /// The VTK Prefab to create miniatures
+        /// </summary>
+        public VTKUnitySmallMultipleGameObject VTKMiniaturePrefab;
+
+        /// <summary>
         /// The mesh to use
         /// </summary>
         private Mesh m_mesh = null;
@@ -187,12 +192,8 @@ namespace Sereno.SciVis
         /// <returns>The created GameObject</returns>
         public override DefaultSubDatasetGameObject CreateMiniature()
         {
-            GameObject go = new GameObject();
-
-            VTKUnitySmallMultipleGameObject vtkSDGO = go.AddComponent<VTKUnitySmallMultipleGameObject>();
-            vtkSDGO.Outline = Instantiate(Outline);
+            VTKUnitySmallMultipleGameObject vtkSDGO = Instantiate(VTKMiniaturePrefab);
             vtkSDGO.Init(m_sm, m_dataProvider, true);
-
             vtkSDGO.m_texture3D = m_texture3D;
 
             return vtkSDGO;

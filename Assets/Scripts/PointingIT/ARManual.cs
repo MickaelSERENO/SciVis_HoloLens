@@ -11,52 +11,47 @@ namespace Sereno.Pointing
     /// <summary>
     /// Class handling WIM interaction
     /// </summary>
-    public class ARWIM : MonoBehaviour, IPointingIT
+    public class ARManual : MonoBehaviour, IPointingIT
     {
         /// <summary>
         /// The HandDetector provider
         /// </summary>
-        protected HandDetectorProvider m_hdProvider = null;
+        private HandDetectorProvider m_hdProvider = null;
         
-        /// <summary>
-        /// The WorldInMiniature GameObject.
-        /// </summary>
-        protected DefaultSubDatasetGameObject m_wim = null;
-
         /// <summary>
         /// The original SubDataset GameObject
         /// </summary>
-        protected DefaultSubDatasetGameObject m_original = null;
+        private DefaultSubDatasetGameObject m_original = null;
 
         /// <summary>
         /// The Gesture recognizer
         /// </summary>
-        protected GestureRecognizer m_gestureRecognizer = null;
+        private GestureRecognizer m_gestureRecognizer = null;
 
         /// <summary>
         /// The hand current position (last update)
         /// </summary>
-        protected Vector3 m_handPosition = new Vector3(0, 0, 0);
+        private Vector3 m_handPosition = new Vector3(0, 0, 0);
 
         /// <summary>
         /// The target position
         /// </summary>
-        protected Vector3 m_targetPosition = new Vector3(0, 0, 0);
+        private Vector3 m_targetPosition = new Vector3(0, 0, 0);
 
         /// <summary>
         /// Was the hand detected?
         /// </summary>
-        protected bool m_isHandDetected = false;
+        private bool m_isHandDetected = false;
+
+        /// <summary>
+        /// The headset start position when the interaction technique was created
+        /// </summary>
+        private Vector3 m_headsetStartPosition = new Vector3(0, 0, 0);
 
         /// <summary>
         /// The headset transform representing the headset
         /// </summary>
         protected Transform m_headsetTransform;
-
-        /// <summary>
-        /// The headset start position when the interaction technique was created
-        /// </summary>
-        protected Vector3 m_headsetStartPosition = new Vector3(0, 0, 0);
 
         /// <summary>
         /// The game object representing the hand position
@@ -76,13 +71,12 @@ namespace Sereno.Pointing
         }
 
         /// <summary>
-        /// Initialize the interaction technique. The headset start position is reset to the headsetTransform object position
+        /// Initialize the interaction technique
         /// </summary>
         /// <param name="hdProvider">The HandProvider.</param>
         /// <param name="go">The Original SubDataset.</param>
-        /// <param name="wimScale">The replicas scale</param>
         /// <param name="headsetTransform">The transform representing the head. If null, we take Camera.main.transform gameobject</param>
-        public virtual void Init(HandDetectorProvider hdProvider, DefaultSubDatasetGameObject go, Vector3 wimScale, Transform headsetTransform=null)
+        public void Init(HandDetectorProvider hdProvider, DefaultSubDatasetGameObject go, Transform headsetTransform=null)
         {
             //Hand provider
             m_hdProvider = hdProvider;
@@ -92,17 +86,11 @@ namespace Sereno.Pointing
             if (headsetTransform == null)
                 headsetTransform = Camera.main.transform;
 
-            m_headsetStartPosition = headsetTransform.position;
-
             //Handle the transform tree
             Vector3 cameraForward = headsetTransform.forward;
             cameraForward.y = 0;
             transform.localPosition = headsetTransform.position + new Vector3(0, -0.15f, 0) + 0.45f * cameraForward;
             transform.localRotation = Quaternion.identity;
-            transform.localScale    = wimScale;
-
-            m_wim = go.CreateMiniature();
-            m_wim.transform.SetParent(transform, false);
 
             HandPositionGO.transform.SetParent(null, false);
 
@@ -113,11 +101,12 @@ namespace Sereno.Pointing
             m_gestureRecognizer.StartCapturingGestures();
 
             m_headsetTransform = headsetTransform;
+
+            m_headsetStartPosition = headsetTransform.position;
         }
 
         void OnDestroy()
         {
-            Destroy(m_wim);
             Destroy(HandPositionGO);
         }
 
@@ -128,7 +117,7 @@ namespace Sereno.Pointing
         }
 
         // Update is called once per frame
-        protected virtual void Update()
+        void Update()
         {
 #if ENABLE_WINMD_SUPPORT
             if (m_hdProvider != null)
@@ -155,15 +144,14 @@ namespace Sereno.Pointing
                         
                         //Adjust to fingers
                         m_handPosition += 0.06f*cameraLeft + 0.03f*Vector3.up + 0.11f*cameraForward;
-
-                        m_targetPosition = m_wim.transform.worldToLocalMatrix.MultiplyPoint3x4(m_handPosition);
+                        m_targetPosition = m_original.transform.worldToLocalMatrix.MultiplyPoint3x4(m_handPosition);
                     }
                 }
             }
 #endif
             //We do this because it permits to use the same code for both the local user and the remote collaborators embodiement
-            if (m_wim != null)
-                HandPositionGO.transform.position = m_wim.transform.localToWorldMatrix.MultiplyPoint3x4(m_targetPosition);
+            if (m_original != null)
+                HandPositionGO.transform.position = m_original.transform.localToWorldMatrix.MultiplyPoint3x4(m_targetPosition);
         }
 
         private void OnTap(TappedEventArgs args)
@@ -224,11 +212,7 @@ namespace Sereno.Pointing
         public Vector3 HeadsetStartPosition
         {
             get => m_headsetStartPosition;
-            set
-            {
-                m_headsetStartPosition = value;
-                transform.localPosition = m_headsetStartPosition + new Vector3(0, -0.15f, 0) + 0.45f * m_headsetTransform.forward;
-            }
+            set => m_headsetStartPosition = value;
         }
     }
 }
