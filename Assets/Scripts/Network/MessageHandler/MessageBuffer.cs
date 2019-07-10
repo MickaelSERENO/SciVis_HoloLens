@@ -101,6 +101,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnClearAnnotations(MessageBuffer messageBuffer, ClearAnnotationsMessage msg);
+
+        /// <summary>
+        /// Function called when a next trial message has been submited
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnNextTrial(MessageBuffer messageBuffer, NextTrialMessage msg);
     }
 
     /// <summary>
@@ -283,6 +290,10 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_CLEAR_ANNOTATIONS:
                             foreach (var l in m_listeners)
                                 l.OnClearAnnotations(this, (ClearAnnotationsMessage)m_msg);
+                            break;
+                        case ServerType.GET_NEXT_TRIAL:
+                            foreach (var l in m_listeners)
+                                l.OnNextTrial(this, (NextTrialMessage)m_msg);
                             break;
                         default:
                             break;
@@ -473,6 +484,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_CLEAR_ANNOTATIONS:
                     m_msg = new ClearAnnotationsMessage(ServerType.GET_CLEAR_ANNOTATIONS);
+                    break;
+                case ServerType.GET_NEXT_TRIAL:
+                    m_msg = new NextTrialMessage(ServerType.GET_NEXT_TRIAL);
                     break;
             }
         }

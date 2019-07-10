@@ -62,6 +62,11 @@ namespace Sereno.Pointing
         /// The game object representing the hand position
         /// </summary>
         public GameObject HandPositionGO;
+
+        /// <summary>
+        /// The Game object representing the hand position in the original dataset
+        /// </summary>
+        public GameObject OriginalHandPositionGO;
         
         /// <summary>
         /// The OnSelection event, event called when a selection has been performed
@@ -105,6 +110,7 @@ namespace Sereno.Pointing
             m_wim.transform.SetParent(transform, false);
 
             HandPositionGO.transform.SetParent(null, false);
+            OriginalHandPositionGO.transform.SetParent(null, false);
 
             //Handle gestures
             m_gestureRecognizer = new GestureRecognizer();
@@ -164,6 +170,8 @@ namespace Sereno.Pointing
             //We do this because it permits to use the same code for both the local user and the remote collaborators embodiement
             if (m_wim != null)
                 HandPositionGO.transform.position = m_wim.transform.localToWorldMatrix.MultiplyPoint3x4(m_targetPosition);
+            if (m_original != null)
+                OriginalHandPositionGO.transform.position = m_original.transform.localToWorldMatrix.MultiplyPoint3x4(m_targetPosition);
         }
 
         private void OnTap(TappedEventArgs args)

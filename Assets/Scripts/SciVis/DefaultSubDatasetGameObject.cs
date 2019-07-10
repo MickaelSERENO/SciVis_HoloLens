@@ -245,7 +245,7 @@ namespace Sereno.SciVis
             //Update the 3D transform of this game object
             lock (this)
             {
-                if (m_dataProvider.GetTargetedGameObject() == this)
+                if (m_dataProvider != null && m_dataProvider.GetTargetedGameObject() == this)
                 {
                     if (!m_isTargeted)
                     {

@@ -26,6 +26,11 @@ namespace Sereno.Network.MessageHandler
         private bool m_tabletConnected;
 
         /// <summary>
+        /// The ID of the connected tablet.
+        /// </summary>
+        private Int32 m_tabletID;
+
+        /// <summary>
         /// Is this headset the first connected headset?
         /// </summary>
         private byte m_isFirst = 0;
@@ -37,30 +42,32 @@ namespace Sereno.Network.MessageHandler
         {
             if(Cursor == 2)
                 m_tabletConnected = (value != 0);
-            else if(Cursor == 3)
+            else if(Cursor == 4)
                 m_isFirst = value;
             base.Push(value);
         }
 
         public override void Push(int value)
         {
-            if(Cursor == 0)
+            if (Cursor == 0)
                 m_id = value;
-            else if(Cursor == 1)
+            else if (Cursor == 1)
                 m_color = value;
+            else if (Cursor == 3)
+                m_tabletID = value;
             base.Push(value);
         }
 
         public override byte GetCurrentType()
         {
-            if(Cursor == 0 || Cursor == 1)
+            if(Cursor == 0 || Cursor == 1 || Cursor == 3)
                 return (byte)'I';
-            else if(Cursor == 2 || Cursor == 3)
+            else if(Cursor == 2 || Cursor == 4)
                 return (byte)'b';
             return 0;
         }
 
-        public override Int32 GetMaxCursor() {return 3;}
+        public override Int32 GetMaxCursor() {return 4;}
 
 
         /// <summary>
@@ -85,5 +92,10 @@ namespace Sereno.Network.MessageHandler
         /// Is this Headset the first headset connected?
         /// </summary>
         public bool IsFirstConnected {get => m_isFirst != 0; set => m_isFirst = (byte)(value ? 1 : 0);}
+
+        /// <summary>
+        /// Get the tablet ID bound to this Headset. Is usable only if TabletConnected == true. The TabletID defines a role in the application.
+        /// </summary>
+        public Int32 TabletID { get => m_tabletID; set => m_tabletID = value; }
     }
 }

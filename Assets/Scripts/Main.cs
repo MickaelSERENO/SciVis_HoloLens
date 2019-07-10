@@ -33,12 +33,27 @@ namespace Sereno
         /// <summary>
         /// Should we enable the IPText?
         /// </summary>
-        public bool   EnableTexts = false;
+        public bool   EnableIPTexts = false;
 
         /// <summary>
         /// Should we update the text values?
         /// </summary>
-        public bool   UpdateTexts = false;
+        public bool   UpdateIPTexts = false;
+
+        /// <summary>
+        /// The Random string value
+        /// </summary>
+        public String RandomStr = "";
+
+        /// <summary>
+        /// Should we enable the Random Text?
+        /// </summary>
+        public bool EnableRandomText = false;
+
+        /// <summary>
+        /// Should we update the random text values?
+        /// </summary>
+        public bool UpdateRandomText = false;
     }
 
     /// <summary>
@@ -78,6 +93,13 @@ namespace Sereno
         /// Default text displayed for the IP address
         /// </summary>
         const String DEFAULT_IP_ADDRESS_TEXT = "Server not found";
+
+#if CHI2020
+        /// <summary>
+        /// The duration time the next trial message should appear in milliseconds
+        /// </summary>
+        const Int64 NEXT_TRIAL_MESSAGE_DURATION_TIME = 3*1000;
+#endif
 
         /// <summary>
         /// Maximum number of retry for importing anchor data
@@ -130,6 +152,11 @@ namespace Sereno
         /// The client headset ID
         /// </summary>
         private int m_headsetID = -1;
+
+        /// <summary>
+        /// The tablet ID bound to this headset
+        /// </summary>
+        private int m_tabletID = -1;
 
         /// <summary>
         /// The client color
@@ -247,6 +274,24 @@ namespace Sereno
         /// Should we update the pointing ID
         /// </summary>
         private bool m_updatePointingID = false;
+
+#if CHI2020
+        /// <summary>
+        /// When should the random text be disabled? -1 == never
+        /// </summary>
+        private Int64 m_disableRandomTextTimestamp = -1;
+
+        /// <summary>
+        /// What is the current trial data ?
+        /// </summary>
+        private NextTrialMessage m_currentTrialMessage = null;
+
+        /// <summary>
+        /// Should we update the rendering pipeline due to new CHI2020 data?
+        /// </summary>
+        private bool m_updateCHI2020Data = false;
+
+#endif
         #endregion
 
         /* Public attributes*/
@@ -275,6 +320,11 @@ namespace Sereno
         /// The IP value text being displayed
         /// </summary>
         public UnityEngine.UI.Text IPValueText;
+
+        /// <summary>
+        /// Any text that has to be displayed
+        /// </summary>
+        public UnityEngine.UI.Text RandomText;
 
         /// <summary>
         /// The minicube displayed above the user coding their color
@@ -330,13 +380,23 @@ namespace Sereno
         /// The AR Collaborator pointing IT prefab
         /// </summary>
         public ARCollabPointingIT ARCollabPointingITPrefab;
-        #endregion
+
+#if CHI2020
+        /// <summary>
+        /// The Target Annotation Game Object that the user sees
+        /// </summary>
+        public GameObject TargetAnnotationGO = null;
+#endif
+#endregion
 
         void Start()
         {
             //Default text helpful to bind headset to tablet
-            m_textValues.UpdateTexts = true;
-            m_textValues.EnableTexts = true;
+            m_textValues.UpdateIPTexts = true;
+            m_textValues.EnableIPTexts = true;
+
+            m_textValues.UpdateRandomText = true;
+            m_textValues.EnableRandomText = false;
 
             //Configure the main camera. Depth texture is used during raycasting
             Camera.main.depthTextureMode = DepthTextureMode.Depth;
@@ -358,6 +418,9 @@ namespace Sereno
             GoGoGameObject.gameObject.SetActive(false);
 
             CurrentPointingIT = PointingIT.NONE;
+
+            //By default, false
+            TargetAnnotationGO.SetActive(false);
 #if TEST
             Task t = new Task( () =>
             {
@@ -445,17 +508,17 @@ namespace Sereno
         /// </summary>
         private void HandleAnchor()
         {
-            //Export the anchor coordinate system
-            if(m_anchorCommunication == AnchorCommunication.EXPORT)
-            {
 #if !UNITY_EDITOR
+            //Export the anchor coordinate system
+            if (m_anchorCommunication == AnchorCommunication.EXPORT)
+            {
                 RecreateRootAnchorGO();
 
                 m_transferBatch = new WorldAnchorTransferBatch();
                 m_transferBatch.AddWorldAnchor("rootAnchor", m_rootAnchorGO.GetComponent<UnityEngine.XR.WSA.WorldAnchor>());
 
                 WorldAnchorTransferBatch.ExportAsync(m_transferBatch, OnExportDataAvailable, OnExportComplete);
-#endif
+
                 m_anchorCommunication = AnchorCommunication.NONE;
             }
 
@@ -464,7 +527,7 @@ namespace Sereno
             {
                 Debug.Log("Finish importing data");
                 m_anchorCommunication   = AnchorCommunication.NONE;
-#if !UNITY_EDITOR
+
                 m_importAnchorData = new byte[m_importAnchorSize];
                 long i = 0;
                 while(m_anchorImportSegments.Count > 0)
@@ -475,10 +538,9 @@ namespace Sereno
                 }
                 
                 WorldAnchorTransferBatch.ImportAsync(m_importAnchorData, OnImportComplete);
-#else
                 m_anchorImportSegments.Clear();
-#endif
             }
+#endif
         }
 
         /// <summary>
@@ -487,14 +549,14 @@ namespace Sereno
         private void HandleIPTxt()
         {
             //Update the displayed text requiring networking attention
-            if(m_textValues.UpdateTexts)
+            if(m_textValues.UpdateIPTexts)
             {
                 //Enable/Disable the IP Text
-                IPHeaderText.enabled = m_textValues.EnableTexts;
-                IPValueText.enabled  = m_textValues.EnableTexts;
+                IPHeaderText.enabled = m_textValues.EnableIPTexts;
+                IPValueText.enabled  = m_textValues.EnableIPTexts;
 
                 //If we should enable the text, set the text value
-                if(m_textValues.EnableTexts)
+                if(m_textValues.EnableIPTexts)
                 {
                     if(m_textValues.IPStr.Length > 0)
                     {
@@ -507,7 +569,35 @@ namespace Sereno
                         IPValueText.text  = "";
                     }
                 }
-                m_textValues.UpdateTexts = false;
+                m_textValues.UpdateIPTexts = false;
+            }
+        }
+
+        /// <summary>
+        /// Handle the random text to display
+        /// </summary>
+        private void HandleRandomText()
+        {
+            //Disable the random text if needed
+            if(m_disableRandomTextTimestamp < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() && m_disableRandomTextTimestamp > 0)
+            {
+                m_textValues.EnableRandomText = false;
+                m_textValues.UpdateRandomText = true;
+                m_disableRandomTextTimestamp = -1;
+            }
+            
+            //Update the displayed text requiring networking attention
+            if (m_textValues.UpdateRandomText)
+            {
+                //Enable/Disable the IP Text
+                RandomText.enabled = m_textValues.EnableRandomText;
+
+                //If we should enable the text, set the text value
+                if (m_textValues.EnableRandomText)
+                {
+                    RandomText.text = m_textValues.RandomStr;
+                }
+                m_textValues.UpdateRandomText = false;
             }
         }
 
@@ -619,7 +709,7 @@ namespace Sereno
             }
 
             //Change the color, shape and the position/rotation of each character's glyph
-            for(int i = 0; i < m_headsetGameObjects.Count; i++)
+            for(int i = 0; i < m_headsetStatus.Count; i++)
             {
                 //Update the glyph position / rotation
                 m_headsetGameObjects[i].Headset.transform.localRotation = new Quaternion(m_headsetStatus[i].Rotation[1],
@@ -733,6 +823,31 @@ namespace Sereno
 #endif
         }
 
+#if CHI2020
+        private void HandleCHI2020()
+        {
+            if(m_updateCHI2020Data && m_currentTrialMessage != null)
+            {
+                DefaultSubDatasetGameObject sdGameObject = GetSDGameObject(GetSubDataset(0, 0, true));
+                if (!sdGameObject)
+                    return;
+
+                if (m_currentTrialMessage.StudyID == 1 && m_currentTrialMessage.TabletID != m_tabletID ||
+                    m_currentTrialMessage.StudyID == 2 && m_currentTrialMessage.TabletID == m_tabletID)
+                {
+                    TargetAnnotationGO.transform.SetParent(sdGameObject.transform, false);
+                    TargetAnnotationGO.transform.localPosition = new Vector3(m_currentTrialMessage.TargetPosition[0], m_currentTrialMessage.TargetPosition[1], m_currentTrialMessage.TargetPosition[2]);
+                    TargetAnnotationGO.SetActive(true);
+                }
+
+                else
+                    TargetAnnotationGO.SetActive(false);
+            }
+            else
+                TargetAnnotationGO.SetActive(false);
+        }
+#endif
+
         // Update is called once per frame
         void Update()
         {
@@ -743,8 +858,12 @@ namespace Sereno
                 HandlePointingID();
                 HandleAnchor();
                 HandleIPTxt();
+                HandleRandomText();
                 HandleHeadsetStatusLoaded();
                 HandleHeadsetStatusSending();
+#if CHI2020
+                HandleCHI2020();
+#endif
             }
         }
 
@@ -905,8 +1024,8 @@ namespace Sereno
             {
                 lock(this)
                 {
-                    m_textValues.UpdateTexts = true;
-                    m_textValues.EnableTexts = false;
+                    m_textValues.UpdateIPTexts = true;
+                    m_textValues.EnableIPTexts = false;
                 }
             }
             //Redisplay the connection message
@@ -919,8 +1038,8 @@ namespace Sereno
                     if(addr != null)
                         s = IPAddress.Parse(addr.ToString()).ToString();
                     m_textValues.IPStr = s;
-                    m_textValues.UpdateTexts = true;
-                    m_textValues.EnableTexts = true;
+                    m_textValues.UpdateIPTexts = true;
+                    m_textValues.EnableIPTexts = true;
                 }
             }
 
@@ -930,6 +1049,8 @@ namespace Sereno
 
             m_headsetID = msg.ID;
 
+            m_tabletID = msg.TabletID;
+
             //Send anchor dataset to the server. 
             //The server will store that and send that information to other headsets if needed
             if(msg.IsFirstConnected)
@@ -937,6 +1058,8 @@ namespace Sereno
                 lock(this)
                     m_anchorCommunication = AnchorCommunication.EXPORT;
             }
+
+            m_updateCHI2020Data = true;
         }
 
         public void OnHeadsetsStatus(MessageBuffer messageBuffer, HeadsetsStatusMessage msg)
@@ -950,6 +1073,7 @@ namespace Sereno
 
         public void OnDefaultByteArray(MessageBuffer messageBuffer, DefaultByteArray msg)
         {
+#if !UNITY_EDITOR
             if(msg.Type == ServerType.GET_ANCHOR_SEGMENT)
             {
                 Debug.Log("importing anchor data...");
@@ -959,6 +1083,7 @@ namespace Sereno
                     m_importAnchorSize += (UInt32)msg.Data.Length;
                 }
             }
+#endif
         }
 
         public void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg)
@@ -1004,6 +1129,46 @@ namespace Sereno
 
             if(sd != null)
                 sd.ClearAnnotations();
+        }
+
+        public void OnNextTrial(MessageBuffer messageBuffer, NextTrialMessage msg)
+        {
+            lock(this)
+            {
+                if (msg.StudyID == 1 || msg.StudyID == 2)
+                {
+                    if (msg.TabletID == m_tabletID)
+                    {
+                        String s = "Selection Technique: ";
+                        switch (msg.PointingIT)
+                        {
+                            case PointingIT.GOGO:
+                                s += "GOGO";
+                                break;
+                            case PointingIT.MANUAL:
+                                s += "Manual";
+                                break;
+                            case PointingIT.WIM:
+                                s += "WIM";
+                                break;
+                            case PointingIT.WIM_RAY:
+                                s += "WIM-RAY";
+                                break;
+                            default:
+                                s += "NONE";
+                                break;
+                        }
+                        m_textValues.RandomStr = s;
+                        m_textValues.UpdateRandomText = true;
+                        m_textValues.EnableRandomText = true;
+
+                        m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + NEXT_TRIAL_MESSAGE_DURATION_TIME;
+                    }
+                }
+
+                m_currentTrialMessage = msg;
+                m_updateCHI2020Data = true;
+            }
         }
 
         #endregion
@@ -1149,7 +1314,7 @@ namespace Sereno
         {
             lock(this)
             {
-                m_textValues.EnableTexts = true;
+                m_textValues.EnableIPTexts = true;
                 String txt = "";
                 if (status == ConnectionStatus.CONNECTED)
                 {
@@ -1185,7 +1350,7 @@ namespace Sereno
                 if(txt != m_textValues.IPStr)
                 {
                     m_textValues.IPStr = txt;
-                    m_textValues.UpdateTexts = true;
+                    m_textValues.UpdateIPTexts = true;
                 }
             }
         }
@@ -1264,7 +1429,7 @@ namespace Sereno
 
             m_anchorImportSegments.Clear();
         }
-        
+
         #endregion
     }
 }
