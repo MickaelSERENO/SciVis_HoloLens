@@ -132,18 +132,10 @@ namespace Sereno.Pointing
                         m_isHandDetected = true;
                         HandDetected hd = m_hdProvider.GetFarthestHand(validHDs);
 
-                        //Update the position
-                        Vector3 cameraLeft = -m_headsetTransform.right;
-                        cameraLeft.y = 0;
-                        cameraLeft.Normalize();
-                        Vector3 cameraForward = m_headsetTransform.forward;
-                        cameraForward.y = 0;
-                        cameraForward.Normalize();
+                       m_handPosition = hd.Position;
 
-                        m_handPosition = hd.Position;
-                        
                         //Adjust to fingers
-                        m_handPosition += 0.06f*cameraLeft + 0.03f*Vector3.up + 0.11f*cameraForward;
+                        m_handPosition  += PointingFunctions.GetFingerOffset(m_headsetTransform, Handedness.RIGHT);
                         m_targetPosition = m_original.transform.worldToLocalMatrix.MultiplyPoint3x4(m_handPosition);
                     }
                 }

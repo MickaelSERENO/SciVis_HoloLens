@@ -176,7 +176,7 @@ namespace Sereno.Network.MessageHandler
         public void Push(byte[] buf)
         {
             int bufPos = 0;
-            while(true)
+            while(bufPos < buf.Length)
             {
                 //Get the message type
                 if(m_msg == null)
@@ -414,7 +414,7 @@ namespace Sereno.Network.MessageHandler
             newOffset = offset;
             arr       = null;
 
-            if(m_byteArray == null)
+            if(m_byteArray == null) //Read the size component
             {
                 if(!ReadInt32(data, newOffset, out m_byteArrayPos, out newOffset))
                     return false;

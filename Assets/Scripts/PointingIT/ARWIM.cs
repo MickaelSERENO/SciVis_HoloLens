@@ -102,12 +102,15 @@ namespace Sereno.Pointing
             //Handle the transform tree
             Vector3 cameraForward = headsetTransform.forward;
             cameraForward.y = 0;
-            transform.localPosition = headsetTransform.position + new Vector3(0, -0.15f, 0) + 0.45f * cameraForward;
+            transform.localPosition = headsetTransform.position + new Vector3(0, -0.20f, 0) + 0.50f * cameraForward;
             transform.localRotation = Quaternion.identity;
             transform.localScale    = wimScale;
 
             m_wim = go.CreateMiniature();
             m_wim.transform.SetParent(transform, false);
+            m_wim.transform.localPosition = new Vector3(0, 0, 0);
+            m_wim.transform.localRotation = Quaternion.identity;
+            m_wim.transform.localScale    = new Vector3(1, 1, 1);
 
             HandPositionGO.transform.SetParent(null, false);
             OriginalHandPositionGO.transform.SetParent(null, false);
@@ -125,6 +128,7 @@ namespace Sereno.Pointing
         {
             Destroy(m_wim);
             Destroy(HandPositionGO);
+            Destroy(OriginalHandPositionGO);
         }
 
         // Start is called before the first frame update
@@ -148,19 +152,11 @@ namespace Sereno.Pointing
                     {
                         m_isHandDetected = true;
                         HandDetected hd = m_hdProvider.GetFarthestHand(validHDs);
-
-                        //Update the position
-                        Vector3 cameraLeft = -m_headsetTransform.right;
-                        cameraLeft.y = 0;
-                        cameraLeft.Normalize();
-                        Vector3 cameraForward = m_headsetTransform.forward;
-                        cameraForward.y = 0;
-                        cameraForward.Normalize();
-
-                        m_handPosition = hd.Position;
                         
+                        m_handPosition = hd.Position;
+
                         //Adjust to fingers
-                        m_handPosition += 0.06f*cameraLeft + 0.03f*Vector3.up + 0.11f*cameraForward;
+                        m_handPosition += PointingFunctions.GetFingerOffset(m_headsetTransform, Handedness.RIGHT);
 
                         m_targetPosition = m_wim.transform.worldToLocalMatrix.MultiplyPoint3x4(m_handPosition);
                     }

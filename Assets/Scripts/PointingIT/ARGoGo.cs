@@ -17,6 +17,11 @@ namespace Sereno.Pointing
     public class ARGoGo : MonoBehaviour, IPointingIT
     {
         /// <summary>
+        /// The minimum magnitude to use in the gogo technique
+        /// </summary>
+        public static readonly float MIN_MAGNITUDE = 0.25f;
+
+        /// <summary>
         /// The current pointing direction
         /// </summary>
         private Vector3 m_pointingDir = new Vector3(0, 0, 0);
@@ -113,13 +118,21 @@ namespace Sereno.Pointing
                         Vector3 anchorPoint = Camera.main.transform.position + new Vector3(0, -0.20f, 0);
                         Vector3 pointDir = (hd.Position - anchorPoint).normalized;
 
-                        if (m_pointingDir.x == 0 && m_pointingDir.y == 0 && m_pointingDir.z == 0)
+                        //if (m_pointingDir.x != 0 || m_pointingDir.y != 0 || m_pointingDir.z != 0)
+                        //    m_pointingDir = 0.20f * m_pointingDir + 0.80f * pointDir; //Apply a strong smoothing
+                        //else
                             m_pointingDir = pointDir;
-                        else
-                            m_pointingDir = (1.0f - 0.8f) * pointDir + 0.8f * m_pointingDir; //Apply a strong "smoothing"
 
                         m_handPosition   = hd.Position;
-                        m_targetPosition = anchorPoint + m_pointingDir * (20.0f * Math.Max((anchorPoint - hd.Position).magnitude, 0.3f) - 6.0f);
+                        //m_handPosition  += PointingFunctions.GetFingerOffset(m_headsetTransform, Handedness.RIGHT);
+
+                        float handMagnitude = (anchorPoint - hd.Position).magnitude;
+
+                        if (handMagnitude < MIN_MAGNITUDE)
+                            m_targetPosition = anchorPoint + m_pointingDir * handMagnitude;
+                        else
+                            m_targetPosition = anchorPoint + m_pointingDir * 15.0f * (handMagnitude - MIN_MAGNITUDE);
+
                         m_targetPosition = m_currentSubDataset.transform.worldToLocalMatrix.MultiplyPoint3x4(m_targetPosition);
                     }
                 }

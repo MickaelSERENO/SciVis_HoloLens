@@ -456,7 +456,7 @@ namespace Sereno
                 OnStartAnnotation(null, annotMsg);*/
 
                 //Headset Status
-                HeadsetsStatusMessage headsetStatusMsg = new HeadsetsStatusMessage(ServerType.GET_HEADSETS_STATUS);
+                /*HeadsetsStatusMessage headsetStatusMsg = new HeadsetsStatusMessage(ServerType.GET_HEADSETS_STATUS);
                 headsetStatusMsg.HeadsetsStatus = new HeadsetStatus[1];
                 HeadsetStatus headsetStatus = new HeadsetStatus();
                 headsetStatus.Color = (int)0x00ff0000;
@@ -470,16 +470,22 @@ namespace Sereno
                 headsetStatus.PointingLocalSDPosition = new float[3] { 0, 0, 0 };
                 headsetStatus.PointingHeadsetStartPosition = new float[3] { 1, 1, 1 };
                 headsetStatusMsg.HeadsetsStatus[0] = headsetStatus;
-                OnHeadsetsStatus(null, headsetStatusMsg);
+                OnHeadsetsStatus(null, headsetStatusMsg);*/
 
-                /*AnchorAnnotationMessage anchorAnnot = new AnchorAnnotationMessage(ServerType.GET_ANCHOR_ANNOTATION);
+                AnchorAnnotationMessage anchorAnnot = new AnchorAnnotationMessage(ServerType.GET_ANCHOR_ANNOTATION);
                 anchorAnnot.AnnotationID = 0;
                 anchorAnnot.DatasetID = 0;
                 anchorAnnot.SubDatasetID = 0;
                 anchorAnnot.HeadsetID = -1;
                 anchorAnnot.LocalPosition = new float[3] { 0.5f, 0.5f, 0.5f };
                 anchorAnnot.InPublic = 1;
-                OnAnchorAnnotation(null, anchorAnnot);*/
+                OnAnchorAnnotation(null, anchorAnnot);
+
+                ClearAnnotationsMessage clrMsg = new ClearAnnotationsMessage(ServerType.GET_CLEAR_ANNOTATIONS);
+                clrMsg.DatasetID = 0;
+                clrMsg.SubDatasetID = 0;
+                clrMsg.InPublic = 1;
+                OnClearAnnotations(null, clrMsg);
             }
             );
             t.Start();
@@ -832,8 +838,8 @@ namespace Sereno
                 if (!sdGameObject)
                     return;
 
-                if (m_currentTrialMessage.StudyID == 1 && m_currentTrialMessage.TabletID != m_tabletID ||
-                    m_currentTrialMessage.StudyID == 2 && m_currentTrialMessage.TabletID == m_tabletID)
+                if ((m_currentTrialMessage.StudyID == 1 && m_currentTrialMessage.TabletID != m_tabletID) ||
+                    (m_currentTrialMessage.StudyID == 2 && m_currentTrialMessage.TabletID == m_tabletID))
                 {
                     TargetAnnotationGO.transform.SetParent(sdGameObject.transform, false);
                     TargetAnnotationGO.transform.localPosition = new Vector3(m_currentTrialMessage.TargetPosition[0], m_currentTrialMessage.TargetPosition[1], m_currentTrialMessage.TargetPosition[2]);
@@ -997,13 +1003,13 @@ namespace Sereno
         
         public void OnSetVisibilityDataset(MessageBuffer messageBuffer, VisibilityMessage msg)
         {
-#if !CHI2020
+//#if !CHI2020
             lock(this)
             {
                 SubDatasetMetaData metaData = m_datasets[msg.DataID].SubDatasets[msg.SubDataID];
                 SetVisibilityDataset(metaData, msg.Visibility);
             }
-#endif
+//#endif
         }
 
         public void SetVisibilityDataset(SubDatasetMetaData metaData, int visibility)
@@ -1135,35 +1141,40 @@ namespace Sereno
         {
             lock(this)
             {
-                if (msg.StudyID == 1 || msg.StudyID == 2)
+                if ((msg.StudyID == 1 || msg.StudyID == 2) && (msg.TabletID == m_tabletID))
                 {
-                    if (msg.TabletID == m_tabletID)
+                    String s = "Selection Technique: ";
+                    switch (msg.PointingIT)
                     {
-                        String s = "Selection Technique: ";
-                        switch (msg.PointingIT)
-                        {
-                            case PointingIT.GOGO:
-                                s += "GOGO";
-                                break;
-                            case PointingIT.MANUAL:
-                                s += "Manual";
-                                break;
-                            case PointingIT.WIM:
-                                s += "WIM";
-                                break;
-                            case PointingIT.WIM_RAY:
-                                s += "WIM-RAY";
-                                break;
-                            default:
-                                s += "NONE";
-                                break;
-                        }
-                        m_textValues.RandomStr = s;
-                        m_textValues.UpdateRandomText = true;
-                        m_textValues.EnableRandomText = true;
-
-                        m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + NEXT_TRIAL_MESSAGE_DURATION_TIME;
+                        case PointingIT.GOGO:
+                            s += "GOGO";
+                            break;
+                        case PointingIT.MANUAL:
+                            s += "Manual";
+                            break;
+                        case PointingIT.WIM:
+                            s += "WIM";
+                            break;
+                        case PointingIT.WIM_RAY:
+                            s += "WIM-RAY";
+                            break;
+                        default:
+                            s += "NONE";
+                            break;
                     }
+                    m_textValues.RandomStr = s;
+                    m_textValues.UpdateRandomText = true;
+                    m_textValues.EnableRandomText = true;
+
+                    m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + NEXT_TRIAL_MESSAGE_DURATION_TIME;
+                }
+
+                else
+                {
+                    m_textValues.RandomStr = "";
+                    m_textValues.UpdateRandomText = true;
+                    m_textValues.EnableRandomText = true;
+                    m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + NEXT_TRIAL_MESSAGE_DURATION_TIME;
                 }
 
                 m_currentTrialMessage = msg;
@@ -1251,7 +1262,7 @@ namespace Sereno
                     {
                         if(m_datasetGameObjects.Count > 0)
                         {
-                            ARWIM go = Instantiate(ARWIMPrefab);
+                            ARWIM go = Instantiate(ARWIMPrefab, null);
                             go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.30f, 0.30f, 0.30f));
                             go.gameObject.SetActive(true);
                             m_currentPointingIT = go;
@@ -1263,7 +1274,7 @@ namespace Sereno
                     {
                         if(m_datasetGameObjects.Count > 0)
                         {
-                            ARWIMRay go = Instantiate(ARWIMRayPrefab);
+                            ARWIMRay go = Instantiate(ARWIMRayPrefab, null);
                             go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.30f, 0.30f, 0.30f));
                             go.gameObject.SetActive(true);
                             m_currentPointingIT = go;
@@ -1274,7 +1285,7 @@ namespace Sereno
                     case PointingIT.MANUAL:
                         if (m_datasetGameObjects.Count > 0)
                         {
-                            ARManual go = Instantiate(ARManualPrefab);
+                            ARManual go = Instantiate(ARManualPrefab, null);
                             go.Init(m_hdProvider, m_datasetInAnnotation);
                             go.gameObject.SetActive(true);
                             m_currentPointingIT = go;

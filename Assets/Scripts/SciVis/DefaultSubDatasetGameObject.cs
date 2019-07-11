@@ -298,6 +298,7 @@ namespace Sereno.SciVis
                         //Create annotation game object received asynchronously
                         foreach (Annotation annot in m_annotationGOsInCreation)
                             CreateAnnotationGO(annot);
+
                         m_annotationGOsInCreation.Clear();
 
                         //Delete annotation game object received asynchronously
@@ -307,12 +308,13 @@ namespace Sereno.SciVis
                             {
                                 if(m_annotationGOs[i].Annotation == annot)
                                 {
-                                    Destroy(m_annotationGOs[i]);
+                                    Destroy(m_annotationGOs[i].gameObject);
                                     m_annotationGOs.RemoveAt(i);
                                     break;
                                 }
                             }
                         }
+                        m_annotationGOsInRemoving.Clear();
                     }
                 }
             }

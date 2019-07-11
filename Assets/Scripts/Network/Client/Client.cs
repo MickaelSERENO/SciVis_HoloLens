@@ -85,7 +85,10 @@ namespace Sereno.Network
         /// </summary>
         private ConnectionStatus m_currentStatus = ConnectionStatus.DISCONNECTED;
 
-		private const int THREAD_SLEEP = 10;
+        /// <summary>
+        /// The number of time in micro seconds that the reading and writing threads sleep if no data is to be sent/read or in case of disconnection
+        /// </summary>
+		private const int THREAD_SLEEP = 5;
 
         /******************************/
         /*******PUBLIC FUNCTIONS*******/
@@ -149,6 +152,10 @@ namespace Sereno.Network
 			}
         }
 
+        /// <summary>
+        /// Is this client connected to the distant server?
+        /// </summary>
+        /// <returns></returns>
         public bool IsConnected()
         {
             return m_sock != null && m_sock.Connected;
@@ -286,7 +293,7 @@ namespace Sereno.Network
                     }
 
                     //Server disconnected
-                    else if(m_sock.Poll(10, SelectMode.SelectRead) && m_sock.Available == 0)
+                    else if(m_sock.Poll(THREAD_SLEEP, SelectMode.SelectRead) && m_sock.Available == 0)
                     {
                         FiredStatus(ConnectionStatus.DISCONNECTED);
                         m_sock.Close();
