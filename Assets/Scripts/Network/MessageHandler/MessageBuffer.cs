@@ -221,7 +221,8 @@ namespace Sereno.Network.MessageHandler
                         }
                         case (byte)'b':
                         {
-                            m_msg.Push(buf[bufPos++]);
+                            m_msg.Push(buf[bufPos]);
+                            bufPos++;
                             break;
                         }
                         case (byte)'a':
@@ -235,7 +236,7 @@ namespace Sereno.Network.MessageHandler
                 }
 
                 //Call the listeners
-                if(m_msg != null)
+                if(m_msg != null && m_msg.GetMaxCursor() < m_msg.Cursor)
                 {
                     switch(m_msg.Type)
                     {
@@ -317,13 +318,13 @@ namespace Sereno.Network.MessageHandler
             val = 0;
             if(data.Length+m_dataPos - offset < 2)
             {
-                for(int i = offset; i < data.Length - offset; i++, newOff++)
+                for(int i = offset; i < data.Length; i++, newOff++)
                     m_data[m_dataPos++] = data[i];
                 return false;
             }
 
-            for(int i = newOff; m_dataPos < 2; i++, newOff++)
-                m_data[m_dataPos++] = data[i];
+            for(; m_dataPos < 2; newOff++)
+                m_data[m_dataPos++] = data[newOff];
 
             val = (Int16)((m_data[0] << 8) + 
                           (m_data[1]));
@@ -345,13 +346,13 @@ namespace Sereno.Network.MessageHandler
             newOff = offset;
             if(data.Length+m_dataPos - offset < 4)
             {
-                for(int i = offset; i < data.Length - offset; i++, newOff++)
+                for(int i = offset; i < data.Length; i++, newOff++)
                     m_data[m_dataPos++] = data[i];
                 return false;
             }
 
-            for(int i = newOff; m_dataPos < 4; i++, newOff++)
-                m_data[m_dataPos++] = data[i];
+            for(; m_dataPos < 4; newOff++)
+                m_data[m_dataPos++] = data[newOff];
 
             val = (Int32)(((m_data[0] & 0xff) << 24) + 
                           ((m_data[1] & 0xff) << 16) +

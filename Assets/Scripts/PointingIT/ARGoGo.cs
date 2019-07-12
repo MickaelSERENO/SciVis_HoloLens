@@ -19,7 +19,7 @@ namespace Sereno.Pointing
         /// <summary>
         /// The minimum magnitude to use in the gogo technique
         /// </summary>
-        public static readonly float MIN_MAGNITUDE = 0.25f;
+        public static readonly float MIN_MAGNITUDE = 0.20f;
 
         /// <summary>
         /// The current pointing direction
@@ -118,9 +118,9 @@ namespace Sereno.Pointing
                         Vector3 anchorPoint = Camera.main.transform.position + new Vector3(0, -0.20f, 0);
                         Vector3 pointDir = (hd.Position - anchorPoint).normalized;
 
-                        //if (m_pointingDir.x != 0 || m_pointingDir.y != 0 || m_pointingDir.z != 0)
-                        //    m_pointingDir = 0.20f * m_pointingDir + 0.80f * pointDir; //Apply a strong smoothing
-                        //else
+                        if (m_pointingDir.x != 0 || m_pointingDir.y != 0 || m_pointingDir.z != 0)
+                            m_pointingDir = (0.10f * m_pointingDir + 0.90f * pointDir).normalized; //Apply a strong smoothing. Renormalize because of floating point issue
+                        else
                             m_pointingDir = pointDir;
 
                         m_handPosition   = hd.Position;
@@ -131,7 +131,7 @@ namespace Sereno.Pointing
                         if (handMagnitude < MIN_MAGNITUDE)
                             m_targetPosition = anchorPoint + m_pointingDir * handMagnitude;
                         else
-                            m_targetPosition = anchorPoint + m_pointingDir * 15.0f * (handMagnitude - MIN_MAGNITUDE);
+                            m_targetPosition = anchorPoint + m_pointingDir * 14.0f * (handMagnitude - MIN_MAGNITUDE);
 
                         m_targetPosition = m_currentSubDataset.transform.worldToLocalMatrix.MultiplyPoint3x4(m_targetPosition);
                     }

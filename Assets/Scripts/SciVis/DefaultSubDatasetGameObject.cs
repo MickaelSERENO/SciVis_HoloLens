@@ -140,7 +140,7 @@ namespace Sereno.SciVis
         protected void LinkToSM()
         {
             //Update position / rotation / scaling
-            lock(m_sd)
+            lock(this)
             {
                 OnRotationChange(m_sd, m_sd.Rotation);
                 OnPositionChange(m_sd, m_sd.Position);
@@ -211,13 +211,19 @@ namespace Sereno.SciVis
 
         public void OnAddAnnotation(SubDataset dataset, Annotation annot)
         {
-            m_annotationGOsInCreation.Add(annot);
+            lock (this)
+            {
+                m_annotationGOsInCreation.Add(annot);
+            }
         }
 
         public void OnClearAnnotations(SubDataset dataset)
         {
-            foreach (Annotation annot in dataset.Annotations)
-                m_annotationGOsInRemoving.Add(annot);
+            lock (this)
+            {
+                foreach (Annotation annot in dataset.Annotations)
+                    m_annotationGOsInRemoving.Add(annot);
+            }
         }
 
         public void SetSubDatasetState(SubDataset sd)
@@ -236,7 +242,7 @@ namespace Sereno.SciVis
             if(!m_isMiniature)
             {
                 foreach (var annot in m_annotationGOs)
-                    Destroy(annot);
+                    Destroy(annot.gameObject);
             }
         }
 
@@ -283,7 +289,7 @@ namespace Sereno.SciVis
                     {
                         //Destroy every annotation GO
                         foreach (AnnotationGameObject go in m_annotationGOs)
-                            Destroy(go);
+                            Destroy(go.gameObject);
                         m_annotationGOs.Clear();
 
                         //Create every Annotations

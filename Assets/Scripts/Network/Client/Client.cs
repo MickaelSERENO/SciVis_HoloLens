@@ -259,6 +259,7 @@ namespace Sereno.Network
                 //If the socket is not created, recreate it and try to reconnect
                 lock(this)
                 {
+                    bool askClose = false;
                     if(m_sock == null)
                     {
                         try
@@ -275,10 +276,7 @@ namespace Sereno.Network
                         catch(SocketException)
                         {
                             FiredStatus(ConnectionStatus.FAILED_CONNECTION);
-                            m_sock.Close();
-                            m_sock = null;
-                            sleep = true;
-                            continue;
+                            askClose = true;
                         }
                     }
 
@@ -288,15 +286,39 @@ namespace Sereno.Network
                     {
                         //Receive data and handle it
                         byte[] dataBuf = new byte[m_sock.Available];
-                        m_sock.Receive(dataBuf, dataBuf.Length, SocketFlags.None);
-                        HandleMessage(dataBuf);
+                        SocketError err;
+
+                        try
+                        {
+                            int readSize = m_sock.Receive(dataBuf, 0, dataBuf.Length, SocketFlags.None, out err);
+                            if (err == SocketError.Success)
+                            {
+                                if (readSize != dataBuf.Length)
+                                    Array.Resize<byte>(ref dataBuf, readSize);
+
+                                HandleMessage(dataBuf);
+                            }
+                            else
+                                askClose = true;
+                        }
+                        catch(SocketException)
+                        {
+                            FiredStatus(ConnectionStatus.DISCONNECTED);
+                            askClose = true;
+                        }
                     }
 
                     //Server disconnected
                     else if(m_sock.Poll(THREAD_SLEEP, SelectMode.SelectRead) && m_sock.Available == 0)
                     {
                         FiredStatus(ConnectionStatus.DISCONNECTED);
-                        m_sock.Close();
+                        askClose = true;
+                    }
+
+                    if(askClose)
+                    {
+                        if(m_sock != null)
+                            m_sock.Close();
                         sleep = true;
                         m_sock = null;
                     }

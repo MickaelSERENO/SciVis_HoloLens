@@ -1141,28 +1141,36 @@ namespace Sereno
         {
             lock(this)
             {
-                if ((msg.StudyID == 1 || msg.StudyID == 2) && (msg.TabletID == m_tabletID))
+                if (msg.StudyID == 1 || msg.StudyID == 2)
                 {
-                    String s = "Selection Technique: ";
-                    switch (msg.PointingIT)
+                    if (msg.TrialID == -1)
                     {
-                        case PointingIT.GOGO:
-                            s += "GOGO";
-                            break;
-                        case PointingIT.MANUAL:
-                            s += "Manual";
-                            break;
-                        case PointingIT.WIM:
-                            s += "WIM";
-                            break;
-                        case PointingIT.WIM_RAY:
-                            s += "WIM-RAY";
-                            break;
-                        default:
-                            s += "NONE";
-                            break;
+                        m_textValues.RandomStr = "You can now take a short break if needed";
                     }
-                    m_textValues.RandomStr = s;
+                    else
+                    {
+                        String s = "Selection Technique: ";
+                        switch (msg.PointingIT)
+                        {
+                            case PointingIT.GOGO:
+                                s += "GOGO";
+                                break;
+                            case PointingIT.MANUAL:
+                                s += "Manual";
+                                break;
+                            case PointingIT.WIM:
+                                s += "WIM";
+                                break;
+                            case PointingIT.WIM_RAY:
+                                s += "WIM-RAY";
+                                break;
+                            default:
+                                s += "NONE";
+                                break;
+                        }
+                        m_textValues.RandomStr = s;
+                    }
+
                     m_textValues.UpdateRandomText = true;
                     m_textValues.EnableRandomText = true;
 
@@ -1263,7 +1271,7 @@ namespace Sereno
                         if(m_datasetGameObjects.Count > 0)
                         {
                             ARWIM go = Instantiate(ARWIMPrefab, null);
-                            go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.30f, 0.30f, 0.30f));
+                            go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.25f, 0.25f, 0.25f));
                             go.gameObject.SetActive(true);
                             m_currentPointingIT = go;
                         }
@@ -1275,7 +1283,7 @@ namespace Sereno
                         if(m_datasetGameObjects.Count > 0)
                         {
                             ARWIMRay go = Instantiate(ARWIMRayPrefab, null);
-                            go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.30f, 0.30f, 0.30f));
+                            go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.25f, 0.25f, 0.25f));
                             go.gameObject.SetActive(true);
                             m_currentPointingIT = go;
                         }
