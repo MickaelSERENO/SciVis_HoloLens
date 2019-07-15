@@ -17,6 +17,12 @@ namespace Sereno.Pointing
             RayObject.transform.SetParent(null, false);
         }
 
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            Destroy(RayObject);
+        }
+
         protected override void Update()
         {
             base.Update();

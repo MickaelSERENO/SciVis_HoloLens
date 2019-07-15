@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.XR.WSA.Input;
 
+
 namespace Sereno.Pointing
 {
     /// <summary>
@@ -124,7 +125,7 @@ namespace Sereno.Pointing
             m_headsetTransform = headsetTransform;
         }
 
-        void OnDestroy()
+        protected virtual void OnDestroy()
         {
             Destroy(m_wim);
             Destroy(HandPositionGO);
@@ -156,7 +157,7 @@ namespace Sereno.Pointing
                         m_handPosition = hd.Position;
 
                         //Adjust to fingers
-                        m_handPosition += PointingFunctions.GetFingerOffset(m_headsetTransform, Handedness.RIGHT);
+                        m_handPosition += PointingFunctions.GetFingerOffset(m_headsetTransform, m_hdProvider.Handedness);
 
                         m_targetPosition = m_wim.transform.worldToLocalMatrix.MultiplyPoint3x4(m_handPosition);
                     }

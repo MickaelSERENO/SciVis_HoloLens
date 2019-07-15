@@ -10,6 +10,16 @@ using Windows.Perception.Spatial;
 
 namespace Sereno.Unity.HandDetector
 {
+    /// <summary>
+    /// The Handedness enumerations
+    /// </summary>
+    public enum Handedness
+    {
+        NONE = -1,
+        LEFT = 0,
+        RIGHT = 1
+    }
+
     public class HandDetectorProvider
 #if ENABLE_WINMD_SUPPORT
         : IHDMediaSinkClbk
@@ -47,6 +57,11 @@ namespace Sereno.Unity.HandDetector
         /// The smoothness to apply when updating hands' position. Default: HAND_Smoothness
         /// </summary>
         private float m_smoothness = HAND_Smoothness;
+
+        /// <summary>
+        /// The handedness
+        /// </summary>
+        private Handedness m_handedness = Handedness.RIGHT;
 
         /// <summary>
         /// Initialize the hand detector algorithm and launch the hand tracking
@@ -263,6 +278,15 @@ namespace Sereno.Unity.HandDetector
         {
             get { return m_smoothness; }
             set { m_smoothness = value; foreach (var hd in m_handsDetected) hd.Smoothness = value; }
+        }
+
+        /// <summary>
+        /// The user's handedness
+        /// </summary>
+        public Handedness Handedness
+        {
+            get { return m_handedness; }
+            set { m_handedness = value; }
         }
     }
 }

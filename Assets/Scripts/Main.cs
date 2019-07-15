@@ -1025,47 +1025,44 @@ namespace Sereno
         {
             Debug.Log($"Received init headset message. Color : {msg.Color:X}, tablet connected: {msg.TabletConnected}, first connected: {msg.IsFirstConnected}");
 
-            //Remove the connection message
-            if(msg.TabletConnected)
+            lock (this)
             {
-                lock(this)
+                //Remove the connection message
+                if (msg.TabletConnected)
                 {
                     m_textValues.UpdateIPTexts = true;
                     m_textValues.EnableIPTexts = false;
                 }
-            }
-            //Redisplay the connection message
-            else
-            {
-                lock(this)
+                //Redisplay the connection message
+                else
                 {
                     IPAddress addr = m_client.GetIPAddress();
                     String s = DEFAULT_IP_ADDRESS_TEXT;
-                    if(addr != null)
+                    if (addr != null)
                         s = IPAddress.Parse(addr.ToString()).ToString();
                     m_textValues.IPStr = s;
                     m_textValues.UpdateIPTexts = true;
                     m_textValues.EnableIPTexts = true;
                 }
-            }
 
-            m_clientColor = new Color32((byte)((msg.Color >> 16) & 0xff),
-                                        (byte)((msg.Color >> 8 ) & 0xff),
-                                        (byte)(msg.Color & 0xff), 255);
 
-            m_headsetID = msg.ID;
+                m_clientColor = new Color32((byte)((msg.Color >> 16) & 0xff),
+                                            (byte)((msg.Color >> 8) & 0xff),
+                                            (byte)(msg.Color & 0xff), 255);
 
-            m_tabletID = msg.TabletID;
+                m_headsetID = msg.ID;
 
-            //Send anchor dataset to the server. 
-            //The server will store that and send that information to other headsets if needed
-            if(msg.IsFirstConnected)
-            {
-                lock(this)
+                m_tabletID = msg.TabletID;
+
+                m_hdProvider.Handedness = (Handedness)msg.Handedness;
+
+                //Send anchor dataset to the server. 
+                //The server will store that and send that information to other headsets if needed
+                if (msg.IsFirstConnected)
                     m_anchorCommunication = AnchorCommunication.EXPORT;
-            }
 
-            m_updateCHI2020Data = true;
+                m_updateCHI2020Data = true;
+            }
         }
 
         public void OnHeadsetsStatus(MessageBuffer messageBuffer, HeadsetsStatusMessage msg)
@@ -1145,9 +1142,9 @@ namespace Sereno
                 {
                     if (msg.TrialID == -1)
                     {
-                        m_textValues.RandomStr = "You can now take a short break if needed";
+                        m_textValues.RandomStr = "You can now take a short\nbreak if needed";
                     }
-                    else
+                    else if(msg.TabletID == m_tabletID) //The one performing the task
                     {
                         String s = "Selection Technique: ";
                         switch (msg.PointingIT)
@@ -1168,7 +1165,14 @@ namespace Sereno
                                 s += "NONE";
                                 break;
                         }
-                        m_textValues.RandomStr = s;
+                        m_textValues.RandomStr = $"{s}\nTrial: {msg.TrialID}";
+                    }
+                    else
+                    {
+                        if (msg.StudyID == 1) //Guidance task
+                            m_textValues.RandomStr = "Guide your partenaire";
+                        else //Should wait
+                            m_textValues.RandomStr = "Wait for your partenaire";
                     }
 
                     m_textValues.UpdateRandomText = true;

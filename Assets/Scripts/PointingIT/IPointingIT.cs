@@ -16,16 +16,6 @@ namespace Sereno.Pointing
         MANUAL  = 3,  //The GOGO technique interaction technique
     }
 
-    /// <summary>
-    /// The Handedness enumerations
-    /// </summary>
-    public enum Handedness
-    {
-        NONE  = -1,
-        LEFT  = 0,
-        RIGHT = 1
-    }
-
     public delegate void OnSelection(IPointingIT pointingIT);
 
     public interface IPointingIT

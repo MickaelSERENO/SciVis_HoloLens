@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Sereno.Unity.HandDetector;
+using UnityEngine;
 
 namespace Sereno.Pointing
 {

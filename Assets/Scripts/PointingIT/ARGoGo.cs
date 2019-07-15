@@ -5,12 +5,11 @@ using UnityEngine.XR;
 using System.Collections.Generic;
 using UnityEngine.XR.WSA.Input;
 using Sereno.SciVis;
+using Sereno.Unity.HandDetector;
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
 #endif
-
-using Sereno.Unity.HandDetector;
 
 namespace Sereno.Pointing
 { 
