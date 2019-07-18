@@ -18,18 +18,8 @@ namespace Sereno.Network.MessageHandler
     /// <summary>
     /// Status of a collabroator Headset
     /// </summary>
-    public class HeadsetStatus
+    public class HeadsetStatus : HeadsetUpdateData
     {
-        /// <summary>
-        /// The X, Y and Z 3D position
-        /// </summary>
-        public float[] Position = new float[3];
-
-        /// <summary>
-        /// The W, X, Y and Z 3D Quaternion rotation
-        /// </summary>
-        public float[] Rotation = new float[4];
-
         /// <summary>
         /// The headset ID
         /// </summary>
@@ -44,36 +34,6 @@ namespace Sereno.Network.MessageHandler
         /// The headset current action
         /// </summary>
         public HeadsetCurrentAction CurrentAction = HeadsetCurrentAction.NOTHING;
-
-        /// <summary>
-        /// The pointing interaction technique in use
-        /// </summary>
-        public PointingIT PointingIT = PointingIT.NONE;
-
-        /// <summary>
-        /// The DatasetID linked to the pointing technique
-        /// </summary>
-        public Int32 PointingDatasetID = -1;
-
-        /// <summary>
-        /// The SubDataset ID linked to the pointing technique
-        /// </summary>
-        public Int32 PointingSubDatasetID = -1;
-
-        /// <summary>
-        /// Is the public pointing done in the public space?
-        /// </summary>
-        public bool PointingInPublic = true;
-
-        /// <summary>
-        /// The position of the pointing technique in the subdataset local space
-        /// </summary>
-        public float[] PointingLocalSDPosition = new float[3];
-
-        /// <summary>
-        /// The started position of the headset when the pointing interaction technique was created
-        /// </summary>
-        public float[] PointingHeadsetStartPosition = new float[3];
     }
 
     /// <summary>
@@ -92,8 +52,8 @@ namespace Sereno.Network.MessageHandler
 
         public override void Push(float value)
         {
-            int   headset = (Cursor-1)/20;
-            Int32 id      = (Cursor-1) % 20;
+            int   headset = (Cursor-1)/24;
+            Int32 id      = (Cursor-1)%24;
 
             if (id < 6) //Position
                 m_status[headset].Position[id - 3] = value;
@@ -101,8 +61,10 @@ namespace Sereno.Network.MessageHandler
                 m_status[headset].Rotation[id - 6] = value;
             else if (id < 17) //Pointing local's position
                 m_status[headset].PointingLocalSDPosition[id - 14] = value;
-            else if (id < 20)
+            else if (id < 20) //Start position of the headset when the IT started
                 m_status[headset].PointingHeadsetStartPosition[id - 17] = value;
+            else if (id < 24) //Start orientation of the headset when the IT started
+                m_status[headset].PointingHeadsetStartOrientation[id - 20] = value;
             base.Push(value);
         }
 
@@ -117,8 +79,8 @@ namespace Sereno.Network.MessageHandler
             }
             else
             {
-                Int32 id = (Cursor-1)%20;
-                int headset = (Cursor-1)/20;
+                Int32 id = (Cursor-1)%24;
+                int headset = (Cursor-1)/24;
 
                 if (id == 0)
                     m_status[headset].ID = value;
@@ -138,8 +100,8 @@ namespace Sereno.Network.MessageHandler
 
         public override void Push(byte value)
         {
-            Int32 id = (Cursor - 1) % 20;
-            int headset = (Cursor - 1) / 20;
+            Int32 id = (Cursor - 1) % 24;
+            int headset = (Cursor - 1) / 24;
 
             if (id == 13)
                 m_status[headset].PointingInPublic = (value != 0);
@@ -153,7 +115,7 @@ namespace Sereno.Network.MessageHandler
                 return (byte)'I';
             else
             {
-                Int32 id = (Cursor-1) % 20;
+                Int32 id = (Cursor-1) % 24;
 
                 if (id < 3) //Color / ID / Current Action
                     return (byte)'I';
@@ -175,11 +137,14 @@ namespace Sereno.Network.MessageHandler
 
                 else if (id < 20) //Pointing position of the headset when the pointing started
                     return (byte)'f';
+
+                else if (id < 24) //Pointing orientation of the headset when the pointing started
+                    return (byte)'f';
             }
             return 0;
         }
 
-        public override Int32 GetMaxCursor() { return 0+(m_status != null ? m_status.Length*20 : 0); }
+        public override Int32 GetMaxCursor() { return 0+(m_status != null ? m_status.Length*24 : 0); }
 
         /// <summary>
         /// The headsets status received

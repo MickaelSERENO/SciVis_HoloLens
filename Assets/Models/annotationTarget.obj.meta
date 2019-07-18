@@ -5,12 +5,19 @@ ModelImporter:
   fileIDToRecycleName:
     100000: //RootNode
     100002: pCylinder1
+    100004: default
     400000: //RootNode
     400002: pCylinder1
+    400004: default
     2100000: pCylinder1Mat
+    2100002: mat0
+    2100004: defaultMat
     2300000: pCylinder1
+    2300002: default
     3300000: pCylinder1
+    3300002: default
     4300000: pCylinder1
+    4300002: default
   externalObjects: {}
   materials:
     importMaterials: 1
@@ -42,7 +49,7 @@ ModelImporter:
     isReadable: 1
   meshes:
     lODScreenPercentages: []
-    globalScale: 0.005
+    globalScale: 1
     meshCompression: 0
     addColliders: 0
     useSRGBMaterialColor: 1

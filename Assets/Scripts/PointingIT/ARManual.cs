@@ -49,6 +49,11 @@ namespace Sereno.Pointing
         private Vector3 m_headsetStartPosition = new Vector3(0, 0, 0);
 
         /// <summary>
+        /// The headset orientation when the interaction technique was created
+        /// </summary>
+        protected Quaternion m_headsetStartOrientation = Quaternion.identity;
+
+        /// <summary>
         /// The headset transform representing the headset
         /// </summary>
         protected Transform m_headsetTransform;
@@ -102,7 +107,8 @@ namespace Sereno.Pointing
 
             m_headsetTransform = headsetTransform;
 
-            m_headsetStartPosition = headsetTransform.position;
+            HeadsetStartOrientation = headsetTransform.rotation;
+            HeadsetStartPosition    = headsetTransform.position;
         }
 
         void OnDestroy()
@@ -125,12 +131,12 @@ namespace Sereno.Pointing
                 lock (m_hdProvider)
                 {
                     //Get the valid hands
-                    List<HandDetected> validHDs = m_hdProvider.GetHandsNotOnBody(0.10f);
+                    List<HandDetected> validHDs = m_hdProvider.GetHandsNotOnBody(0.15f);
 
                     if (validHDs.Count > 0)
                     {
                         m_isHandDetected = true;
-                        HandDetected hd = m_hdProvider.GetFarthestHand(validHDs);
+                        HandDetected hd = m_hdProvider.GetOptimalHand(validHDs);
 
                        m_handPosition = hd.Position;
 
@@ -205,6 +211,12 @@ namespace Sereno.Pointing
         {
             get => m_headsetStartPosition;
             set => m_headsetStartPosition = value;
+        }
+
+        public Quaternion HeadsetStartOrientation
+        {
+            get => m_headsetStartOrientation;
+            set => m_headsetStartOrientation = value;
         }
     }
 }

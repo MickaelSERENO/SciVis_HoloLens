@@ -24,6 +24,16 @@ namespace Sereno.Unity.HandDetector
         private Vector3 m_wristPosition = new Vector3(0, 0, 0);
 
         /// <summary>
+        /// The hand's position in the camera space
+        /// </summary>
+        private Vector3 m_cameraSpacePosition = new Vector3(0, 0, 0);
+
+        /// <summary>
+        /// The wrist position in the camera space
+        /// </summary>
+        private Vector3 m_cameraSpaceWristPosition = new Vector3(0, 0, 0);
+
+        /// <summary>
         /// List of fingers related to this hand
         /// </summary>
         private List<FingerDetected> m_fingers  = new List<FingerDetected>();
@@ -32,11 +42,6 @@ namespace Sereno.Unity.HandDetector
         /// The uppest finger found in the image coordinate system
         /// </summary>
         private FingerDetected m_uppestFingerInImage = null;
-
-        /// <summary>
-        /// The smoothness to apply when updating the position. position = (1-smoothness)*newPosition + smoothness*oldPosition
-        /// </summary>
-        private float m_smoothness;
 
         /// <summary>
         /// The number of consecutive frames where this hand was not detected
@@ -72,9 +77,8 @@ namespace Sereno.Unity.HandDetector
         /// Constructor
         /// </summary>
         /// <param name="smoothness">The smoothness to apply when updating the position. position = (1-smoothness)*newPosition + smoothness*oldPosition</param>
-        public HandDetected(float smoothness)
+        public HandDetected()
         {
-            m_smoothness = smoothness;
         }
 
         /// <summary>
@@ -82,23 +86,18 @@ namespace Sereno.Unity.HandDetector
         /// </summary>
         /// <param name="pos">The new hand position</param>
         /// <param name="wristPosition">The new wrist position</param>
+        /// <param name="cameraSpacePos">The hand's position in the camera's space</param>
+        /// <param name="cameraSpaceWristPos">the wrist's position in the camera's space</param>
         /// <param name="newROI">The new ROI</param>
-        public void PushPosition(Vector3 pos, Vector3 wristPosition, float[] newROI)
+        public void PushPosition(Vector3 pos, Vector3 wristPosition, Vector3 cameraSpacePos, Vector3 cameraSpaceWristPos, float[] newROI)
         {
             if(m_newDetection)
             {
-                //Apply the smoothness coefficient
-                if (m_nbFrameDetected > 0)
-                {
-                    m_position      = pos           * (1.0f - m_smoothness) + m_smoothness * m_position;
-                    m_wristPosition = wristPosition * (1.0f - m_smoothness) + m_smoothness * m_wristPosition;
-                }
-                else
-                {
-                    m_position      = pos;
-                    m_wristPosition = wristPosition;
-                }
+                m_position = pos;
+                m_wristPosition = wristPosition;
                 m_roi      = newROI;
+                m_cameraSpacePosition = cameraSpacePos;
+                m_cameraSpaceWristPosition = cameraSpaceWristPos;
                 m_nbFrameDetected++;
                 m_nbFrameNotDetected = 0;
                 m_hasPushedPosition = true;
@@ -126,10 +125,10 @@ namespace Sereno.Unity.HandDetector
         /// <returns>true if this is the hand that collides a given ROI</returns>
         public bool HandCollision(float[] roi)
         {
-            return !(roi[0] > m_roi[2] ||
-                     roi[2] < m_roi[0] ||
-                     roi[1] > m_roi[3] ||
-                     roi[3] < m_roi[1]);
+            return !(roi[0] >= m_roi[2] ||
+                     roi[2] <= m_roi[0] ||
+                     roi[1] >= m_roi[3] ||
+                     roi[3] <= m_roi[1]);
         }
 
         /// <summary>
@@ -161,6 +160,37 @@ namespace Sereno.Unity.HandDetector
                 m_wristPosition = value;
             }
         }
+
+        /// <summary>
+        /// The Hand position in camera space
+        /// </summary>
+        public Vector3 CameraSpacePosition
+        {
+            get
+            {
+                return m_cameraSpacePosition;
+            }
+            set
+            {
+                m_cameraSpacePosition = value;
+            }
+        }
+
+        /// <summary>
+        /// The Wrist position in camera space
+        /// </summary>
+        public Vector3 CameraSpaceWristPosition
+        {
+            get
+            {
+                return m_cameraSpaceWristPosition;
+            }
+            set
+            {
+                m_cameraSpaceWristPosition = value;
+            }
+        }
+
 
         /// <summary>
         /// Tells if this hand was detected in the last frame
@@ -243,21 +273,6 @@ namespace Sereno.Unity.HandDetector
             set
             {
                 m_uppestFingerInImage = value;
-            }
-        }
-
-        /// <summary>
-        /// The smoothness coefficient to apply each time the hand position is updated, to avoid noise
-        /// </summary>
-        public float Smoothness
-        {
-            get
-            {
-                return m_smoothness;
-            }
-            set
-            {
-                m_smoothness = value;
             }
         }
     }

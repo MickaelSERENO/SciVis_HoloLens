@@ -60,6 +60,11 @@ namespace Sereno.Pointing
         protected Vector3 m_headsetStartPosition = new Vector3(0, 0, 0);
 
         /// <summary>
+        /// The headset orientation when the interaction technique was created
+        /// </summary>
+        protected Quaternion m_headsetStartOrientation = Quaternion.identity;
+
+        /// <summary>
         /// The game object representing the hand position
         /// </summary>
         public GameObject HandPositionGO;
@@ -98,19 +103,13 @@ namespace Sereno.Pointing
             if (headsetTransform == null)
                 headsetTransform = Camera.main.transform;
 
-            m_headsetStartPosition = headsetTransform.position;
-
-            //Handle the transform tree
-            Vector3 cameraForward = headsetTransform.forward;
-            cameraForward.y = 0;
-            transform.localPosition = headsetTransform.position + new Vector3(0, -0.20f, 0) + 0.50f * cameraForward;
             transform.localRotation = Quaternion.identity;
             transform.localScale    = wimScale;
 
             m_wim = go.CreateMiniature();
             m_wim.transform.SetParent(transform, false);
             m_wim.transform.localPosition = new Vector3(0, 0, 0);
-            m_wim.transform.localRotation = Quaternion.identity;
+            m_wim.transform.localRotation = go.transform.rotation;
             m_wim.transform.localScale    = new Vector3(1, 1, 1);
 
             HandPositionGO.transform.SetParent(null, false);
@@ -121,8 +120,10 @@ namespace Sereno.Pointing
             m_gestureRecognizer.SetRecognizableGestures(GestureSettings.Tap);
             m_gestureRecognizer.Tapped += OnTap;
             m_gestureRecognizer.StartCapturingGestures();
-
-            m_headsetTransform = headsetTransform;
+                        
+            //Handle the positions
+            HeadsetStartOrientation = headsetTransform.rotation;
+            HeadsetStartPosition    = headsetTransform.position;
         }
 
         protected virtual void OnDestroy()
@@ -147,12 +148,12 @@ namespace Sereno.Pointing
                 lock (m_hdProvider)
                 {
                     //Get the valid hands
-                    List<HandDetected> validHDs = m_hdProvider.GetHandsNotOnBody(0.10f);
+                    List<HandDetected> validHDs = m_hdProvider.GetHandsNotOnBody(0.15f);
 
                     if (validHDs.Count > 0)
                     {
                         m_isHandDetected = true;
-                        HandDetected hd = m_hdProvider.GetFarthestHand(validHDs);
+                        HandDetected hd = m_hdProvider.GetOptimalHand(validHDs);
                         
                         m_handPosition = hd.Position;
 
@@ -176,6 +177,15 @@ namespace Sereno.Pointing
             if(!m_isHandDetected)
                 args.sourcePose.TryGetPosition(out m_handPosition);
             OnSelection?.Invoke(this);
+        }
+
+        /// <summary>
+        /// Recompute the WIM replica's position
+        /// </summary>
+        private void RecomputeWIMPosition()
+        {
+            Vector3 forward         = HeadsetStartOrientation * Vector3.forward;
+            transform.localPosition = HeadsetStartPosition + new Vector3(0, -0.15f, 0) + 0.45f * (new Vector3(forward.x, 0.0f, forward.z)).normalized;
         }
 
         /// <summary>
@@ -231,8 +241,18 @@ namespace Sereno.Pointing
             get => m_headsetStartPosition;
             set
             {
-                m_headsetStartPosition = value;
-                transform.localPosition = m_headsetStartPosition + new Vector3(0, -0.15f, 0) + 0.45f * m_headsetTransform.forward;
+                m_headsetStartPosition  = value;
+                RecomputeWIMPosition();
+            }
+        }
+
+        public Quaternion HeadsetStartOrientation
+        {
+            get => m_headsetStartOrientation;
+            set
+            {
+                m_headsetStartOrientation  = value;
+                RecomputeWIMPosition();
             }
         }
     }

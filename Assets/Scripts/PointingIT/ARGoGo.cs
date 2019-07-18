@@ -51,6 +51,11 @@ namespace Sereno.Pointing
         private Vector3 m_headsetStartPosition = new Vector3(0, 0, 0);
 
         /// <summary>
+        /// The headset orientation when the interaction technique was created
+        /// </summary>
+        protected Quaternion m_headsetStartOrientation = Quaternion.identity;
+
+        /// <summary>
         /// The GameObject representing the ray
         /// </summary>
         public GameObject RayObject = null;
@@ -91,7 +96,8 @@ namespace Sereno.Pointing
             m_gestureRecognizer.Tapped += OnTap;
             m_gestureRecognizer.StartCapturingGestures();
 
-            m_headsetStartPosition = m_headsetTransform.transform.position;
+            HeadsetStartOrientation = m_headsetTransform.rotation;
+            HeadsetStartPosition    = m_headsetTransform.position;
         }
 
         void Start()
@@ -104,21 +110,21 @@ namespace Sereno.Pointing
             {
                 lock (m_hdProvider)
                 {
-                    List<HandDetected> validHDs = m_hdProvider.GetHandsNotOnBody(0.10f);
+                    List<HandDetected> validHDs = m_hdProvider.GetHandsNotOnBody(0.15f);
 
                     if (validHDs.Count > 0)
                     {
                         m_isHandDetected = true;
-                        HandDetected hd = m_hdProvider.GetFarthestHand(validHDs);
+                        HandDetected hd = m_hdProvider.GetOptimalHand(validHDs);
 
                         RayObject.SetActive(true);
 
                         //Pointing
-                        Vector3 anchorPoint = Camera.main.transform.position + new Vector3(0, -0.20f, 0);
+                        Vector3 anchorPoint = Camera.main.transform.position + new Vector3(0, -0.15f, 0);
                         Vector3 pointDir = (hd.Position - anchorPoint).normalized;
 
                         if (m_pointingDir.x != 0 || m_pointingDir.y != 0 || m_pointingDir.z != 0)
-                            m_pointingDir = (0.10f * m_pointingDir + 0.90f * pointDir).normalized; //Apply a strong smoothing. Renormalize because of floating point issue
+                            m_pointingDir = (0.70f * m_pointingDir + 0.30f * pointDir).normalized; //Apply a strong smoothing. Renormalize because of floating point issue
                         else
                             m_pointingDir = pointDir;
 
@@ -130,7 +136,7 @@ namespace Sereno.Pointing
                         if (handMagnitude < MIN_MAGNITUDE)
                             m_targetPosition = anchorPoint + m_pointingDir * handMagnitude;
                         else
-                            m_targetPosition = anchorPoint + m_pointingDir * 14.0f * (handMagnitude - MIN_MAGNITUDE);
+                            m_targetPosition = anchorPoint + m_pointingDir * 17.5f * (handMagnitude - MIN_MAGNITUDE);
 
                         m_targetPosition = m_currentSubDataset.transform.worldToLocalMatrix.MultiplyPoint3x4(m_targetPosition);
                     }
@@ -140,14 +146,14 @@ namespace Sereno.Pointing
             //We do this because it permits to use the same code for both the local user and the remote collaborators embodiement
             if (m_currentSubDataset)
             {
-                Vector3 anchorPoint = m_headsetTransform.position + new Vector3(0, -0.20f, 0);
+                Vector3 anchorPoint = m_headsetTransform.position + new Vector3(0, -0.15f, 0);
                 Vector3 targetPos = m_currentSubDataset.transform.localToWorldMatrix.MultiplyPoint3x4(m_targetPosition);
 
                 Vector3 rayVec = targetPos - anchorPoint;
                 rayVec = rayVec.normalized;
 
                 RayObject.transform.up = rayVec;
-                RayObject.transform.localPosition = anchorPoint + RayObject.transform.up * RayObject.transform.localScale.y;
+                RayObject.transform.localPosition = anchorPoint + rayVec * RayObject.transform.localScale.y;
                 PosObject.transform.localPosition = targetPos;
             }
         }
@@ -222,5 +228,11 @@ namespace Sereno.Pointing
         }
 
         public Vector3 HeadsetStartPosition { get => m_headsetStartPosition; set => m_headsetStartPosition = value; }
+
+        public Quaternion HeadsetStartOrientation
+        {
+            get => m_headsetStartOrientation;
+            set => m_headsetStartOrientation = value;
+        }
     }
 }

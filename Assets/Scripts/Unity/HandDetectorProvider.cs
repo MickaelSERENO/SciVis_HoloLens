@@ -111,6 +111,21 @@ namespace Sereno.Unity.HandDetector
                     //For each detected hand
                     foreach (Hand hand in hands)
                     {
+                        //Get the needed transformation matrices to convert hand in image space to camera and world space
+                        System.Numerics.Matrix4x4? cameraToWorld = CoordinateSystem.TryGetTransformTo(m_spatialCoordinateSystem).Value;
+                        System.Numerics.Matrix4x4 viewToCamera;
+                        System.Numerics.Matrix4x4.Invert(cameraParam.CameraViewTransform, out viewToCamera);
+                        if (cameraToWorld == null)
+                            cameraToWorld = System.Numerics.Matrix4x4.Identity;
+
+                        //Hand in camera space
+                        System.Numerics.Vector4 handVecCamera = System.Numerics.Vector4.Transform(new System.Numerics.Vector4(hand.PalmX, hand.PalmY, hand.PalmZ, 1.0f), viewToCamera);
+                        Vector3 unityHandCamera = new Vector3(handVecCamera.X, handVecCamera.Y, handVecCamera.Z) / handVecCamera.W;
+
+                        //Wrist in camera space
+                        System.Numerics.Vector4 wristVecCamera = System.Numerics.Vector4.Transform(new System.Numerics.Vector4(hand.WristX, hand.WristY, hand.WristZ, 1.0f), viewToCamera);
+                        Vector3 unityWristCamera = new Vector3(wristVecCamera.X, wristVecCamera.Y, wristVecCamera.Z) / wristVecCamera.W;
+                                               
                         //Add offsets in the ROI
                         float[] roi = new float[4];
                         roi[0] = hand.WristROIMinX - 10;
@@ -119,10 +134,11 @@ namespace Sereno.Unity.HandDetector
                         roi[3] = hand.WristROIMaxY + 10;
 
                         //check if we already know it
+                        bool created = false;
                         HandDetected handDetected = null;
                         foreach (HandDetected hd in m_handsDetected)
                         {
-                            if (!hd.IsDetected && hd.HandCollision(roi))
+                            if (!hd.IsDetected && hd.HandCollision(roi) && (hd.CameraSpacePosition - unityHandCamera).magnitude <= 0.10) //Test the ROI and the magnitude in the position (no more than 5 cm)
                             {
                                 handDetected = hd;
                                 break;
@@ -132,27 +148,27 @@ namespace Sereno.Unity.HandDetector
                         //If not, this is a new hand!
                         if (handDetected == null)
                         {
-                            handDetected = new HandDetected(m_smoothness);
+                            handDetected = new HandDetected();
                             handDetected.NewDetection = true;
                             m_handsDetected.Add(handDetected);
+                            created = true;
                         }
 
-                        //Compute the hand 3D position in the left-handed coordinate system
-                        System.Numerics.Matrix4x4? cameraToWorld = CoordinateSystem.TryGetTransformTo(m_spatialCoordinateSystem).Value;
-                        System.Numerics.Matrix4x4 viewToCamera;
-                        System.Numerics.Matrix4x4.Invert(cameraParam.CameraViewTransform, out viewToCamera);
-                        if (cameraToWorld == null)
-                            cameraToWorld = System.Numerics.Matrix4x4.Identity;
+                        float smoothness = m_smoothness;
+                        if (created == true)
+                            smoothness = 0.0f;
 
-                        System.Numerics.Vector4 handVec = System.Numerics.Vector4.Transform(new System.Numerics.Vector4(hand.PalmX, hand.PalmY, hand.PalmZ, 1.0f), viewToCamera);
-                        handVec = System.Numerics.Vector4.Transform(handVec, cameraToWorld.Value);
+                        //Smooth the hand
+                        Vector3 smoothPosCamera = unityHandCamera * (1.0f - smoothness) + handDetected.CameraSpacePosition * smoothness; //Smooth the position
+                        System.Numerics.Vector4 handVec = System.Numerics.Vector4.Transform(new System.Numerics.Vector4(smoothPosCamera.x, smoothPosCamera.y, smoothPosCamera.z, 1.0f), cameraToWorld.Value);
                         Vector3 unityHandVec = new Vector3(handVec.X, handVec.Y, -handVec.Z) / handVec.W;
 
-                        System.Numerics.Vector4 wristVec = System.Numerics.Vector4.Transform(new System.Numerics.Vector4(hand.WristX, hand.WristY, hand.WristZ, 1.0f), viewToCamera);
-                        wristVec = System.Numerics.Vector4.Transform(wristVec, cameraToWorld.Value);
+                        //Smooth the wrist
+                        Vector3 smoothWristCamera = unityWristCamera * (1.0f - smoothness) + handDetected.CameraSpaceWristPosition * smoothness; //Smooth the position
+                        System.Numerics.Vector4 wristVec = System.Numerics.Vector4.Transform(new System.Numerics.Vector4(smoothWristCamera.x, smoothWristCamera.y, smoothWristCamera.z, 1.0f), cameraToWorld.Value);
                         Vector3 unityWristVec = new Vector3(wristVec.X, wristVec.Y, -wristVec.Z) / wristVec.W;
 
-                        handDetected.PushPosition(unityHandVec, unityWristVec, roi);
+                        handDetected.PushPosition(unityHandVec, unityWristVec, smoothPosCamera, smoothWristCamera, roi);
 
                         //Clear fingers information
                         handDetected.Fingers.Clear();
@@ -184,11 +200,6 @@ namespace Sereno.Unity.HandDetector
                                     handDetected.UppestFinger = handDetected.Fingers[i];
                                 }
                             }
-
-                            //Apply smoothness on this particular finger
-                            if (formerFinger != null)
-                                handDetected.UppestFinger.Position = (1.0f - m_smoothness) * handDetected.UppestFinger.Position + m_smoothness * formerFinger.Position;
-
                         }
                     }
                 }
@@ -217,17 +228,19 @@ namespace Sereno.Unity.HandDetector
         /// Get the hands that are not on the body.
         /// </summary>
         /// <param name="minMagnitude">The minimum magnitude between the camera and the valid hands along the z and x axis</param>
+        /// <param name="maxVerticalDistance">The maximum vertical distance between the hand and the camera allowed</param>
         /// <returns>The list of hands not on the body</returns>
-        public List<HandDetected> GetHandsNotOnBody(float minMagnitude)
+        public List<HandDetected> GetHandsNotOnBody(float minMagnitude, float maxVerticalDistance=0.60f)
         {
             List<HandDetected> validHDs = new List<HandDetected>();
+
             foreach (HandDetected hd in HandsDetected)
             {
                 if (hd.IsValid)
                 {
                     Vector3 distBody = (hd.Position - Camera.main.transform.position);
-                    Vector2 distBody2D = new Vector2(-Vector3.Dot(distBody, Camera.main.transform.right), Vector3.Dot(distBody, Camera.main.transform.forward));
-                    if (distBody2D.magnitude > minMagnitude) //Discard detection that may be the chest "on the body"
+                    Vector2 distBody2D = new Vector2(distBody.x, distBody.z);
+                    if (distBody2D.magnitude > minMagnitude && distBody.y >= -maxVerticalDistance) //Discard detection that may be the chest "on the body" or too low
                     {
                         validHDs.Add(hd);
                     }
@@ -247,14 +260,64 @@ namespace Sereno.Unity.HandDetector
             if (validHDs.Count == 0)
                 return null;
 
+            Vector3 forward = Camera.main.transform.forward;
+            forward = (new Vector3(forward.x, 0.0f, forward.z)).normalized;
+
             HandDetected hd = validHDs[0];
-            float posZ = Vector3.Dot(Camera.main.transform.forward, validHDs[0].Position - Camera.main.transform.position);
+            float posZ = Vector3.Dot(forward, validHDs[0].Position - Camera.main.transform.position);
             for (int i = 1; i < validHDs.Count; i++)
             {
-                float tempPosZ = Vector3.Dot(Camera.main.transform.forward, validHDs[i].Position - Camera.main.transform.position);
+                float tempPosZ = Vector3.Dot(forward, validHDs[i].Position - Camera.main.transform.position);
                 if (posZ < tempPosZ)
                 {
                     posZ = tempPosZ;
+                    hd = validHDs[i];
+                }
+            }
+            return hd;
+        }
+
+        /// <summary>
+        /// Get the optimal hand given a list of valid hands
+        /// </summary>
+        /// <param name="validHDs">The list of valid Hands</param>
+        /// <returns></returns>
+        public HandDetected GetOptimalHand(List<HandDetected> validHDs)
+        {
+            if (validHDs.Count == 0)
+                return null;
+
+            float optimalLimit = 0.40f;
+
+            Vector3 forward = Camera.main.transform.forward;
+            forward = (new Vector3(forward.x, 0.0f, forward.z)).normalized;
+
+            HandDetected hd = validHDs[0];
+
+            float maxPosZ = Vector3.Dot(forward, validHDs[0].Position - Camera.main.transform.position);
+            float minPosZ = float.MaxValue;
+
+
+            for (int i = 1; i < validHDs.Count; i++)
+            {
+                bool computeMin = false;
+                float tempPosZ = Vector3.Dot(forward, validHDs[i].Position - Camera.main.transform.position);
+                if (maxPosZ < tempPosZ)
+                {
+                    maxPosZ = tempPosZ;
+                    if (tempPosZ < optimalLimit) //Take the farthest between a range of 0 and the optimal limit
+                    {
+                        hd = validHDs[i];
+                    }
+                    else
+                        computeMin = true;
+                }
+                else if (tempPosZ < minPosZ && tempPosZ >= optimalLimit)
+                    computeMin = true;
+
+                if (computeMin)
+                {
+                    minPosZ = tempPosZ;
                     hd = validHDs[i];
                 }
             }
@@ -277,7 +340,7 @@ namespace Sereno.Unity.HandDetector
         public float Smoothness
         {
             get { return m_smoothness; }
-            set { m_smoothness = value; foreach (var hd in m_handsDetected) hd.Smoothness = value; }
+            set { m_smoothness = value; }
         }
 
         /// <summary>

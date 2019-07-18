@@ -50,6 +50,11 @@ namespace Sereno.Pointing
         private Vector3 m_headsetStartPosition = new Vector3(0, 0, 0);
 
         /// <summary>
+        /// The headset orientation when the interaction technique was created
+        /// </summary>
+        protected Quaternion m_headsetStartOrientation = Quaternion.identity;
+
+        /// <summary>
         /// AR GOGO Technique prefab
         /// </summary>
         public ARGoGo   ARGoGoPrefab;
@@ -133,7 +138,8 @@ namespace Sereno.Pointing
             //Reset correctly all the values
             m_currentGO.transform.SetParent(null, false);
             
-            m_currentITObj.HeadsetStartPosition = m_headsetStartPosition;
+            m_currentITObj.HeadsetStartPosition    = m_headsetStartPosition;
+            m_currentITObj.HeadsetStartOrientation = m_headsetStartOrientation;
         }
 
         /// <summary>
@@ -209,6 +215,20 @@ namespace Sereno.Pointing
                 m_headsetStartPosition = value;
                 if (m_currentITObj != null)
                     m_currentITObj.HeadsetStartPosition = value;
+            }
+        }
+
+        /// <summary>
+        /// The orientation of the headset when this interaction technique started
+        /// </summary>
+        public Quaternion HeadsetStartOrientation
+        {
+            get { return m_headsetStartOrientation; }
+            set
+            {
+                m_headsetStartOrientation = value;
+                if (m_currentITObj != null)
+                    m_currentITObj.HeadsetStartOrientation = value;
             }
         }
     }

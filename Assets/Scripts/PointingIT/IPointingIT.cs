@@ -41,6 +41,11 @@ namespace Sereno.Pointing
         Vector3 HeadsetStartPosition { get; set; }
 
         /// <summary>
+        /// The headset start orientation when the interaction technique was created
+        /// </summary>
+        Quaternion HeadsetStartOrientation { get; set; }
+
+        /// <summary>
         /// The Headset transform object. By default it is the MainCamera
         /// </summary>
         Transform HeadsetTransform { get; set; }

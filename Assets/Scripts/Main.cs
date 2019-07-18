@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 #define CHI2020
 
 #if ENABLE_WINMD_SUPPORT
@@ -407,7 +407,7 @@ namespace Sereno
             m_client.Connect();
 
             //Start the hand detector
-            m_hdProvider.Smoothness = 0.70f;
+            m_hdProvider.Smoothness = 0.75f;
             m_hdProvider.InitializeHandDetector();
 
             //Initialize our selection techniques
@@ -440,7 +440,7 @@ namespace Sereno
                 moveVTKMsg.HeadsetID = -1;
                 OnMoveDataset(null, moveVTKMsg);
 
-                /*ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
+                ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
                 scaleMsg.SubDataID = 0;
                 scaleMsg.HeadsetID = -1;
@@ -451,9 +451,9 @@ namespace Sereno
                 StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
                 annotMsg.DatasetID = 0;
                 annotMsg.SubDatasetID = 0;
-                annotMsg.PointingID = PointingIT.WIM_RAY;
+                annotMsg.PointingID = PointingIT.GOGO;
                 annotMsg.InPublic = 1;
-                OnStartAnnotation(null, annotMsg);*/
+                OnStartAnnotation(null, annotMsg);
 
                 //Headset Status
                 /*HeadsetsStatusMessage headsetStatusMsg = new HeadsetsStatusMessage(ServerType.GET_HEADSETS_STATUS);
@@ -719,9 +719,9 @@ namespace Sereno
             {
                 //Update the glyph position / rotation
                 m_headsetGameObjects[i].Headset.transform.localRotation = new Quaternion(m_headsetStatus[i].Rotation[1],
-                                                                                       m_headsetStatus[i].Rotation[2],
-                                                                                       m_headsetStatus[i].Rotation[3],
-                                                                                       m_headsetStatus[i].Rotation[0]);
+                                                                                         m_headsetStatus[i].Rotation[2],
+                                                                                         m_headsetStatus[i].Rotation[3],
+                                                                                         m_headsetStatus[i].Rotation[0]);
 
                 m_headsetGameObjects[i].Headset.transform.localPosition = new Vector3(m_headsetStatus[i].Position[0],
                                                                                       m_headsetStatus[i].Position[1],
@@ -758,10 +758,20 @@ namespace Sereno
                 if (m_headsetStatus[i].ID != m_headsetID)
                 {
                     //Update the pointing interaction technique
-                    m_headsetGameObjects[i].ARPointingGO.PointingIT = m_headsetStatus[i].PointingIT;
+                    m_headsetGameObjects[i].ARPointingGO.PointingIT           = m_headsetStatus[i].PointingIT;
                     m_headsetGameObjects[i].ARPointingGO.SubDatasetGameObject = (m_headsetStatus[i].PointingInPublic ? GetSDGameObject(GetSubDataset(m_headsetStatus[i].PointingDatasetID, m_headsetStatus[i].PointingSubDatasetID, true)) : null);
-                    m_headsetGameObjects[i].ARPointingGO.TargetPosition = new Vector3(m_headsetStatus[i].PointingLocalSDPosition[0], m_headsetStatus[i].PointingLocalSDPosition[1], m_headsetStatus[i].PointingLocalSDPosition[2]);
-                    m_headsetGameObjects[i].ARPointingGO.HeadsetStartPosition = new Vector3(m_headsetStatus[i].PointingHeadsetStartPosition[0], m_headsetStatus[i].PointingHeadsetStartPosition[1], m_headsetStatus[i].PointingHeadsetStartPosition[2]);
+                    m_headsetGameObjects[i].ARPointingGO.TargetPosition       = new Vector3(m_headsetStatus[i].PointingLocalSDPosition[0], m_headsetStatus[i].PointingLocalSDPosition[1], m_headsetStatus[i].PointingLocalSDPosition[2]);
+
+                    Vector3 pointingHeadsetStartPosition = new Vector3(m_headsetStatus[i].PointingHeadsetStartPosition[0], m_headsetStatus[i].PointingHeadsetStartPosition[1], m_headsetStatus[i].PointingHeadsetStartPosition[2]);
+                    pointingHeadsetStartPosition = this.transform.localToWorldMatrix.MultiplyPoint(pointingHeadsetStartPosition);
+
+                    Quaternion headsetOrientation = new Quaternion(m_headsetStatus[i].PointingHeadsetStartOrientation[1],
+                                                                   m_headsetStatus[i].PointingHeadsetStartOrientation[2],
+                                                                   m_headsetStatus[i].PointingHeadsetStartOrientation[3],
+                                                                   m_headsetStatus[i].PointingHeadsetStartOrientation[0]);
+                    headsetOrientation = headsetOrientation * this.transform.rotation; //Convert the headset orientation in world space.
+                    m_headsetGameObjects[i].ARPointingGO.HeadsetStartPosition    = pointingHeadsetStartPosition;
+                    m_headsetGameObjects[i].ARPointingGO.HeadsetStartOrientation = headsetOrientation;
                 }
             }
         }
@@ -773,12 +783,8 @@ namespace Sereno
         /// <returns>the x, y and z component of the position regarding the root anchor game object</returns>
         private float[] GetRelativePositionToAnchor(Vector3 position)
         {
-            //The relative position (taking acount the headset's orientation, i.e., new coordinate system)
-            Vector3 relPos = position - m_rootAnchorGO.transform.position;
-
-            return new float[3] {Vector3.Dot(relPos, m_rootAnchorGO.transform.right),
-                                 Vector3.Dot(relPos, m_rootAnchorGO.transform.up),
-                                 Vector3.Dot(relPos, m_rootAnchorGO.transform.forward)};
+            Vector3 relPos = transform.worldToLocalMatrix.MultiplyPoint(position); //This work because WE are a child of the root anchor and we have an identity local matrix
+            return new float[3] { relPos.x, relPos.y, relPos.z };
         }
 
         /// <summary>
@@ -786,7 +792,7 @@ namespace Sereno
         /// </summary>
         private void HandleHeadsetStatusSending()
         {
-            //Send camera status
+            //Send camera status. No need to send status if there is no root anchor (i.e, synchronization)
             if(m_rootAnchorGO != null && m_client.IsConnected() && m_client.HeadsetConnectionSent)
             {
                 HeadsetUpdateData headsetData = new HeadsetUpdateData();
@@ -809,7 +815,10 @@ namespace Sereno
                     for (int i = 0; i < 3; i++)
                         headsetData.PointingLocalSDPosition[i] = m_currentPointingIT.TargetPosition[i];
 
-                    headsetData.PointingHeadsetStartPosition = GetRelativePositionToAnchor(m_currentPointingIT.HeadsetStartPosition);
+                    headsetData.PointingHeadsetStartPosition    = GetRelativePositionToAnchor(m_currentPointingIT.HeadsetStartPosition);
+                    Quaternion relHeadsetStartOrientation       = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * m_currentPointingIT.HeadsetStartOrientation;
+                    headsetData.PointingHeadsetStartOrientation = new float[] { relHeadsetStartOrientation[3], relHeadsetStartOrientation[0],
+                                                                                relHeadsetStartOrientation[1], relHeadsetStartOrientation[2] };
                 }
 
                 m_client.SendHeadsetUpdateData(headsetData);

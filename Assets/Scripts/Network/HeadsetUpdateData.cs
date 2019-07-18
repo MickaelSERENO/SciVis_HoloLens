@@ -44,5 +44,10 @@ namespace Sereno.Network
         /// The position headset when the pointing technique started
         /// </summary>
         public float[] PointingHeadsetStartPosition = new float[3];
+
+        /// <summary>
+        /// The orientation of the headset when the pointing interaction technique was created
+        /// </summary>
+        public float[] PointingHeadsetStartOrientation = new float[4];
     }
 }
