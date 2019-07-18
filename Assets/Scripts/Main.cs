@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 #define CHI2020
 
 #if ENABLE_WINMD_SUPPORT
