@@ -34,5 +34,17 @@ namespace Sereno.Pointing
             RayObject.transform.localScale = new Vector3(RayObject.transform.localScale.x, rayTarget.magnitude/2.0f, RayObject.transform.localScale.z);
             RayObject.transform.position   = wimPos + RayObject.transform.up*RayObject.transform.localScale.y;
         }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            RayObject.SetActive(true);
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            RayObject.SetActive(false);
+        }
     }
 }

@@ -99,6 +99,11 @@ namespace Sereno
         /// The duration time the next trial message should appear in milliseconds
         /// </summary>
         const Int64 NEXT_TRIAL_MESSAGE_DURATION_TIME = 3*1000;
+
+        /// <summary>
+        /// The minimum distance between the user and the dataset for when the interaction techniques are available
+        /// </summary>
+        const float MIN_DISTANCE_IT = 1.5f;
 #endif
 
         /// <summary>
@@ -182,7 +187,12 @@ namespace Sereno
         /// Information received from the communication thread in order to update the IP text values being displayed
         /// </summary>
         private IPTextValue m_textValues = new IPTextValue();
-
+        
+        /// <summary>
+        /// When should the random text be disabled? -1 == never
+        /// </summary>
+        private Int64 m_disableRandomTextTimestamp = -1;
+        
         /// <summary>
         /// The anchor communication the server asked
         /// </summary>
@@ -241,6 +251,11 @@ namespace Sereno
         private IPointingIT m_currentPointingIT = null;
 
         /// <summary>
+        /// The current pointing IT GameObject
+        /// </summary>
+        private GameObject m_currentPointingITGO = null;
+
+        /// <summary>
         /// The game object being target by the pointing interaction technique
         /// </summary>
         private DefaultSubDatasetGameObject m_targetedGameObject = null;
@@ -277,11 +292,6 @@ namespace Sereno
 
 #if CHI2020
         /// <summary>
-        /// When should the random text be disabled? -1 == never
-        /// </summary>
-        private Int64 m_disableRandomTextTimestamp = -1;
-
-        /// <summary>
         /// What is the current trial data ?
         /// </summary>
         private NextTrialMessage m_currentTrialMessage = null;
@@ -290,7 +300,11 @@ namespace Sereno
         /// Should we update the rendering pipeline due to new CHI2020 data?
         /// </summary>
         private bool m_updateCHI2020Data = false;
-
+        
+        /// <summary>
+        /// Is the pointing Iteraction technique disabled?
+        /// </summary>
+        private bool m_itDisabled = true;
 #endif
         #endregion
 
@@ -420,7 +434,9 @@ namespace Sereno
             CurrentPointingIT = PointingIT.NONE;
 
             //By default, false
+#if CHI2020
             TargetAnnotationGO.SetActive(false);
+#endif
 #if TEST
             Task t = new Task( () =>
             {
@@ -432,19 +448,19 @@ namespace Sereno
                 addVTKMsg.PtFieldValueIndices = new int[] { 0 };
                 OnAddVTKDataset(null, addVTKMsg);
 
-                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                /*MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
                 moveVTKMsg.SubDataID = 0;
                 moveVTKMsg.Position = new float[3] { -1, -1, -1 };
                 moveVTKMsg.InPublic = 1;
                 moveVTKMsg.HeadsetID = -1;
-                OnMoveDataset(null, moveVTKMsg);
+                OnMoveDataset(null, moveVTKMsg);*/
 
                 ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
                 scaleMsg.SubDataID = 0;
                 scaleMsg.HeadsetID = -1;
-                scaleMsg.Scale = new float[3] { 0.25f, 0.25f, 0.25f };
+                scaleMsg.Scale = new float[3] { 0.5f, 0.5f, 0.5f };
                 scaleMsg.InPublic = 1;
                 OnScaleDataset(null, scaleMsg);
 
@@ -472,7 +488,7 @@ namespace Sereno
                 headsetStatusMsg.HeadsetsStatus[0] = headsetStatus;
                 OnHeadsetsStatus(null, headsetStatusMsg);*/
 
-                AnchorAnnotationMessage anchorAnnot = new AnchorAnnotationMessage(ServerType.GET_ANCHOR_ANNOTATION);
+                /*AnchorAnnotationMessage anchorAnnot = new AnchorAnnotationMessage(ServerType.GET_ANCHOR_ANNOTATION);
                 anchorAnnot.AnnotationID = 0;
                 anchorAnnot.DatasetID = 0;
                 anchorAnnot.SubDatasetID = 0;
@@ -485,7 +501,7 @@ namespace Sereno
                 clrMsg.DatasetID = 0;
                 clrMsg.SubDatasetID = 0;
                 clrMsg.InPublic = 1;
-                OnClearAnnotations(null, clrMsg);
+                OnClearAnnotations(null, clrMsg);*/
             }
             );
             t.Start();
@@ -718,6 +734,7 @@ namespace Sereno
             for(int i = 0; i < m_headsetStatus.Count; i++)
             {
                 //Update the glyph position / rotation
+                //First update the general headset transform gameobject
                 m_headsetGameObjects[i].Headset.transform.localRotation = new Quaternion(m_headsetStatus[i].Rotation[1],
                                                                                          m_headsetStatus[i].Rotation[2],
                                                                                          m_headsetStatus[i].Rotation[3],
@@ -727,8 +744,9 @@ namespace Sereno
                                                                                       m_headsetStatus[i].Position[1],
                                                                                       m_headsetStatus[i].Position[2]);
 
-                m_headsetGameObjects[i].Glyph.transform.localPosition  = m_headsetGameObjects[i].Headset.transform.forward*(-HEADSET_SIZE/2.0f) + //Middle of the head
-                                                                         m_headsetGameObjects[i].Headset.transform.up*(HEADSET_TOP);  //Top of the head
+                //Handle the special case of the glyph
+                m_headsetGameObjects[i].Glyph.transform.localPosition  = Vector3.forward*(-HEADSET_SIZE/2.0f) + //Middle of the head
+                                                                         Vector3.up     *( HEADSET_TOP);        //Top of the head
 
                 //Update the glyph color
                 m_headsetGameObjects[i].Glyph.GetComponent<MeshRenderer>().material.color = new Color(((byte)(m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
@@ -800,25 +818,30 @@ namespace Sereno
                 headsetData.Position = GetRelativePositionToAnchor(Camera.main.transform.position);
                 
                 //The relative orientation
-                Quaternion rel = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * Camera.main.transform.localRotation;
+                Quaternion rel = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * Camera.main.transform.rotation;
                 headsetData.Rotation = new float[4]{rel[3], rel[0], rel[1], rel[2]};
 
                 //The current pointing data
                 headsetData.PointingIT = CurrentPointingIT;
                 if(CurrentPointingIT != PointingIT.NONE && m_sdInAnnotation != null && m_currentPointingIT != null)
                 {
-                    SubDataset curSD = m_sdInAnnotation.SubDatasetPublicState;
-                    headsetData.PointingDatasetID    = curSD.Parent.ID;
-                    headsetData.PointingSubDatasetID = curSD.Parent.SubDatasets.FindIndex(s => s == curSD);
-                    headsetData.PointingInPublic     = (curSD == m_sdInAnnotation.SubDatasetPublicState);
+#if CHI2020
+                    if (!m_itDisabled)
+#endif
+                    {
+                        SubDataset curSD = m_sdInAnnotation.SubDatasetPublicState;
+                        headsetData.PointingDatasetID = curSD.Parent.ID;
+                        headsetData.PointingSubDatasetID = curSD.Parent.SubDatasets.FindIndex(s => s == curSD);
+                        headsetData.PointingInPublic = (curSD == m_sdInAnnotation.SubDatasetPublicState);
 
-                    for (int i = 0; i < 3; i++)
-                        headsetData.PointingLocalSDPosition[i] = m_currentPointingIT.TargetPosition[i];
+                        for (int i = 0; i < 3; i++)
+                            headsetData.PointingLocalSDPosition[i] = m_currentPointingIT.TargetPosition[i];
 
-                    headsetData.PointingHeadsetStartPosition    = GetRelativePositionToAnchor(m_currentPointingIT.HeadsetStartPosition);
-                    Quaternion relHeadsetStartOrientation       = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * m_currentPointingIT.HeadsetStartOrientation;
-                    headsetData.PointingHeadsetStartOrientation = new float[] { relHeadsetStartOrientation[3], relHeadsetStartOrientation[0],
-                                                                                relHeadsetStartOrientation[1], relHeadsetStartOrientation[2] };
+                        headsetData.PointingHeadsetStartPosition = GetRelativePositionToAnchor(m_currentPointingIT.HeadsetStartPosition);
+                        Quaternion relHeadsetStartOrientation = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * m_currentPointingIT.HeadsetStartOrientation;
+                        headsetData.PointingHeadsetStartOrientation = new float[] { relHeadsetStartOrientation[3], relHeadsetStartOrientation[0],
+                                                                                    relHeadsetStartOrientation[1], relHeadsetStartOrientation[2] };
+                    }
                 }
 
                 m_client.SendHeadsetUpdateData(headsetData);
@@ -843,10 +866,12 @@ namespace Sereno
         {
             if(m_updateCHI2020Data && m_currentTrialMessage != null)
             {
+                //The dataset needs to be loaded to continue
                 DefaultSubDatasetGameObject sdGameObject = GetSDGameObject(GetSubDataset(0, 0, true));
                 if (!sdGameObject)
                     return;
 
+                //Update the position of the target annotation game object
                 if ((m_currentTrialMessage.StudyID == 1 && m_currentTrialMessage.TabletID != m_tabletID) ||
                     (m_currentTrialMessage.StudyID == 2 && m_currentTrialMessage.TabletID == m_tabletID))
                 {
@@ -860,6 +885,19 @@ namespace Sereno
             }
             else
                 TargetAnnotationGO.SetActive(false);
+
+            //Handle the fact that for starting an interaction technique, the user must be about 1.5m away the original dataset.
+            if (m_currentPointingITGO != null)
+            {
+                if (m_itDisabled)
+                {
+                    Vector3 headsetSDVector = Camera.main.transform.position - m_currentPointingIT.CurrentSubDataset.transform.position;
+
+                    if ((new Vector2(headsetSDVector.x, headsetSDVector.z)).magnitude >= MIN_DISTANCE_IT)
+                        m_itDisabled = false;
+                }
+                m_currentPointingITGO.SetActive(!m_itDisabled);
+            }
         }
 #endif
 
@@ -1069,8 +1107,9 @@ namespace Sereno
                 //The server will store that and send that information to other headsets if needed
                 if (msg.IsFirstConnected)
                     m_anchorCommunication = AnchorCommunication.EXPORT;
-
+#if CHI2020
                 m_updateCHI2020Data = true;
+#endif
             }
         }
 
@@ -1145,7 +1184,8 @@ namespace Sereno
 
         public void OnNextTrial(MessageBuffer messageBuffer, NextTrialMessage msg)
         {
-            lock(this)
+#if CHI2020
+            lock (this)
             {
                 if (msg.StudyID == 1 || msg.StudyID == 2)
                 {
@@ -1153,7 +1193,7 @@ namespace Sereno
                     {
                         m_textValues.RandomStr = "You can now take a short\nbreak if needed";
                     }
-                    else if(msg.TabletID == m_tabletID) //The one performing the task
+                    else if (msg.TabletID == m_tabletID) //The one performing the task
                     {
                         String s = "Selection Technique: ";
                         switch (msg.PointingIT)
@@ -1179,31 +1219,35 @@ namespace Sereno
                     else
                     {
                         if (msg.StudyID == 1) //Guidance task
-                            m_textValues.RandomStr = "Guide your partenaire";
+                            m_textValues.RandomStr = "Guide your partner";
                         else //Should wait
-                            m_textValues.RandomStr = "Wait for your partenaire";
+                            m_textValues.RandomStr = "Wait for your partner";
                     }
 
-                    m_textValues.UpdateRandomText = true;
-                    m_textValues.EnableRandomText = true;
-
                     m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + NEXT_TRIAL_MESSAGE_DURATION_TIME;
                 }
 
-                else
+                else if (msg.StudyID == 3) //End of study
+                {
+                    m_textValues.RandomStr = "The study is finished\nThank you!!";
+                }
+
+                else //training session (normally)
                 {
                     m_textValues.RandomStr = "";
-                    m_textValues.UpdateRandomText = true;
-                    m_textValues.EnableRandomText = true;
                     m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + NEXT_TRIAL_MESSAGE_DURATION_TIME;
                 }
+
+                m_textValues.UpdateRandomText = true;
+                m_textValues.EnableRandomText = true;
 
                 m_currentTrialMessage = msg;
                 m_updateCHI2020Data = true;
             }
+#endif
         }
 
-        #endregion
+#endregion
 
         public Color GetHeadsetColor(int headsetID)
         {
@@ -1250,20 +1294,17 @@ namespace Sereno
                 switch(m_enumPointingIT)
                 {
                     case PointingIT.WIM:
-                        Destroy(((ARWIM)m_currentPointingIT).gameObject);
-                        break;
                     case PointingIT.WIM_RAY:
-                        Destroy(((ARWIMRay)m_currentPointingIT).gameObject);
+                    case PointingIT.MANUAL:
+                        Destroy(m_currentPointingITGO);
                         break;
                     case PointingIT.GOGO:
                         GoGoGameObject.gameObject.SetActive(false);
                         break;
-                    case PointingIT.MANUAL:
-                        Destroy(((ARManual)m_currentPointingIT).gameObject);
-                        break;
                 }
 
-                m_currentPointingIT = null;
+                m_currentPointingIT   = null;
+                m_currentPointingITGO = null;
 
                 m_enumPointingIT = value;
 
@@ -1277,6 +1318,7 @@ namespace Sereno
                         m_currentPointingIT = GoGoGameObject;
                         GoGoGameObject.CurrentSubDataset = m_datasetInAnnotation;
                         GoGoGameObject.gameObject.SetActive(true);
+                        m_currentPointingITGO = GoGoGameObject.gameObject;
                         break;
 
                     case PointingIT.WIM: //Create a new WIM with the correct copy
@@ -1287,6 +1329,7 @@ namespace Sereno
                             go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.25f, 0.25f, 0.25f));
                             go.gameObject.SetActive(true);
                             m_currentPointingIT = go;
+                            m_currentPointingITGO = go.gameObject;
                         }
                         break;
                     }
@@ -1299,6 +1342,7 @@ namespace Sereno
                             go.Init(m_hdProvider, m_datasetInAnnotation, new Vector3(0.25f, 0.25f, 0.25f));
                             go.gameObject.SetActive(true);
                             m_currentPointingIT = go;
+                            m_currentPointingITGO = go.gameObject;
                         }
                         break;
                     }
@@ -1310,6 +1354,7 @@ namespace Sereno
                             go.Init(m_hdProvider, m_datasetInAnnotation);
                             go.gameObject.SetActive(true);
                             m_currentPointingIT = go;
+                            m_currentPointingITGO = go.gameObject;
                         }
                         break;
                 }
@@ -1317,6 +1362,10 @@ namespace Sereno
                 //Register
                 if(m_currentPointingIT != null)
                     m_currentPointingIT.OnSelection += OnPointingSelection;
+
+#if CHI2020
+                m_itDisabled = true;
+#endif
             }
         }
 
@@ -1462,6 +1511,6 @@ namespace Sereno
             m_anchorImportSegments.Clear();
         }
 
-        #endregion
+#endregion
     }
 }

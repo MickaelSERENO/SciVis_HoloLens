@@ -139,6 +139,20 @@ namespace Sereno.Pointing
 
         }
 
+        protected virtual void OnEnable()
+        {
+            m_wim.gameObject.SetActive(true);
+            HandPositionGO.SetActive(true);
+            OriginalHandPositionGO.SetActive(true);
+        }
+
+        protected virtual void OnDisable()
+        {
+            m_wim.gameObject.SetActive(false);
+            HandPositionGO.SetActive(false);
+            OriginalHandPositionGO.SetActive(false);
+        }
+
         // Update is called once per frame
         protected virtual void Update()
         {
@@ -174,7 +188,9 @@ namespace Sereno.Pointing
 
         private void OnTap(TappedEventArgs args)
         {
-            if(!m_isHandDetected)
+            if (!gameObject.activeInHierarchy)
+                return;
+            if (!m_isHandDetected)
                 args.sourcePose.TryGetPosition(out m_handPosition);
             OnSelection?.Invoke(this);
         }

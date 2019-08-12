@@ -122,6 +122,16 @@ namespace Sereno.Pointing
 
         }
 
+        protected virtual void OnEnable()
+        {
+            HandPositionGO.SetActive(true);
+        }
+
+        protected virtual void OnDisable()
+        {
+            HandPositionGO.SetActive(false);
+        }
+
         // Update is called once per frame
         void Update()
         {
@@ -154,6 +164,8 @@ namespace Sereno.Pointing
 
         private void OnTap(TappedEventArgs args)
         {
+            if (!gameObject.activeInHierarchy)
+                return;
             if(!m_isHandDetected)
                 args.sourcePose.TryGetPosition(out m_handPosition);
             OnSelection?.Invoke(this);

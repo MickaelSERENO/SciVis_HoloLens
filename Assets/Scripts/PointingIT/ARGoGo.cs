@@ -34,6 +34,11 @@ namespace Sereno.Pointing
         /// The hand target position (local dataset space)
         /// </summary>
         private Vector3 m_targetPosition = new Vector3(0, 0, 0);
+
+        /// <summary>
+        /// The hand remote position (the position of the sphere!)
+        /// </summary>
+        private Vector3 m_remotePosition = new Vector3(0, 0, 0);
         
         /// <summary>
         /// Was the hand detected?
@@ -122,23 +127,21 @@ namespace Sereno.Pointing
                         //Pointing
                         Vector3 anchorPoint = Camera.main.transform.position + new Vector3(0, -0.15f, 0);
                         Vector3 pointDir = (hd.Position - anchorPoint).normalized;
-
-                        if (m_pointingDir.x != 0 || m_pointingDir.y != 0 || m_pointingDir.z != 0)
-                            m_pointingDir = (0.70f * m_pointingDir + 0.30f * pointDir).normalized; //Apply a strong smoothing. Renormalize because of floating point issue
-                        else
-                            m_pointingDir = pointDir;
+                        m_pointingDir = pointDir;
 
                         m_handPosition   = hd.Position;
                         //m_handPosition  += PointingFunctions.GetFingerOffset(m_headsetTransform, Handedness.RIGHT);
 
                         float handMagnitude = (anchorPoint - hd.Position).magnitude;
+                        Vector3 remotePosition;
 
                         if (handMagnitude < MIN_MAGNITUDE)
-                            m_targetPosition = anchorPoint + m_pointingDir * handMagnitude;
+                            remotePosition = anchorPoint + m_pointingDir * handMagnitude;
                         else
-                            m_targetPosition = anchorPoint + m_pointingDir * 17.5f * (handMagnitude - MIN_MAGNITUDE);
+                            remotePosition = anchorPoint + m_pointingDir * 13.0f * (handMagnitude - MIN_MAGNITUDE);
 
-                        m_targetPosition = m_currentSubDataset.transform.worldToLocalMatrix.MultiplyPoint3x4(m_targetPosition);
+                        m_remotePosition = m_hdProvider.Smoothness * m_remotePosition + (1.0f - m_hdProvider.Smoothness) * remotePosition;
+                        m_targetPosition = m_currentSubDataset.transform.worldToLocalMatrix.MultiplyPoint3x4(m_remotePosition);
                     }
                 }
             }
@@ -152,10 +155,28 @@ namespace Sereno.Pointing
                 Vector3 rayVec = targetPos - anchorPoint;
                 rayVec = rayVec.normalized;
 
+                //Scale about 10%
+                Vector3 scale = RayObject.transform.localScale;
+                scale.y = (targetPos - anchorPoint).magnitude / 2.0f * 1.10f;
+                RayObject.transform.localScale = scale;
+
+
                 RayObject.transform.up = rayVec;
                 RayObject.transform.localPosition = anchorPoint + rayVec * RayObject.transform.localScale.y;
                 PosObject.transform.localPosition = targetPos;
             }
+        }
+
+        protected virtual void OnEnable()
+        {
+            PosObject.gameObject.SetActive(true);
+            RayObject.SetActive(true);
+        }
+
+        protected virtual void OnDisable()
+        {
+            PosObject.gameObject.SetActive(false);
+            RayObject.SetActive(false);
         }
 
         /// <summary>
@@ -164,6 +185,8 @@ namespace Sereno.Pointing
         /// <param name="args"></param>
         private void OnTap(TappedEventArgs args)
         {
+            if (!gameObject.activeInHierarchy)
+                return;
             OnSelection?.Invoke(this);
         }
 

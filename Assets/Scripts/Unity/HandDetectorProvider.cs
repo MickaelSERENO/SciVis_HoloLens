@@ -192,19 +192,20 @@ namespace Sereno.Unity.HandDetector
                             float minFY = hand.Fingers[0].TipY;
                             handDetected.UppestFinger = handDetected.Fingers[0];
 
-                            for (int i = 1; i < handDetected.Fingers.Count; i++)
+                            for (int j = 1; j < handDetected.Fingers.Count; j++)
                             {
                                 if (minFY > hand.Fingers[0].TipY)
                                 {
                                     minFY = hand.Fingers[0].TipY;
-                                    handDetected.UppestFinger = handDetected.Fingers[i];
+                                    handDetected.UppestFinger = handDetected.Fingers[j];
                                 }
                             }
                         }
                     }
                 }
 
-                for (int i = 0; i < m_handsDetected.Count; i++)
+                int i = 0;
+                while(i < m_handsDetected.Count)
                 {
                     HandDetected hd = m_handsDetected[i];
                     //Handle non detected hands
@@ -216,10 +217,10 @@ namespace Sereno.Unity.HandDetector
                         if (!hd.IsValid)
                         {
                             m_handsDetected.RemoveAt(i);
-                            i--;
                             continue;
                         }
                     }
+                    i++;
                 }
             }
         }
@@ -287,7 +288,7 @@ namespace Sereno.Unity.HandDetector
             if (validHDs.Count == 0)
                 return null;
 
-            float optimalLimit = 0.40f;
+            float optimalLimit = 0.25f;
 
             Vector3 forward = Camera.main.transform.forward;
             forward = (new Vector3(forward.x, 0.0f, forward.z)).normalized;
@@ -312,13 +313,16 @@ namespace Sereno.Unity.HandDetector
                     else
                         computeMin = true;
                 }
-                else if (tempPosZ < minPosZ && tempPosZ >= optimalLimit)
+                else 
                     computeMin = true;
 
                 if (computeMin)
                 {
-                    minPosZ = tempPosZ;
-                    hd = validHDs[i];
+                    if (tempPosZ < minPosZ && tempPosZ >= optimalLimit)
+                    {
+                        minPosZ = tempPosZ;
+                        hd = validHDs[i];
+                    }
                 }
             }
             return hd;

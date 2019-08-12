@@ -140,6 +140,19 @@ namespace Sereno.Pointing
             
             m_currentITObj.HeadsetStartPosition    = m_headsetStartPosition;
             m_currentITObj.HeadsetStartOrientation = m_headsetStartOrientation;
+            m_currentGO.SetActive(gameObject.activeSelf);
+        }
+
+        private void OnDisable()
+        {
+            if (m_currentGO != null)
+                m_currentGO.SetActive(false);
+        }
+
+        private void OnEnable()
+        {
+            if (m_currentGO != null)
+                m_currentGO.SetActive(true);
         }
 
         /// <summary>
