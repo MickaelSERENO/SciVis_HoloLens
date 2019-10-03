@@ -1,5 +1,4 @@
 ﻿//#define TEST
-#define CHI2020
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -93,19 +92,7 @@ namespace Sereno
         /// Default text displayed for the IP address
         /// </summary>
         const String DEFAULT_IP_ADDRESS_TEXT = "Server not found";
-
-#if CHI2020
-        /// <summary>
-        /// The duration time the next trial message should appear in milliseconds
-        /// </summary>
-        const Int64 NEXT_TRIAL_MESSAGE_DURATION_TIME = 3*1000;
-
-        /// <summary>
-        /// The minimum distance between the user and the dataset for when the interaction techniques are available
-        /// </summary>
-        const float MIN_DISTANCE_IT = 1.5f;
-#endif
-
+        
         /// <summary>
         /// Maximum number of retry for importing anchor data
         /// </summary>
@@ -289,23 +276,6 @@ namespace Sereno
         /// Should we update the pointing ID
         /// </summary>
         private bool m_updatePointingID = false;
-
-#if CHI2020
-        /// <summary>
-        /// What is the current trial data ?
-        /// </summary>
-        private NextTrialMessage m_currentTrialMessage = null;
-
-        /// <summary>
-        /// Should we update the rendering pipeline due to new CHI2020 data?
-        /// </summary>
-        private bool m_updateCHI2020Data = false;
-        
-        /// <summary>
-        /// Is the pointing Iteraction technique disabled?
-        /// </summary>
-        private bool m_itDisabled = true;
-#endif
         #endregion
 
         /* Public attributes*/
@@ -394,13 +364,6 @@ namespace Sereno
         /// The AR Collaborator pointing IT prefab
         /// </summary>
         public ARCollabPointingIT ARCollabPointingITPrefab;
-
-#if CHI2020
-        /// <summary>
-        /// The Target Annotation Game Object that the user sees
-        /// </summary>
-        public GameObject TargetAnnotationGO = null;
-#endif
 #endregion
 
         void Start()
@@ -433,10 +396,6 @@ namespace Sereno
 
             CurrentPointingIT = PointingIT.NONE;
 
-            //By default, false
-#if CHI2020
-            TargetAnnotationGO.SetActive(false);
-#endif
 #if TEST
             Task t = new Task( () =>
             {
@@ -637,20 +596,6 @@ namespace Sereno
             }
 
             //Load what the server thread loaded regarding vtk datasets
-#if CHI2020
-            while (m_vtkDatasetsLoaded.Count > 0)
-            {
-                VTKDataset d = m_vtkDatasetsLoaded.Dequeue();
-                foreach (SubDataset sd in d.SubDatasets)
-                {
-                    DefaultSubDatasetGameObject gameObject = Instantiate(DefaultSubDatasetGO);
-                    gameObject.transform.parent = transform;
-                    gameObject.Init(sd, this);
-                    m_changeInternalStates.Add(sd, gameObject);
-                    m_datasetGameObjects.Add(gameObject);
-                }
-            }
-#else
             while(m_vtkSMLoaded.Count > 0)
             {
                 VTKUnitySmallMultiple sm = m_vtkSMLoaded.Dequeue();
@@ -663,7 +608,6 @@ namespace Sereno
 
                 m_datasetGameObjects.Add(gameObject);
             }
-#endif
         }
 
         private void HandlePointingID()
@@ -825,23 +769,18 @@ namespace Sereno
                 headsetData.PointingIT = CurrentPointingIT;
                 if(CurrentPointingIT != PointingIT.NONE && m_sdInAnnotation != null && m_currentPointingIT != null)
                 {
-#if CHI2020
-                    if (!m_itDisabled)
-#endif
-                    {
-                        SubDataset curSD = m_sdInAnnotation.SubDatasetPublicState;
-                        headsetData.PointingDatasetID = curSD.Parent.ID;
-                        headsetData.PointingSubDatasetID = curSD.Parent.SubDatasets.FindIndex(s => s == curSD);
-                        headsetData.PointingInPublic = (curSD == m_sdInAnnotation.SubDatasetPublicState);
+                    SubDataset curSD = m_sdInAnnotation.SubDatasetPublicState;
+                    headsetData.PointingDatasetID = curSD.Parent.ID;
+                    headsetData.PointingSubDatasetID = curSD.Parent.SubDatasets.FindIndex(s => s == curSD);
+                    headsetData.PointingInPublic = (curSD == m_sdInAnnotation.SubDatasetPublicState);
 
-                        for (int i = 0; i < 3; i++)
-                            headsetData.PointingLocalSDPosition[i] = m_currentPointingIT.TargetPosition[i];
+                    for (int i = 0; i < 3; i++)
+                        headsetData.PointingLocalSDPosition[i] = m_currentPointingIT.TargetPosition[i];
 
-                        headsetData.PointingHeadsetStartPosition = GetRelativePositionToAnchor(m_currentPointingIT.HeadsetStartPosition);
-                        Quaternion relHeadsetStartOrientation = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * m_currentPointingIT.HeadsetStartOrientation;
-                        headsetData.PointingHeadsetStartOrientation = new float[] { relHeadsetStartOrientation[3], relHeadsetStartOrientation[0],
-                                                                                    relHeadsetStartOrientation[1], relHeadsetStartOrientation[2] };
-                    }
+                    headsetData.PointingHeadsetStartPosition = GetRelativePositionToAnchor(m_currentPointingIT.HeadsetStartPosition);
+                    Quaternion relHeadsetStartOrientation = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * m_currentPointingIT.HeadsetStartOrientation;
+                    headsetData.PointingHeadsetStartOrientation = new float[] { relHeadsetStartOrientation[3], relHeadsetStartOrientation[0],
+                                                                                relHeadsetStartOrientation[1], relHeadsetStartOrientation[2] };
                 }
 
                 m_client.SendHeadsetUpdateData(headsetData);
@@ -860,47 +799,7 @@ namespace Sereno
             }
 #endif
         }
-
-#if CHI2020
-        private void HandleCHI2020()
-        {
-            if(m_updateCHI2020Data && m_currentTrialMessage != null)
-            {
-                //The dataset needs to be loaded to continue
-                DefaultSubDatasetGameObject sdGameObject = GetSDGameObject(GetSubDataset(0, 0, true));
-                if (!sdGameObject)
-                    return;
-
-                //Update the position of the target annotation game object
-                if ((m_currentTrialMessage.StudyID == 1 && m_currentTrialMessage.TabletID != m_tabletID) ||
-                    (m_currentTrialMessage.StudyID == 2 && m_currentTrialMessage.TabletID == m_tabletID))
-                {
-                    TargetAnnotationGO.transform.SetParent(sdGameObject.transform, false);
-                    TargetAnnotationGO.transform.localPosition = new Vector3(m_currentTrialMessage.TargetPosition[0], m_currentTrialMessage.TargetPosition[1], m_currentTrialMessage.TargetPosition[2]);
-                    TargetAnnotationGO.SetActive(true);
-                }
-
-                else
-                    TargetAnnotationGO.SetActive(false);
-            }
-            else
-                TargetAnnotationGO.SetActive(false);
-
-            //Handle the fact that for starting an interaction technique, the user must be about 1.5m away the original dataset.
-            if (m_currentPointingITGO != null)
-            {
-                if (m_itDisabled)
-                {
-                    Vector3 headsetSDVector = Camera.main.transform.position - m_currentPointingIT.CurrentSubDataset.transform.position;
-
-                    if ((new Vector2(headsetSDVector.x, headsetSDVector.z)).magnitude >= MIN_DISTANCE_IT)
-                        m_itDisabled = false;
-                }
-                m_currentPointingITGO.SetActive(!m_itDisabled);
-            }
-        }
-#endif
-
+        
         // Update is called once per frame
         void Update()
         {
@@ -914,9 +813,6 @@ namespace Sereno
                 HandleRandomText();
                 HandleHeadsetStatusLoaded();
                 HandleHeadsetStatusSending();
-#if CHI2020
-                HandleCHI2020();
-#endif
             }
         }
 
@@ -979,7 +875,7 @@ namespace Sereno
                 m_vtkDatasetsLoaded.Enqueue(dataset);
                 m_datasets.Add(dataset.ID, new DatasetMetaData(dataset));
             }
-#if !CHI2020
+
             //Create the associate visualization
             //if(parser.GetDatasetType() == VTKDatasetType.VTK_STRUCTURED_GRID)
             {
@@ -994,7 +890,6 @@ namespace Sereno
                     }
                 }
             }
-#endif
         }
 
         /// <summary>
@@ -1050,13 +945,11 @@ namespace Sereno
         
         public void OnSetVisibilityDataset(MessageBuffer messageBuffer, VisibilityMessage msg)
         {
-//#if !CHI2020
             lock(this)
             {
                 SubDatasetMetaData metaData = m_datasets[msg.DataID].SubDatasets[msg.SubDataID];
                 SetVisibilityDataset(metaData, msg.Visibility);
             }
-//#endif
         }
 
         public void SetVisibilityDataset(SubDatasetMetaData metaData, int visibility)
@@ -1107,9 +1000,6 @@ namespace Sereno
                 //The server will store that and send that information to other headsets if needed
                 if (msg.IsFirstConnected)
                     m_anchorCommunication = AnchorCommunication.EXPORT;
-#if CHI2020
-                m_updateCHI2020Data = true;
-#endif
             }
         }
 
@@ -1180,71 +1070,6 @@ namespace Sereno
 
             if(sd != null)
                 sd.ClearAnnotations();
-        }
-
-        public void OnNextTrial(MessageBuffer messageBuffer, NextTrialMessage msg)
-        {
-#if CHI2020
-            lock (this)
-            {
-                if (msg.StudyID == 1 || msg.StudyID == 2)
-                {
-                    if (msg.TrialID == -1)
-                    {
-                        m_textValues.RandomStr = "You can now take a short\nbreak if needed";
-                    }
-                    else if (msg.TabletID == m_tabletID) //The one performing the task
-                    {
-                        String s = "Selection Technique: ";
-                        switch (msg.PointingIT)
-                        {
-                            case PointingIT.GOGO:
-                                s += "GOGO";
-                                break;
-                            case PointingIT.MANUAL:
-                                s += "Manual";
-                                break;
-                            case PointingIT.WIM:
-                                s += "WIM";
-                                break;
-                            case PointingIT.WIM_RAY:
-                                s += "WIM-RAY";
-                                break;
-                            default:
-                                s += "NONE";
-                                break;
-                        }
-                        m_textValues.RandomStr = $"{s}\nTrial: {msg.TrialID}";
-                    }
-                    else
-                    {
-                        if (msg.StudyID == 1) //Guidance task
-                            m_textValues.RandomStr = "Guide your partner";
-                        else //Should wait
-                            m_textValues.RandomStr = "Wait for your partner";
-                    }
-
-                    m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + NEXT_TRIAL_MESSAGE_DURATION_TIME;
-                }
-
-                else if (msg.StudyID == 3) //End of study
-                {
-                    m_textValues.RandomStr = "The study is finished\nThank you!!";
-                }
-
-                else //training session (normally)
-                {
-                    m_textValues.RandomStr = "";
-                    m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + NEXT_TRIAL_MESSAGE_DURATION_TIME;
-                }
-
-                m_textValues.UpdateRandomText = true;
-                m_textValues.EnableRandomText = true;
-
-                m_currentTrialMessage = msg;
-                m_updateCHI2020Data = true;
-            }
-#endif
         }
 
 #endregion
@@ -1362,10 +1187,6 @@ namespace Sereno
                 //Register
                 if(m_currentPointingIT != null)
                     m_currentPointingIT.OnSelection += OnPointingSelection;
-
-#if CHI2020
-                m_itDisabled = true;
-#endif
             }
         }
 
