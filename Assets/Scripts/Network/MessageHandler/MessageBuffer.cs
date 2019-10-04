@@ -73,14 +73,7 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed containing the owner information</param>
         void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg);
-
-        /// <summary>
-        /// Function called when a a SubDataset visibility has changed
-        /// </summary>
-        /// <param name="messageBuffer">The message buffer in use</param>
-        /// <param name="msg">The message parsed containing the owner information</param>
-        void OnSetVisibilityDataset(MessageBuffer messageBuffer, VisibilityMessage msg);
-
+        
         /// <summary>
         /// Function called when a start annotation command has been submited
         /// </summary>
@@ -268,10 +261,6 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_ON_SCALE_DATASET:
                             foreach(var l in m_listeners)
                                 l.OnScaleDataset(this, (ScaleDatasetMessage)m_msg);
-                            break;
-                        case ServerType.GET_SET_VISIBILITY_DATASET:
-                            foreach(var l in m_listeners)
-                                l.OnSetVisibilityDataset(this, (VisibilityMessage)m_msg);
                             break;
                         case ServerType.GET_START_ANNOTATION:
                             foreach (var l in m_listeners)
@@ -462,9 +451,6 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_ON_SCALE_DATASET:
                     m_msg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
-                    break;
-                case ServerType.GET_SET_VISIBILITY_DATASET:
-                    m_msg = new VisibilityMessage(ServerType.GET_SET_VISIBILITY_DATASET);
                     break;
                 case ServerType.GET_START_ANNOTATION:
                     m_msg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);

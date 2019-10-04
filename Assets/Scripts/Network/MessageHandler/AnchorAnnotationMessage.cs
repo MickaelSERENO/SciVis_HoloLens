@@ -29,11 +29,6 @@ namespace Sereno.Network.MessageHandler
         public Int32 HeadsetID;
 
         /// <summary>
-        /// Is this anchored annotation done in the public subdataset state?
-        /// </summary>
-        public byte InPublic;
-
-        /// <summary>
         /// The Annotation anchor position in the subdataset local space
         /// </summary>
         public float[] LocalPosition = new float[3];
@@ -45,9 +40,7 @@ namespace Sereno.Network.MessageHandler
         {
             if (Cursor <= 3)
                 return (byte)'I';
-            else if (Cursor == 4)
-                return (byte)'b';
-            else if (Cursor <= 7)
+            else if (Cursor <= 6)
                 return (byte)'f';
             return 0;
         }
@@ -67,21 +60,14 @@ namespace Sereno.Network.MessageHandler
 
         public override void Push(float value)
         {
-            if(Cursor <= 7 && Cursor >= 5)
-                LocalPosition[Cursor - 5] = value;
-            base.Push(value);
-        }
-
-        public override void Push(byte value)
-        {
-            if (Cursor == 4)
-                InPublic = value;
+            if(Cursor <= 6 && Cursor >= 4)
+                LocalPosition[Cursor - 4] = value;
             base.Push(value);
         }
 
         public override Int32 GetMaxCursor()
         {
-            return 7;
+            return 6;
         }
     }
 }

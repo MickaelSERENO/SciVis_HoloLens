@@ -18,11 +18,6 @@ namespace Sereno.Network.MessageHandler
         /// </summary>
         public Int32 SubDatasetID;
 
-        /// <summary>
-        /// Is this anchored annotation done in the public subdataset state?
-        /// </summary>
-        public byte InPublic;
-
         public ClearAnnotationsMessage(ServerType type) : base(type)
         { }
 
@@ -30,8 +25,6 @@ namespace Sereno.Network.MessageHandler
         {
             if (Cursor <= 1)
                 return (byte)'I';
-            else if (Cursor == 2)
-                return (byte)'b';
             return 0;
         }
 
@@ -44,16 +37,9 @@ namespace Sereno.Network.MessageHandler
             base.Push(value);
         }
 
-        public override void Push(byte value)
-        {
-            if (Cursor == 2)
-                InPublic = value;
-            base.Push(value);
-        }
-
         public override Int32 GetMaxCursor()
         {
-            return 2;
+            return 1;
         }
     }
 }

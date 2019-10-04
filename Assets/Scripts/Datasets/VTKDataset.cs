@@ -31,10 +31,10 @@ namespace Sereno.Datasets
             m_ptFieldValues = new List<VTKFieldValue>(ptFieldValues);
             m_cellFieldValues = new List<VTKFieldValue>(cellFieldValues);
 
-            foreach(VTKFieldValue fv in ptFieldValues)
-                m_subDatasets.Add(new VTKSubDataset(this, fv));
-            foreach(VTKFieldValue fv in cellFieldValues)
-                m_subDatasets.Add(new VTKSubDataset(this, fv));
+            if(ptFieldValues.Length > 0)
+                m_subDatasets.Add(new VTKSubDataset(this, ptFieldValues[0]));
+            if(cellFieldValues.Length > 0)
+                m_subDatasets.Add(new VTKSubDataset(this, cellFieldValues[0]));
         }
 
         /// <summary>

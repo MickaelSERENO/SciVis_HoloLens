@@ -144,9 +144,9 @@ namespace Sereno.Network
             Send(data);
         }
 
-        public void SendAnchorAnnotation(SubDatasetMetaData sd, float[] position)
+        public void SendAnchorAnnotation(SubDataset sd, float[] position)
         {
-            byte[] data = new byte[2 + 2*4 + 1 + 3*4];
+            byte[] data = new byte[2 + 2*4 + 3*4];
             Int32 offset = 0;
 
             //Type
@@ -154,16 +154,12 @@ namespace Sereno.Network
             offset += 2;
 
             //DatasetID
-            WriteInt32(data, offset, sd.CurrentSubDataset.Parent.ID);
+            WriteInt32(data, offset, sd.Parent.ID);
             offset += 4;
 
             //SubDataset ID
-            WriteInt32(data, offset, sd.SubDatasetPublicState.Parent.GetSubDatasetID(sd.SubDatasetPublicState));
+            WriteInt32(data, offset, sd.Parent.GetSubDatasetID(sd));
             offset += 4;
-
-            //Public state
-            byte inPublic = (byte)(sd.CurrentSubDataset == sd.SubDatasetPrivateState ? 0 : 1);
-            data[offset++] = inPublic;
 
             for (int i = 0; i < 3; i++, offset += sizeof(float))
                 WriteFloat(data, offset, position[i]); 

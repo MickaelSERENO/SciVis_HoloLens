@@ -27,11 +27,6 @@ namespace Sereno.Network.MessageHandler
         /// </summary>
         public Int32 HeadsetID;
 
-        /// <summary>
-        /// Is the translation done into the public workspace?
-        /// </summary>
-        public byte InPublic;
-
         public ScaleDatasetMessage(ServerType type) : base(type)
         {}
 
@@ -39,8 +34,6 @@ namespace Sereno.Network.MessageHandler
         {
             if(Cursor <= 2)
                 return (byte)'I';
-            else if(Cursor == 3)
-                return (byte)'b';
             return (byte)'f';
         }
 
@@ -60,16 +53,10 @@ namespace Sereno.Network.MessageHandler
                 HeadsetID = value;
             base.Push(value);
         }
-
-        public override void Push(byte value)
-        {
-            InPublic = value;
-            base.Push(value);
-        }
-
+        
         public override Int32 GetMaxCursor()
         {
-            return 6;
+            return 5;
         }
     }
 }
