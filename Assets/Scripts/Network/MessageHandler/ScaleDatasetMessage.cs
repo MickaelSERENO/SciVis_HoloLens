@@ -39,7 +39,7 @@ namespace Sereno.Network.MessageHandler
 
         public override void Push(float value)
         {
-            Scale[Cursor-4] = value;
+            Scale[Cursor-3] = value;
             base.Push(value);
         }
 

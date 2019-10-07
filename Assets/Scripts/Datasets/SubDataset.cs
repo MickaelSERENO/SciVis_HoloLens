@@ -130,6 +130,11 @@ namespace Sereno.Datasets
         protected List<ISubDatasetCallback> m_listeners = new List<ISubDatasetCallback>();
 
         /// <summary>
+        /// The ID of this SubDataset
+        /// </summary>
+        protected int m_ID; 
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="parent">The Dataset parent</param>
@@ -306,6 +311,15 @@ namespace Sereno.Datasets
         public List<Annotation> Annotations
         {
             get => m_annotations;
+        }
+
+        /// <summary>
+        /// The ID of this SubDataset. Please do not modify the ID if you are not the Dataset owning it.
+        /// </summary>
+        public int ID
+        {
+            get => m_ID;
+            set => m_ID = value;
         }
     }
 }

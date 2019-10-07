@@ -46,7 +46,7 @@ namespace Sereno.SciVis
         /// <param name="sm">The small multiple data to use</param>
         public void Init(VTKUnitySmallMultiple sm, IDataProvider provider, bool isMiniature=false)
         {
-            base.Init(sm.InternalState, provider, isMiniature);
+            base.Init(sm.SubDataset, provider, isMiniature);
             m_sm = sm;
 
             m_material = new Material(ColorMaterial);            

@@ -595,11 +595,11 @@ namespace Sereno
             {
                 VTKUnitySmallMultiple sm = m_vtkSMLoaded.Dequeue();
                 TriangularGTF gtf = new TriangularGTF(new float[] { 0.5f, 0.5f }, new float[] { 0.5f, 0.5f }, 1.0f);
-                sm.VTKSubDataset.TransferFunction = gtf;
+                sm.SubDataset.TransferFunction = gtf;
                 VTKUnitySmallMultipleGameObject gameObject = Instantiate(VTKSMGameObject);
                 gameObject.transform.parent = transform;
                 gameObject.Init(sm, this);
-                m_changeInternalStates.Add(sm.VTKSubDataset, gameObject);
+                m_changeInternalStates.Add(sm.SubDataset, gameObject);
 
                 m_datasetGameObjects.Add(gameObject);
             }
@@ -870,17 +870,17 @@ namespace Sereno
                 m_vtkDatasetsLoaded.Enqueue(dataset);
                 m_datasets.Add(dataset.ID, dataset);
             }
-
+                       
             //Create the associate visualization
             //if(parser.GetDatasetType() == VTKDatasetType.VTK_STRUCTURED_GRID)
             {
                 unsafe
                 {
                     VTKUnityStructuredGrid grid = new VTKUnityStructuredGrid(dataset, DesiredVTKDensity);
-                    for(int i = 0; i < ptValues.Length; i++)
+                    for (int i = 0; i < dataset.SubDatasets.Count; i++)
                     {
-                        VTKUnitySmallMultiple sm = grid.CreatePointFieldSmallMultiple(i);
-                        lock(this)
+                        VTKUnitySmallMultiple sm = grid.CreatePointFieldSmallMultiple(0, dataset.SubDatasets[i].ID);
+                        lock (this)
                             m_vtkSMLoaded.Enqueue(sm);
                     }
                 }
@@ -901,10 +901,7 @@ namespace Sereno
             if (m_datasets.Count <= datasetID)
                 return null;
 
-            if(m_datasets[datasetID].SubDatasets.Count <= subDatasetID)
-                return null;
-
-            return m_datasets[datasetID].SubDatasets[subDatasetID];
+            return m_datasets[datasetID].GetSubDataset(subDatasetID);
         }
 
         public void OnRotateDataset(MessageBuffer messageBuffer, RotateDatasetMessage msg)
@@ -1043,7 +1040,46 @@ namespace Sereno
                 sd.ClearAnnotations();
         }
 
-#endregion
+        public void OnAddSubDataset(MessageBuffer messageBuffer, AddSubDatasetMessage msg)
+        {
+            //Search for the parent dataset
+            Dataset dataset;
+            lock (this)
+            {
+                if (!m_datasets.ContainsKey(msg.DatasetID))
+                    return;
+                dataset = m_datasets[msg.DatasetID];
+            }
+            
+            //If VTK type
+            if(dataset.GetType() == typeof(VTKDataset))
+            {
+                VTKDataset vtk = dataset as VTKDataset;
+                if (vtk.PtFieldValues.Count == 0)
+                    return;
+
+                //Create a new SubDataset
+                lock(this)
+                {
+                    SubDataset sd = new SubDataset(vtk);
+                    sd.ID         = msg.SubDatasetID;
+                    
+                    vtk.AddSubDataset(sd, false);
+
+                }
+
+                //Attached to this SubDataset a visualization
+                unsafe
+                {
+                    VTKUnityStructuredGrid grid = new VTKUnityStructuredGrid(vtk, DesiredVTKDensity);
+                    VTKUnitySmallMultiple sm = grid.CreatePointFieldSmallMultiple(0, msg.SubDatasetID);
+                    lock (this)
+                        m_vtkSMLoaded.Enqueue(sm);
+                }
+            }
+        }
+
+        #endregion
 
         public Color GetHeadsetColor(int headsetID)
         {
@@ -1303,6 +1339,6 @@ namespace Sereno
             m_anchorImportSegments.Clear();
         }
 
-#endregion
+        #endregion
     }
 }

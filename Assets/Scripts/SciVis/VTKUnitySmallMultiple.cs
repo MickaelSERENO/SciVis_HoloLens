@@ -17,14 +17,9 @@ namespace Sereno.SciVis
     public class VTKUnitySmallMultiple : ISubDatasetCallback
     {
         /// <summary>
-        /// The VTKSubDataset to use
-        /// </summary>
-        private VTKSubDataset m_vtkSubDataset;
-
-        /// <summary>
         /// The internal state of this small multiple
         /// </summary>
-        private SubDataset m_internalState;
+        private SubDataset m_subDataset;
 
         /// <summary>
         /// The value currently in use. Size : density.x*density.y*density.z
@@ -81,17 +76,17 @@ namespace Sereno.SciVis
         /// <param name="dimensions">The dimensions in use</param>
         /// <param name="mask">The mask to apply along each point</param>
         /// <returns></returns>
-        public unsafe bool InitFromPointField(VTKParser parser, VTKFieldValue fieldValue, VTKSubDataset subDataset,
+        public unsafe bool InitFromPointField(VTKParser parser, VTKFieldValue fieldValue, SubDataset subDataset,
                                               Vector3Int offset, Vector3Int dimensions, byte* mask)
         {
             subDataset.AddListener(this);
-            m_internalState = subDataset;
+            m_subDataset = subDataset;
 
             //Copy the variables
             m_values        = new float[dimensions.x*dimensions.y*dimensions.z];
             m_grads         = new float[dimensions.x*dimensions.y*dimensions.z];
             m_dimensions    = dimensions;
-            m_vtkSubDataset = subDataset;
+            m_subDataset = subDataset;
             m_offset        = offset;
 
             VTKStructuredPoints descPts = parser.GetStructuredPointsDescriptor();
@@ -129,8 +124,8 @@ namespace Sereno.SciVis
                 //TODO some optimization can be done here to not read again the dataset (even if in memory)
             }
             //Update the amplitude of this SubDataset
-            m_vtkSubDataset.MaxAmplitude = maxVal;
-            m_vtkSubDataset.MinAmplitude = minVal;
+            m_subDataset.MaxAmplitude = maxVal;
+            m_subDataset.MinAmplitude = minVal;
 
             //Compute the values
             ComputeValues(descPts, fieldValue, val, mask);
@@ -182,7 +177,7 @@ namespace Sereno.SciVis
                 });*/
             //Compute the gradient
             ComputeGradients(descPts, fieldValue, val, mask);
-            UpdateRangeColor(m_vtkSubDataset.MinClamp, m_vtkSubDataset.MaxClamp);
+            UpdateRangeColor(m_subDataset.MinClamp, m_subDataset.MaxClamp);
 
             return true;
         }
@@ -196,7 +191,7 @@ namespace Sereno.SciVis
         private void UpdateRangeColor(float minRange, float maxRange)
         {
             Color32[] colors = new Color32[m_dimensions.x*m_dimensions.y*m_dimensions.z];
-            TransferFunction tf = m_vtkSubDataset.TransferFunction;
+            TransferFunction tf = m_subDataset.TransferFunction;
 
             if(tf == null)
             {
@@ -245,8 +240,8 @@ namespace Sereno.SciVis
         /// <param name="mask">the mask to apply</param>
         private unsafe void ComputeValues(VTKStructuredPoints descPts, VTKFieldValue fieldValue, VTKValue val, byte* mask)
         {
-            float minVal = m_vtkSubDataset.MinAmplitude;
-            float maxVal = m_vtkSubDataset.MaxAmplitude;
+            float minVal = m_subDataset.MinAmplitude;
+            float maxVal = m_subDataset.MaxAmplitude;
 
             //Save the values normalized for later use
             Parallel.For(0, m_dimensions.z, k => 
@@ -427,7 +422,7 @@ namespace Sereno.SciVis
         
         public void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)
         {
-            UpdateRangeColor(m_vtkSubDataset.MinClamp, m_vtkSubDataset.MaxClamp);
+            UpdateRangeColor(m_subDataset.MinClamp, m_subDataset.MaxClamp);
         }
 
         public void OnAddAnnotation(SubDataset dataset, Annotation annot)
@@ -443,23 +438,17 @@ namespace Sereno.SciVis
         public Color32[] TextureColor {get => m_textureColor; set => m_textureColor = value;}
 
         /// <summary>
-        /// The VTKSubDataset bound to this Small Multiple
-        /// </summary>
-        /// <returns>The VTKSubDataset bound to this Small Multiple</returns>
-        public VTKSubDataset VTKSubDataset {get => m_vtkSubDataset;}
-
-        /// <summary>
         /// The SubDataset representing this Small Multiple
         /// </summary>
-        public SubDataset InternalState
+        public SubDataset SubDataset
         {
-            get => m_internalState;
+            get => m_subDataset;
             set
             {
-                if(m_internalState != null)
-                    m_internalState.RemoveListener(this);
-                m_internalState = value;
-                m_internalState.AddListener(this);
+                if(m_subDataset != null)
+                    m_subDataset.RemoveListener(this);
+                m_subDataset = value;
+                m_subDataset.AddListener(this);
             }
         }
 

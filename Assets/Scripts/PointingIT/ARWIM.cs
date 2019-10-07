@@ -141,14 +141,16 @@ namespace Sereno.Pointing
 
         protected virtual void OnEnable()
         {
-            m_wim.gameObject.SetActive(true);
+            if(m_wim != null)
+                m_wim.gameObject.SetActive(true);
             HandPositionGO.SetActive(true);
             OriginalHandPositionGO.SetActive(true);
         }
 
         protected virtual void OnDisable()
         {
-            m_wim.gameObject.SetActive(false);
+            if(m_wim != null)
+                m_wim.gameObject.SetActive(false);
             HandPositionGO.SetActive(false);
             OriginalHandPositionGO.SetActive(false);
         }

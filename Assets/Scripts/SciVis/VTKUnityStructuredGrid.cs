@@ -79,18 +79,19 @@ namespace Sereno.SciVis
         /// <summary>
         /// Create a small multiple object
         /// </summary>
-        /// <param name="dataID">The parameter ID to use. Use Parser.GetPointFieldValueDescriptors(); to get the field ID</param>
+        /// <param name="ptFieldID">The data ID to use. Use Parser.GetPointFieldValueDescriptors(); to get the field ID</param>
+        /// <param name="subDatasetID">The SubDatasetID to use</param>
         /// <returns>A VTKUnitySmallMultiple object.</returns>
-        public VTKUnitySmallMultiple CreatePointFieldSmallMultiple(Int32 dataID)
+        public VTKUnitySmallMultiple CreatePointFieldSmallMultiple(Int32 ptFieldID, Int32 subDatasetID)
         {
             VTKUnitySmallMultiple sm = new VTKUnitySmallMultiple();
 
-            if(dataID >= m_dataset.PtFieldValues.Count || dataID < 0)
+            if(ptFieldID >= m_dataset.PtFieldValues.Count || ptFieldID < 0)
                 return null;
             unsafe
             {
-                VTKSubDataset subData = m_dataset.GetSubDataset(dataID);
-                if(sm.InitFromPointField(m_dataset.Parser, subData.FieldValue, subData,
+                SubDataset subData = m_dataset.GetSubDataset(subDatasetID);
+                if(sm.InitFromPointField(m_dataset.Parser, m_dataset.PtFieldValues[ptFieldID], subData,
                                          new Vector3Int((int)(m_ptsDesc.Size[0]/m_dimensions[0]), 
                                                         (int)(m_ptsDesc.Size[1]/m_dimensions[1]*m_ptsDesc.Size[0]),
                                                         (int)(m_ptsDesc.Size[2]/m_dimensions[2]*m_ptsDesc.Size[1]*m_ptsDesc.Size[0])), m_dimensions, m_mask))

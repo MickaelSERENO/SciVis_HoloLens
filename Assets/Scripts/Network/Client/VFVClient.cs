@@ -158,7 +158,7 @@ namespace Sereno.Network
             offset += 4;
 
             //SubDataset ID
-            WriteInt32(data, offset, sd.Parent.GetSubDatasetID(sd));
+            WriteInt32(data, offset, sd.ID);
             offset += 4;
 
             for (int i = 0; i < 3; i++, offset += sizeof(float))

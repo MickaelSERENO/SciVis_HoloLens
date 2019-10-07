@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Sereno.Datasets
 {
@@ -30,20 +31,7 @@ namespace Sereno.Datasets
             m_parser = parser;
             m_ptFieldValues = new List<VTKFieldValue>(ptFieldValues);
             m_cellFieldValues = new List<VTKFieldValue>(cellFieldValues);
-
-            if(ptFieldValues.Length > 0)
-                m_subDatasets.Add(new VTKSubDataset(this, ptFieldValues[0]));
-            if(cellFieldValues.Length > 0)
-                m_subDatasets.Add(new VTKSubDataset(this, cellFieldValues[0]));
         }
-
-        /// <summary>
-        /// Get the SubDataset at indice i.
-        /// </summary>
-        /// <param name="i">The indice of the SubDataset to retrieve</param>
-        /// <returns>SubDatasets[i]</returns>
-        public new VTKSubDataset GetSubDataset(int i) {return (VTKSubDataset)m_subDatasets[i];}
-
         /// <summary>
         /// The VTKParser containing all the dataset
         /// </summary>

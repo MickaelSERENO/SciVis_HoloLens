@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Sereno.Datasets
 {
@@ -10,6 +11,8 @@ namespace Sereno.Datasets
         protected List<SubDataset> m_subDatasets = new List<SubDataset>();
 
         private int m_id;
+
+        private int m_curSDID = 0;
 
         /// <summary>
         /// Constructor, does nothing
@@ -24,20 +27,28 @@ namespace Sereno.Datasets
         /// Get the SubDataset at indice i.
         /// </summary>
         /// <param name="i">The indice of the SubDataset to retrieve</param>
-        /// <returns>SubDatasets[i]</returns>
-        public SubDataset GetSubDataset(int i) {return m_subDatasets[i];}
+        /// <returns>The SubDataset corresponding to the ID, null if not found</returns>
+        public SubDataset GetSubDataset(int i)
+        {
+            return m_subDatasets.FirstOrDefault(sd => sd.ID == i);
+        }
 
         /// <summary>
-        /// Get the SubDataset ID
+        /// Add a SubDataset to the list
         /// </summary>
-        /// <param name="publicSD">The public SubDataset to compare. The parent must matches</param>
-        /// <returns>-1 if not found, the id (i.e, SubDatasets[id] == sd) if found</returns>
-        public int GetSubDatasetID(SubDataset publicSD)
+        /// <param name="sd">The SubDataset to add</param>
+        /// <param name="updateID">Update the SubDataset ID or not</param>
+        public void AddSubDataset(SubDataset sd, bool updateID=true)
         {
-            for (int i = 0; i < m_subDatasets.Count; i++)
-                if (m_subDatasets[i] == publicSD)
-                    return i;
-            return -1;
+            if(m_subDatasets.Contains(sd))
+                return;
+
+            if (updateID)
+            {
+                sd.ID = m_curSDID;
+                m_curSDID++;
+            }
+            m_subDatasets.Add(sd);
         }
 
         /// <summary>
