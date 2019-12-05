@@ -21,17 +21,17 @@ namespace Sereno.SciVis
         {
             m_mode = mode;
         }
-     
+
         /// <summary>
         /// Get the dimension of this Transfer function
         /// </summary>
         /// <returns>The dimension of the TF</returns>
-        public uint GetDimension() {return 2;}
+        public abstract uint GetDimension();
 
         /// <summary>
         /// Compute the Color t parameter
         /// </summary>
-        /// <param name="values">The values to compute the color. Must be between 0.0f and 1.0f</param>
+        /// <param name="values">The values to compute the color. Must be between 0.0f and 1.0f. Length: at minimum the length of GetDimension()</param>
         /// <returns>The color t parameter. Negative values when errors occure (e.g array too large)</returns>
         public abstract float ComputeColor(float[] values);
 

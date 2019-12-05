@@ -68,6 +68,8 @@ namespace Sereno.SciVis
             return values[0];
         }
 
+        public override uint GetDimension() { return (uint)(m_scale.Length); }
+        
         /// <summary>
         /// The center of the GTF
         /// </summary>

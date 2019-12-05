@@ -205,7 +205,7 @@
 					minT = 0;
 
 				float3 rayPos        = rayOrigin.xyz + minT * rayNormal;
-				const float rayStep  = 1.0 / _MaxDimension;
+				const float rayStep  = 1.0 / (1.5*_MaxDimension);
 				float3 rayStepNormal = rayStep*rayNormal;
 
 				float2 uvDepth = input.uvDepth;

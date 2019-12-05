@@ -10,14 +10,6 @@ namespace Sereno.Datasets
     public interface ISubDatasetCallback
     {
         /// <summary>
-        /// Called when the color range changed
-        /// </summary>
-        /// <param name="dataset">The subdataset being modified</param>
-        /// <param name="min">The minimum clamping color value of the sub dataset</param>
-        /// <param name="max">The maximum clamping color value of the sub dataset</param>
-        void OnColorRangeChange(SubDataset dataset, float min, float max);
-
-        /// <summary>
         /// Called when the transfer function attached changed
         /// </summary>
         /// <param name="dataset">The subdataset being modified</param>
@@ -72,26 +64,6 @@ namespace Sereno.Datasets
         /// The Dataset owning this sub dataset
         /// </summary>
         protected Dataset   m_parent;
-
-        /// <summary>
-        /// The minimum clamp to apply for this subdataset
-        /// </summary>
-        protected float     m_minClamp  = 0.0f;
-
-        /// <summary>
-        /// The maximum clamp to apply for this subdataset
-        /// </summary>
-        protected float     m_maxClamp  = 1.0f;
-
-        /// <summary>
-        /// The minimum amplitude of this dataset
-        /// </summary>
-        protected float m_minAmplitude = 0.0f;
-
-        /// <summary>
-        /// The maximum amplitude of this dataset
-        /// </summary>
-        protected float m_maxAmplitude = 0.0f;
 
         /// <summary>
         /// The transfer function to use
@@ -150,28 +122,10 @@ namespace Sereno.Datasets
         public SubDataset(SubDataset copy)
         {
             m_parent       = copy.m_parent;
-            m_minClamp     = copy.m_minClamp;
-            m_minAmplitude = copy.m_minAmplitude;
-            m_maxClamp     = copy.m_maxClamp;
-            m_maxAmplitude = copy.m_maxAmplitude;
             m_ownerID      = copy.m_ownerID;
             m_position     = (float[])m_position.Clone();
             m_rotation     = (float[])m_rotation.Clone();
             m_scale        = (float[])m_scale.Clone();
-        }
-
-        /// <summary>
-        /// Set the color of this SubDataset
-        /// </summary>
-        /// <param name="min">The minimum clamping (values below that should be clamped)</param>
-        /// <param name="max">The maximum clamping (values above that should be clamped)</param>
-        public void SetColorRange(float min, float max)
-        {
-            m_minClamp  = min;
-            m_maxClamp  = max;
-
-            foreach(var l in m_listeners)
-                l.OnColorRangeChange(this, min, max);
         }
 
         public void AddAnnotation(Annotation annot)
@@ -213,16 +167,6 @@ namespace Sereno.Datasets
         public Dataset Parent {get => m_parent;}
 
         /// <summary>
-        /// The minimum clamping applied (values below that should be clamped)
-        /// </summary>
-        public float MinClamp {get => m_minClamp; set => SetColorRange(value, m_maxClamp);}
-
-        /// <summary>
-        /// The maximum clamping applied (values above that should be clamped)</param>
-        /// </summary>
-        public float MaxClamp { get => m_maxClamp; set => SetColorRange(m_minClamp, value); }
-
-        /// <summary>
         /// The Transfer function bound to this SubDataset. Can be null (used then another algorithm, e.g, a grayscale algorithm)
         /// </summary>
         public TransferFunction TransferFunction
@@ -235,17 +179,7 @@ namespace Sereno.Datasets
                     l.OnTransferFunctionChange(this, m_tf);
             }
         }
-
-        /// <summary>
-        /// The minimum amplitude found in this SubDataset
-        /// </summary>
-        public float MinAmplitude {get => m_minAmplitude; set => m_minAmplitude = value;}
-
-        /// <summary>
-        /// The maximum ampliude found in this SubDataset
-        /// </summary>
-        public float MaxAmplitude { get => m_maxAmplitude; set => m_maxAmplitude = value; }
-        
+                
         /// <summary>
         /// The Rotation Quaternion array. Rotation[0] == w, Rotation[1] = i, Rotation[2] = j, Rotation[3] = k
         /// </summary>

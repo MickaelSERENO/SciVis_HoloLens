@@ -46,9 +46,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Outline: {fileID: 455603246127115753}
   ColorOnTargetPointingIT: {r: 1, g: 1, b: 1, a: 1}
-  AnnotationPrefab: {fileID: 6123219202065968192, guid: 798de7a281fa88d489dadaa6f225b2c2,
+  AnnotationPrefab: {fileID: 7564776657790048829, guid: 99e5be874ec5d1b408d60a1be29b157d,
     type: 3}
-  DefaultMiniaturePrefab: {fileID: 0}
+  DefaultMiniaturePrefab: {fileID: 5339560771976640971, guid: d172793dec486bb49abed9c71a1301c3,
+    type: 3}
   ColorMaterial: {fileID: 2100000, guid: 41d71bb2eb7b887429c3daf009b12d6b, type: 2}
   VTKMiniaturePrefab: {fileID: 4757634199374474188}
 --- !u!1001 &456245234013893441

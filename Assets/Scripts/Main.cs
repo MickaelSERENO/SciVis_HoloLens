@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -116,14 +116,19 @@ namespace Sereno
         private Dictionary<Int32, Dataset> m_datasets = new Dictionary<Int32, Dataset>();
 
         /// <summary>
+        /// The VTK Structured Grid information shared by all SubDataset for a given VTK dataset
+        /// </summary>
+        private Dictionary<Dataset, VTKUnityStructuredGrid> m_vtkStructuredGrid = new Dictionary<Dataset, VTKUnityStructuredGrid>();
+
+        /// <summary>
         /// Dataset loaded that needed to be visualized (in construction GameObject. Needed to be read in the main thread.
         /// </summary>
         private Queue<VTKDataset> m_vtkDatasetsLoaded = new Queue<VTKDataset>();
 
         /// <summary>
-        /// The VTK Small multiple being loaded from the Server thread. Useful to construct GameObjects in the main thread
+        /// SubDataset to visualy load.
         /// </summary>
-        private Queue<VTKUnitySmallMultiple> m_vtkSMLoaded = new Queue<VTKUnitySmallMultiple>();
+        private Queue<SubDataset> m_vtkSubDatasetToLoad = new Queue<SubDataset>();
 
         /// <summary>
         /// All the dataset game objects
@@ -402,17 +407,23 @@ namespace Sereno
                 AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
-                addVTKMsg.NbPtFieldValueIndices = 1;
+                addVTKMsg.NbPtFieldValueIndices = 2;
                 addVTKMsg.Path = "Agulhas_10_resampled.vtk";
-                addVTKMsg.PtFieldValueIndices = new int[] { 0 };
+                addVTKMsg.PtFieldValueIndices = new int[] { 1,2 };
                 OnAddVTKDataset(null, addVTKMsg);
+                                
+                AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
+                addSDMsg.DatasetID = 0;
+                addSDMsg.SubDatasetID = 0;
+                addSDMsg.Name = "s";
+                OnAddSubDataset(null, addSDMsg);
 
-                /*MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
                 moveVTKMsg.SubDataID = 0;
-                moveVTKMsg.Position = new float[3] { -1, -1, -1 };
+                moveVTKMsg.Position = new float[3] { 0, 0, 1 };
                 moveVTKMsg.HeadsetID = -1;
-                OnMoveDataset(null, moveVTKMsg);*/
+                OnMoveDataset(null, moveVTKMsg);
 
                 ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
@@ -587,21 +598,27 @@ namespace Sereno
                 foreach (var go in m_datasetGameObjects)
                     Destroy(go.gameObject);
                 m_datasetGameObjects.Clear();
+                m_datasets.Clear();
+                m_vtkStructuredGrid.Clear();
+
                 CurrentPointingIT = PointingIT.NONE;
             }
 
             //Load what the server thread loaded regarding vtk datasets
-            while(m_vtkSMLoaded.Count > 0)
+            while(m_vtkSubDatasetToLoad.Count > 0)
             {
-                VTKUnitySmallMultiple sm = m_vtkSMLoaded.Dequeue();
-                TriangularGTF gtf = new TriangularGTF(new float[] { 0.5f, 0.5f }, new float[] { 0.5f, 0.5f }, 1.0f);
-                sm.SubDataset.TransferFunction = gtf;
-                VTKUnitySmallMultipleGameObject gameObject = Instantiate(VTKSMGameObject);
-                gameObject.transform.parent = transform;
-                gameObject.Init(sm, this);
-                m_changeInternalStates.Add(sm.SubDataset, gameObject);
+                SubDataset sd = m_vtkSubDatasetToLoad.Dequeue();
+                if (m_vtkStructuredGrid.ContainsKey(sd.Parent))
+                {
+                    VTKUnitySmallMultipleGameObject gameObject = Instantiate(VTKSMGameObject);
+                    VTKUnitySmallMultiple sm = m_vtkStructuredGrid[sd.Parent].CreatePointFieldSmallMultiple(sd);
 
-                m_datasetGameObjects.Add(gameObject);
+                    gameObject.transform.parent = transform;
+                    gameObject.Init(sm, this);
+                    m_changeInternalStates.Add(sm.SubDataset, gameObject);
+
+                    m_datasetGameObjects.Add(gameObject);
+                }
             }
         }
 
@@ -869,21 +886,32 @@ namespace Sereno
             {
                 m_vtkDatasetsLoaded.Enqueue(dataset);
                 m_datasets.Add(dataset.ID, dataset);
-            }
-                       
-            //Create the associate visualization
-            //if(parser.GetDatasetType() == VTKDatasetType.VTK_STRUCTURED_GRID)
-            {
-                unsafe
+
+                //Load the values in an asynchronous way
+                dataset.LoadValues().ContinueWith((status) =>
                 {
-                    VTKUnityStructuredGrid grid = new VTKUnityStructuredGrid(dataset, DesiredVTKDensity);
-                    for (int i = 0; i < dataset.SubDatasets.Count; i++)
+                    lock(this)
                     {
-                        VTKUnitySmallMultiple sm = grid.CreatePointFieldSmallMultiple(0, dataset.SubDatasets[i].ID);
-                        lock (this)
-                            m_vtkSMLoaded.Enqueue(sm);
+                        //Update the transfer functions (again, asynchronously)
+                        if(m_vtkStructuredGrid.ContainsKey(dataset))
+                        {
+                            foreach(VTKUnitySmallMultiple sm in m_vtkStructuredGrid[dataset].SmallMultiples)
+                                sm.UpdateTF();
+                        }
+                    }
+                });
+                
+                //Create the associate visualization
+                //if(parser.GetDatasetType() == VTKDatasetType.VTK_STRUCTURED_GRID)
+                {
+                    unsafe
+                    {
+                        VTKUnityStructuredGrid grid = new VTKUnityStructuredGrid(dataset, DesiredVTKDensity);
+                        m_vtkStructuredGrid.Add(dataset, grid);
                     }
                 }
+                foreach (SubDataset sd in dataset.SubDatasets)
+                        m_vtkSubDatasetToLoad.Enqueue(sd);
             }
         }
 
@@ -1059,22 +1087,20 @@ namespace Sereno
                     return;
 
                 //Create a new SubDataset
-                lock(this)
+                lock (this)
                 {
                     SubDataset sd = new SubDataset(vtk);
-                    sd.ID         = msg.SubDatasetID;
-                    
+                    sd.ID = msg.SubDatasetID;
+
+                    //TGTF transfer function by default
+                    float[] scale  = new float[sd.Parent.PointFieldDescs.Count];
+                    float[] center = new float[sd.Parent.PointFieldDescs.Count];
+                    for (int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
+                        scale[i] = center[i] = 0.5f;
+                    sd.TransferFunction = new TriangularGTF(scale, center);
+
                     vtk.AddSubDataset(sd, false);
-
-                }
-
-                //Attached to this SubDataset a visualization
-                unsafe
-                {
-                    VTKUnityStructuredGrid grid = new VTKUnityStructuredGrid(vtk, DesiredVTKDensity);
-                    VTKUnitySmallMultiple sm = grid.CreatePointFieldSmallMultiple(0, msg.SubDatasetID);
-                    lock (this)
-                        m_vtkSMLoaded.Enqueue(sm);
+                    m_vtkSubDatasetToLoad.Enqueue(sd);
                 }
             }
         }
@@ -1249,10 +1275,8 @@ namespace Sereno
                     m_headsetStatus.Clear();
 
                     //Datasets
-                    m_vtkSMLoaded.Clear();
-
+                    m_vtkSubDatasetToLoad.Clear();
                     m_vtkDatasetsLoaded.Clear();
-                    m_datasets.Clear();
 
                     txt = "";
                 }

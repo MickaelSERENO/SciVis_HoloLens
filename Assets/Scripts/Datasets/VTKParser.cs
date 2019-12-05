@@ -290,11 +290,8 @@ namespace Sereno
             return c;
         }
     }
-
-    /// <summary>
-    /// VTK field value.
-    /// </summary>
-    public class VTKFieldValue
+    
+    public class FieldValueMetaData
     {
         /// <summary>
         /// The field value name
@@ -316,6 +313,26 @@ namespace Sereno
         /// </summary>
         public UInt32 NbValuesPerTuple;
 
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public FieldValueMetaData()
+        { }
+
+        public FieldValueMetaData(FieldValueMetaData cpy)
+        {
+            Name     = (String)cpy.Name.Clone();
+            Format   = cpy.Format;
+            NbTuples = cpy.NbTuples;
+            NbValuesPerTuple = cpy.NbValuesPerTuple;
+        }
+    }
+
+    /// <summary>
+    /// VTK field value.
+    /// </summary>
+    public class VTKFieldValue : FieldValueMetaData
+    {
         /// <summary>
         /// The native ptr.
         /// </summary>

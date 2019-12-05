@@ -79,22 +79,15 @@ namespace Sereno.SciVis
         /// <summary>
         /// Create a small multiple object
         /// </summary>
-        /// <param name="ptFieldID">The data ID to use. Use Parser.GetPointFieldValueDescriptors(); to get the field ID</param>
-        /// <param name="subDatasetID">The SubDatasetID to use</param>
+        /// <parent name="sd">The SubDataset to use</parent>
         /// <returns>A VTKUnitySmallMultiple object.</returns>
-        public VTKUnitySmallMultiple CreatePointFieldSmallMultiple(Int32 ptFieldID, Int32 subDatasetID)
+        public VTKUnitySmallMultiple CreatePointFieldSmallMultiple(SubDataset sd)
         {
             VTKUnitySmallMultiple sm = new VTKUnitySmallMultiple();
 
-            if(ptFieldID >= m_dataset.PtFieldValues.Count || ptFieldID < 0)
-                return null;
             unsafe
             {
-                SubDataset subData = m_dataset.GetSubDataset(subDatasetID);
-                if(sm.InitFromPointField(m_dataset.Parser, m_dataset.PtFieldValues[ptFieldID], subData,
-                                         new Vector3Int((int)(m_ptsDesc.Size[0]/m_dimensions[0]), 
-                                                        (int)(m_ptsDesc.Size[1]/m_dimensions[1]*m_ptsDesc.Size[0]),
-                                                        (int)(m_ptsDesc.Size[2]/m_dimensions[2]*m_ptsDesc.Size[1]*m_ptsDesc.Size[0])), m_dimensions, m_mask))
+                if(sm.Init(m_dataset.Parser, sd, m_dimensions, m_mask))
                 {
                     m_smallMultiples.Add(sm);
                     return sm;
@@ -166,6 +159,14 @@ namespace Sereno.SciVis
         public UInt32 DesiredDensity
         {
             get{return m_desiredDensity;}
+        }
+
+        /// <summary>
+        /// Get the generated small multiples
+        /// </summary>
+        public List<VTKUnitySmallMultiple> SmallMultiples
+        {
+            get { return m_smallMultiples; }
         }
     }
 }

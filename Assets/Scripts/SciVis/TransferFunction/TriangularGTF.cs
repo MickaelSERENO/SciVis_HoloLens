@@ -49,9 +49,6 @@ namespace Sereno.SciVis
             if(grad == 0)
                 return 0;
 
-            if(values.Length-1 > m_scale.Length || values.Length-1 > m_center.Length)
-                return -1;
-
             float r0 = 1.0f/grad;
             float r1Mag = 0;
 
@@ -81,6 +78,8 @@ namespace Sereno.SciVis
             return mag;
         }
 
+        public override uint GetDimension() { return (uint)(m_scale.Length+1); }
+        
         /// <summary>
         /// The center of the GTF
         /// </summary>
