@@ -13,6 +13,7 @@
 		Cull Off
 		ZWrite Off
 		Blend SrcAlpha OneMinusSrcAlpha
+		Fog {Mode Off}
 
         Pass
         {
@@ -90,8 +91,8 @@
 			bool computeRayPlaneIntersection(in float3 rayOrigin, in float3 rayNormal, in float3 planeNormal, in float3 planePosition, out float t)
 			{
 				float nDir = dot(planeNormal, rayNormal);
-				if (nDir == 0)
-					return false;
+				//if (nDir == 0)
+				//	return false;
 
 				t = dot(planeNormal, planePosition - rayOrigin) / nDir;
 				return t >= 0.0;
@@ -155,29 +156,18 @@
 				}
 			}
 
-			float4 frag(v2f input) : COLOR
+			fixed4  frag(v2f input) : COLOR
 			{
 				UNITY_SETUP_INSTANCE_ID(input);
-				float4 fragColor = float4(0, 0, 0, 0);
-
-				//Determine ray origin and normal
-				float3 rayOrigin;
-
-				//Define start and end point 
-				float3 endRayOrigin = input.endRayOrigin.xyz / input.endRayOrigin.w;
+				fixed4  fragColor = float4(0, 0, 0, 0);
 
 				//Optimization when in perspective mode
-				if(unity_OrthoParams.w == 0.0)
-					rayOrigin = input.begRayOrigin.xyz;
-				else
-					rayOrigin = input.begRayOrigin.xyz;
-
-				float3 rayNormal = normalize(endRayOrigin.xyz - rayOrigin.xyz);
+				float3 rayNormal = normalize(input.endRayOrigin.xyz / input.endRayOrigin.w - input.begRayOrigin.xyz);
 
 				//Compute ray - cube intersections
 				float t[6];
 				bool  tValidity[6];
-				computeRayCubeIntersection(rayOrigin.xyz, rayNormal, t, tValidity);
+				computeRayCubeIntersection(input.begRayOrigin.xyz, rayNormal, t, tValidity);
 
 				//Determine if the ray touched the cube or not
 				int startValidity = 0;
@@ -203,10 +193,10 @@
 				//If start == end -> only one point. Go from our position to the end!
 				if(minT == maxT)
 					minT = 0;
-
-				float3 rayPos        = rayOrigin.xyz + minT * rayNormal;
-				const float rayStep  = 1.0 / (2*_MaxDimension);
-				float3 rayStepNormal = rayStep*rayNormal;
+				
+				half3 rayPos        = input.begRayOrigin.xyz + minT * rayNormal;
+				const half rayStep  = 1.0 / (sqrt(3)*_MaxDimension);
+				half3 rayStepNormal = rayStep*rayNormal;
 
 				float2 uvDepth = input.uvDepth;
 				//Determine max displacement (the displacement the ray can perform) regarding the depth
@@ -223,18 +213,16 @@
 				float4 endRayDepth = mul(input.invMVP, float4(uvDepth, depthPos, 1.0));
 				endRayDepth /= endRayDepth.w;
 
-				float maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos); 
-				if (maxDepthDisplacement < 0)
-					return fragColor;
+				half maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos);
 
 				rayPos += 0.5;
 				//Ray marching algorithm
-				for(float j = min(maxDepthDisplacement, maxT-minT); j >= 0; j -= rayStep, rayPos += rayStepNormal)
+				for(half j = min(maxDepthDisplacement, maxT-minT); j > 0; j -= rayStep, rayPos += rayStepNormal)
 				{
-					float4 tfColor = tex3Dlod(_TextureData, float4(rayPos.xyz, 0.0));
+					half4 tfColor = tex3Dlod(_TextureData, float4(rayPos.xyz, 0.0));
 
 					//tfColor.a *= 1.0 ; //Apply the modification of raystep for stability
-					float4 col = float4(tfColor.xyz, 1.0);
+					half4 col = half4(tfColor.xyz, 1.0);
 					fragColor = fragColor + (1 - fragColor.a)*tfColor.a*col;
 					
 					//If enough contribution
