@@ -128,10 +128,8 @@ namespace Sereno.SciVis
                     
                     Debug.Log("Updating TF...");
 
-                    if (m_subDataset.Parent.IsLoaded == false || tf == null)
+                    if (m_subDataset.Parent.IsLoaded == false || tf == null || tf.GetDimension() > m_subDataset.Parent.PointFieldDescs.Count+1)
                     {
-                        Debug.Log("Default TF...");
-
                         Parallel.For(0, m_dimensions.x*m_dimensions.y*m_dimensions.z, i =>
                         {
                             colors[i] = new Color32(0,0,0,0);
@@ -174,7 +172,6 @@ namespace Sereno.SciVis
                                         colors[ind].a = (byte)(255.0f*a);
                                     }
                                 }
-
                                 return partialRes;
                             },
                             (partialRes) =>
@@ -183,7 +180,9 @@ namespace Sereno.SciVis
                     }
 
                     lock (this)
+                    {
                         m_textureColor = colors;
+                    }
                 }
             });
         }

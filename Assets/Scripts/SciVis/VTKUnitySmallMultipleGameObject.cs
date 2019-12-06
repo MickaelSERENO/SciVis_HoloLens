@@ -98,6 +98,7 @@ namespace Sereno.SciVis
                         m_texture3D.wrapModeW = TextureWrapMode.Clamp;
                         m_texture3D.SetPixels32(m_sm.TextureColor);
                         m_texture3D.Apply();
+                        Debug.Log("Applied new texture");
                         m_sm.TextureColor = null;
                     }
                 }
