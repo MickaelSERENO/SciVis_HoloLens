@@ -88,15 +88,18 @@ namespace Sereno.SciVis
         {
             if (!m_isMiniature)
             {
-                if (m_sm.TextureColor != null)
-                {
-                    m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGBA32, false);
-                    m_texture3D.wrapModeU = TextureWrapMode.Clamp;
-                    m_texture3D.wrapModeV = TextureWrapMode.Clamp;
-                    m_texture3D.wrapModeW = TextureWrapMode.Clamp;
-                    m_texture3D.SetPixels32(m_sm.TextureColor);
-                    m_texture3D.Apply();
-                    m_sm.TextureColor = null;
+                lock(m_sm)
+                { 
+                    if (m_sm.TextureColor != null)
+                    {
+                        m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGBA32, false);
+                        m_texture3D.wrapModeU = TextureWrapMode.Clamp;
+                        m_texture3D.wrapModeV = TextureWrapMode.Clamp;
+                        m_texture3D.wrapModeW = TextureWrapMode.Clamp;
+                        m_texture3D.SetPixels32(m_sm.TextureColor);
+                        m_texture3D.Apply();
+                        m_sm.TextureColor = null;
+                    }
                 }
             }
         }

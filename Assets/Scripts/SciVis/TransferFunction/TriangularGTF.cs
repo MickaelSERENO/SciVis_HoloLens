@@ -72,9 +72,9 @@ namespace Sereno.SciVis
                 return values[0];
 
             float mag = 0;
-            for(int i = 0; i < values.Length-1; i++)
+            for(int i = 0; i < m_scale.Length; i++)
                 mag += values[i]*values[i];
-            mag = (float)(Math.Sqrt(mag/(values.Length-1)));
+            mag = (float)(Math.Sqrt(mag/m_scale.Length));
             return mag;
         }
 

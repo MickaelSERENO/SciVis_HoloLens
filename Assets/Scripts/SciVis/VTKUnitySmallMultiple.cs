@@ -42,6 +42,21 @@ namespace Sereno.SciVis
         private VTKStructuredPoints m_descPts;
 
         /// <summary>
+        /// The update TF lock
+        /// </summary>
+        private System.Object m_updateTFLock = new System.Object();
+
+        /// <summary>
+        /// Is the lock to use to check wether is updateTFLock or not
+        /// </summary>
+        private System.Object m_isTFUpdateLock = new System.Object();
+
+        /// <summary>
+        /// Is a thread waiting to update the transfer function?
+        /// </summary>
+        private bool m_waitToUpdateTF = false;
+
+        /// <summary>
         /// Initialize the small multiple
         /// </summary>
         /// <param name="parser">The VTK Parser</param>
@@ -79,61 +94,98 @@ namespace Sereno.SciVis
         /// </summary>
         public void UpdateTF()
         {
-            Color32[] colors = new Color32[m_dimensions.x*m_dimensions.y*m_dimensions.z];
-            TransferFunction tf = m_subDataset.TransferFunction;
-
-            if(m_subDataset.Parent.IsLoaded == false || tf == null)
+            Task.Run(() =>
             {
-                Parallel.For(0, m_dimensions.x*m_dimensions.y*m_dimensions.z, i =>
+                //First, discard multiple call to this function (only two calls are available)
+                lock (m_isTFUpdateLock)
                 {
-                    colors[i] = new Color32(0,0,0,255);
-                });
-            }
-
-            else
-            {
-                List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
-                Parallel.For(0, m_dimensions.z,
-                    () => new float[m_subDataset.Parent.PointFieldDescs.Count+1],
-                    (k, loopState, partialRes) =>
+                    if (m_waitToUpdateTF)
                     {
-                        for(int j = 0; j < m_dimensions.y; j++)
-                        { 
-                            for(int i = 0; i < m_dimensions.x; i++)
-                            { 
-                                UInt64 readInd = (UInt64)(i*m_descPts.Size[0]/m_dimensions.x + 
-                                                          j*m_descPts.Size[0]*m_descPts.Size[1] / m_dimensions.y +
-                                                          k*m_descPts.Size[0]*m_descPts.Size[1]*m_descPts.Size[2] / m_dimensions.z);
+                        Debug.Log("Already waiting for TF");
+                        return;
+                    }
+                    else
+                        m_waitToUpdateTF = true;
+                }
 
-                                UInt64 ind = (UInt64)(i + j*m_dimensions.x + k*m_dimensions.x*m_dimensions.y); 
+                //The wait to update the TF
+                lock(m_updateTFLock)
+                {
+                    //Another one can wait to update the TF if it wants (max: two parallel call, one pending, one executing)
+                    lock (m_isTFUpdateLock)
+                        m_waitToUpdateTF = false;
 
-                                //Determine transfer function coordinate
-                                for (int l = 0; l < ptDescs.Count; l++)
-                                {
-                                    if (ptDescs[l].NbValuesPerTuple == 1)
-                                        partialRes[l] = (ptDescs[l].Value.ReadAsFloat(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
-                                    else
-                                        partialRes[l] = ptDescs[l].ReadMagnitude(readInd);
+                    //This error is rare but exists (forgot its name)
+                    lock (m_isTFUpdateLock)
+                        if (m_waitToUpdateTF == true)
+                            return;
+                    
+                    Color32[] colors = new Color32[m_dimensions.x*m_dimensions.y*m_dimensions.z];
+
+                    TransferFunction tf = null;
+                    lock(m_subDataset)
+                        tf = m_subDataset.TransferFunction;
+                    
+                    Debug.Log("Updating TF...");
+
+                    if (m_subDataset.Parent.IsLoaded == false || tf == null)
+                    {
+                        Debug.Log("Default TF...");
+
+                        Parallel.For(0, m_dimensions.x*m_dimensions.y*m_dimensions.z, i =>
+                        {
+                            colors[i] = new Color32(0,0,0,0);
+                        });
+                    }
+
+                    else
+                    {
+                        List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
+                        Parallel.For(0, m_dimensions.z,
+                            () => new float[m_subDataset.Parent.PointFieldDescs.Count+1],
+                            (k, loopState, partialRes) =>
+                            {
+                                for(int j = 0; j < m_dimensions.y; j++)
+                                { 
+                                    for(int i = 0; i < m_dimensions.x; i++)
+                                    { 
+                                        UInt64 readInd = (UInt64)(i*m_descPts.Size[0]/m_dimensions.x + 
+                                                                  j*m_descPts.Size[0]*m_descPts.Size[1] / m_dimensions.y +
+                                                                  k*m_descPts.Size[0]*m_descPts.Size[1]*m_descPts.Size[2] / m_dimensions.z);
+
+                                        UInt64 ind = (UInt64)(i + j*m_dimensions.x + k*m_dimensions.x*m_dimensions.y); 
+
+                                        //Determine transfer function coordinate
+                                        for (int l = 0; l < ptDescs.Count; l++)
+                                        {
+                                            if (ptDescs[l].NbValuesPerTuple == 1)
+                                                partialRes[l] = (ptDescs[l].Value.ReadAsFloat(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
+                                            else
+                                                partialRes[l] = ptDescs[l].ReadMagnitude(readInd);
+                                        }
+
+                                        partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd];
+
+                                        float t = tf.ComputeColor(partialRes);
+                                        float a = tf.ComputeAlpha(partialRes);
+
+                                        Color c   = SciVisColor.GenColor(tf.ColorMode, t);
+                                        colors[ind]   = c;
+                                        colors[ind].a = (byte)(255.0f*a);
+                                    }
                                 }
 
-                                partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd]/m_subDataset.Parent.MaxGrad;
+                                return partialRes;
+                            },
+                            (partialRes) =>
+                            {}
+                        );
+                    }
 
-                                float t = tf.ComputeColor(partialRes);
-                                float a = tf.ComputeAlpha(partialRes);
-
-                                Color c   = SciVisColor.GenColor(tf.ColorMode, t);
-                                colors[ind]   = c;
-                                colors[ind].a = (byte)(255.0f*a);
-                            }
-                        }
-
-                        return partialRes;
-                    },
-                    (partialRes) =>
-                    {}
-                );
-            }
-            m_textureColor = colors;
+                    lock (this)
+                        m_textureColor = colors;
+                }
+            });
         }
         
         public void OnRotationChange(SubDataset dataset, float[] rotationQuaternion)

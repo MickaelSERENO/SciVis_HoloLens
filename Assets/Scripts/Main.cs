@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -129,7 +130,7 @@ namespace Sereno
         /// SubDataset to visualy load.
         /// </summary>
         private Queue<SubDataset> m_vtkSubDatasetToLoad = new Queue<SubDataset>();
-
+        
         /// <summary>
         /// All the dataset game objects
         /// </summary>
@@ -424,13 +425,27 @@ namespace Sereno
                 moveVTKMsg.Position = new float[3] { 0, 0, 1 };
                 moveVTKMsg.HeadsetID = -1;
                 OnMoveDataset(null, moveVTKMsg);
-
+                
                 ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
                 scaleMsg.SubDataID = 0;
                 scaleMsg.HeadsetID = -1;
                 scaleMsg.Scale = new float[3] { 0.5f, 0.5f, 0.5f };
                 OnScaleDataset(null, scaleMsg);
+                Task.Run(() =>
+                {
+                    Debug.Log("Start TF update");
+                    SubDataset sd = GetSubDataset(0, 0);
+                    while (sd.Parent.IsLoaded == false)
+                        Thread.Sleep(100);
+
+                    for (int i = 0; i < 100; i++) //Test if the application can handle multiple "update" on TF
+                    {
+                        lock (sd)
+                            sd.TransferFunction = sd.TransferFunction;
+                    }
+                    Debug.Log("End TF update");
+                });
 
                 StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
                 annotMsg.DatasetID = 0;
@@ -890,13 +905,14 @@ namespace Sereno
                 //Load the values in an asynchronous way
                 dataset.LoadValues().ContinueWith((status) =>
                 {
-                    lock(this)
+                    lock (this)
                     {
                         //Update the transfer functions (again, asynchronously)
-                        if(m_vtkStructuredGrid.ContainsKey(dataset))
+                        foreach (SubDataset sd in dataset.SubDatasets)
                         {
-                            foreach(VTKUnitySmallMultiple sm in m_vtkStructuredGrid[dataset].SmallMultiples)
-                                sm.UpdateTF();
+                            Debug.Log("Updating SD after loading dataset");
+                            lock(sd)
+                                sd.TransferFunction = sd.TransferFunction;
                         }
                     }
                 });
@@ -960,6 +976,51 @@ namespace Sereno
                 lock (sd)
                     sd.Scale = msg.Scale;
             }
+        }
+        
+        public void OnTFDataset(MessageBuffer messageBuffer, TFSubDatasetMessage msg)
+        {
+            Debug.Log("Received a Transfer Function even");
+
+            SubDataset       sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            TransferFunction tf = null;
+
+            //Parse the transfer function
+            switch (msg.TFID)
+            {
+                case TFType.TF_GTF:
+                case TFType.TF_TRIANGULAR_GTF:
+                {
+                    //Fill centers and scales
+                    float[] centers = new float[msg.GTFData.Props.Length];
+                    float[] scales  = new float[msg.GTFData.Props.Length];
+
+                    foreach (TFSubDatasetMessage.GTFProp prop in msg.GTFData.Props)
+                    {
+                        int ind = sd.Parent.GetTFIndiceFromPropID(prop.PID);
+                        if(ind != -1)
+                        {
+                            centers[ind] = prop.Center;
+                            scales[ind]  = prop.Scale;
+                        }
+                    }
+
+                    //Generate the propert transfer function
+                    if (msg.TFID == TFType.TF_GTF)
+                        tf = new GTF(centers, scales);
+                    else
+                        tf = new TriangularGTF(centers, scales);
+
+                    break;
+                }
+            }
+
+            if (tf != null)
+                tf.ColorMode = msg.ColorType;
+
+            //Update the TF. Numerous thread will be separately launched to update the visual
+            lock (sd)
+                sd.TransferFunction = tf;
         }
 
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
@@ -1090,16 +1151,19 @@ namespace Sereno
                 lock (this)
                 {
                     SubDataset sd = new SubDataset(vtk);
-                    sd.ID = msg.SubDatasetID;
+                    lock(sd)
+                    { 
+                        sd.ID = msg.SubDatasetID;
 
-                    //TGTF transfer function by default
-                    float[] scale  = new float[sd.Parent.PointFieldDescs.Count];
-                    float[] center = new float[sd.Parent.PointFieldDescs.Count];
-                    for (int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
-                        scale[i] = center[i] = 0.5f;
-                    sd.TransferFunction = new TriangularGTF(scale, center);
+                        //TGTF transfer function by default
+                        float[] scale  = new float[sd.Parent.PointFieldDescs.Count];
+                        float[] center = new float[sd.Parent.PointFieldDescs.Count];
+                        for (int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
+                            scale[i] = center[i] = 0.5f;
+                        sd.TransferFunction = new TriangularGTF(scale, center);
 
-                    vtk.AddSubDataset(sd, false);
+                        vtk.AddSubDataset(sd, false);
+                    }
                     m_vtkSubDatasetToLoad.Enqueue(sd);
                 }
             }
@@ -1362,7 +1426,6 @@ namespace Sereno
 
             m_anchorImportSegments.Clear();
         }
-
         #endregion
     }
 }

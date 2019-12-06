@@ -14,6 +14,7 @@ namespace Sereno.Network.MessageHandler
         GET_ANCHOR_EOF        = 7, //The anchor EOF signal
         GET_SUBDATASET_OWNER  = 8, //The subdataset modification owner
         GET_ON_SCALE_DATASET  = 9, //Scale a dataset
+        GET_TF_DATASET        = 10, /*!< Change the transfer function parameter of a given SubDataset*/
         GET_START_ANNOTATION  = 11, /*!< Start to create an annotation on a specific dataset*/
         GET_ANCHOR_ANNOTATION = 12, /*!< Anchor an annotation on a specific dataset on a specific position*/
         GET_CLEAR_ANNOTATIONS = 13, /*!< Clear all annotations on a specific dataset*/

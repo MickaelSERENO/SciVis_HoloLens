@@ -54,6 +54,13 @@ namespace Sereno.Network.MessageHandler
         void OnScaleDataset(MessageBuffer messageBuffer, ScaleDatasetMessage msg);
 
         /// <summary>
+        /// Function called when a Transfer Function message has been parsed
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed containing information to update the dataset scaling</param>
+        void OnTFDataset(MessageBuffer messageBuffer, TFSubDatasetMessage msg);
+
+        /// <summary>
         /// Function called when new headsets status have been received
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
@@ -269,6 +276,10 @@ namespace Sereno.Network.MessageHandler
                             foreach(var l in m_listeners)
                                 l.OnScaleDataset(this, (ScaleDatasetMessage)m_msg);
                             break;
+                        case ServerType.GET_TF_DATASET:
+                            foreach (var l in m_listeners)
+                                l.OnTFDataset(this, (TFSubDatasetMessage)m_msg);
+                            break;
                         case ServerType.GET_START_ANNOTATION:
                             foreach (var l in m_listeners)
                                 l.OnStartAnnotation(this, (StartAnnotationMessage)m_msg);
@@ -462,6 +473,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_ON_SCALE_DATASET:
                     m_msg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
+                    break;
+                case ServerType.GET_TF_DATASET:
+                    m_msg = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                     break;
                 case ServerType.GET_START_ANNOTATION:
                     m_msg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);

@@ -65,7 +65,11 @@ namespace Sereno.SciVis
         /// <returns>values[0]</returns>
         public override float ComputeColor(float[] values)
         {
-            return values[0];
+            float mag = 0;
+            for (int i = 0; i < m_scale.Length; i++)
+                mag += values[i] * values[i];
+            mag = (float)(Math.Sqrt(mag / m_scale.Length));
+            return mag;
         }
 
         public override uint GetDimension() { return (uint)(m_scale.Length); }

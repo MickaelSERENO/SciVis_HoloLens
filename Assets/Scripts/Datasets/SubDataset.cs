@@ -10,7 +10,8 @@ namespace Sereno.Datasets
     public interface ISubDatasetCallback
     {
         /// <summary>
-        /// Called when the transfer function attached changed
+        /// Called when the transfer function attached changed. This method can be called regularly from e.g., the Network or UI Update thread. 
+        /// It may be interesting to manage that call in a separated thread to not block the calling thread
         /// </summary>
         /// <param name="dataset">The subdataset being modified</param>
         /// <param name="tf">The new transfer function</param>

@@ -35,9 +35,11 @@ namespace Sereno.Datasets
             m_cellFieldValues = new List<VTKFieldValue>(cellFieldValues);
 
             //Add all the field values to load
-            foreach(FieldValueMetaData metaData in m_ptFieldValues)
+            for(int i = 0; i < m_ptFieldValues.Count; i++)
             {
+                VTKFieldValue metaData = m_ptFieldValues[i];
                 PointFieldDescriptor desc = new PointFieldDescriptor(metaData);
+                desc.ID = (UInt32)i;
                 m_ptFieldDescs.Add(desc);
             }
         }
@@ -173,14 +175,14 @@ namespace Sereno.Datasets
                                     }
                                     else
                                     {
-                                        partialRes.localGrad[0] = (m_ptFieldDescs[l].ReadMagnitude(indX1) - m_ptFieldDescs[l].ReadMagnitude(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
-                                        partialRes.localGrad[1] = (m_ptFieldDescs[l].ReadMagnitude(indY1) - m_ptFieldDescs[l].ReadMagnitude(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
-                                        partialRes.localGrad[2] = (m_ptFieldDescs[l].ReadMagnitude(indZ1) - m_ptFieldDescs[l].ReadMagnitude(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                                        partialRes.localGrad[0] = (m_ptFieldDescs[l].ReadMagnitude(indX2) - m_ptFieldDescs[l].ReadMagnitude(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
+                                        partialRes.localGrad[1] = (m_ptFieldDescs[l].ReadMagnitude(indY2) - m_ptFieldDescs[l].ReadMagnitude(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
+                                        partialRes.localGrad[2] = (m_ptFieldDescs[l].ReadMagnitude(indZ2) - m_ptFieldDescs[l].ReadMagnitude(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
                                     }
 
                                     //Fill df
                                     for (int ii = 0; ii < 3; ii++)
-                                        partialRes.df[3*l+ii] = partialRes.localGrad[ii]; 
+                                        partialRes.df[3*l+ii] = partialRes.localGrad[ii] / (m_ptFieldDescs[l].MaxVal - m_ptFieldDescs[l].MinVal); 
                                 }
 
                                 //Compute g = Df^T * Df
@@ -239,7 +241,10 @@ namespace Sereno.Datasets
                                   
                                 float gradMag = 0;
                                 for (UInt32 l = 0; l < 3; l++)
+                                {
+                                    partialRes.localGrad[l] /= (m_ptFieldDescs[0].MaxVal - m_ptFieldDescs[0].MinVal);
                                     gradMag += partialRes.localGrad[l] * partialRes.localGrad[l];
+                                }
                                 gradMag = (float)Math.Sqrt(gradMag);
                                 m_grads[ind] = gradMag;
                                 partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
@@ -275,13 +280,16 @@ namespace Sereno.Datasets
                             UInt64 indZ1 = ind - (UInt64)(ptsDesc.Size[1] * ptsDesc.Size[0]);
                             UInt64 indZ2 = ind + (UInt64)(ptsDesc.Size[1] * ptsDesc.Size[0]);
                             
-                            partialRes.localGrad[0] = (m_ptFieldDescs[0].ReadMagnitude(indX1) - m_ptFieldDescs[0].ReadMagnitude(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
-                            partialRes.localGrad[1] = (m_ptFieldDescs[0].ReadMagnitude(indY1) - m_ptFieldDescs[0].ReadMagnitude(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
-                            partialRes.localGrad[2] = (m_ptFieldDescs[0].ReadMagnitude(indZ1) - m_ptFieldDescs[0].ReadMagnitude(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                            partialRes.localGrad[0] = (m_ptFieldDescs[0].ReadMagnitude(indX2) - m_ptFieldDescs[0].ReadMagnitude(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
+                            partialRes.localGrad[1] = (m_ptFieldDescs[0].ReadMagnitude(indY2) - m_ptFieldDescs[0].ReadMagnitude(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
+                            partialRes.localGrad[2] = (m_ptFieldDescs[0].ReadMagnitude(indZ2) - m_ptFieldDescs[0].ReadMagnitude(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
 
                             float gradMag = 0;
                             for (UInt32 l = 0; l < 3; l++)
+                            {
+                                partialRes.localGrad[l] /= (m_ptFieldDescs[0].MaxVal - m_ptFieldDescs[0].MinVal);
                                 gradMag += partialRes.localGrad[l] * partialRes.localGrad[l];
+                            }
 
                             gradMag = (float)Math.Sqrt(gradMag);
                             m_grads[ind] = gradMag;

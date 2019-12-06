@@ -150,10 +150,6 @@ namespace Sereno.SciVis
             }
         }
         
-        public virtual void OnColorRangeChange(SubDataset dataset, float min, float max)
-        {
-        }
-
         public virtual void OnOwnerIDChange(SubDataset dataset, int ownerID)
         {
             Debug.Log($"New owner : {ownerID}");

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -83,6 +84,16 @@ namespace Sereno.Datasets
                 m_curSDID++;
             }
             m_subDatasets.Add(sd);
+        }
+
+        /// <summary>
+        /// Get the TFIndice to use from a property ID
+        /// </summary>
+        /// <param name="propID">The property ID to convert</param>
+        /// <returns>-1 if propID is not found, the TF Indice (i.e., the indice in PointFieldDescs) otherwise</returns>
+        public int GetTFIndiceFromPropID(int propID)
+        {
+            return m_ptFieldDescs.FindIndex((PointFieldDescriptor desc) => { return desc.ID == propID; });
         }
 
         /// <summary>
