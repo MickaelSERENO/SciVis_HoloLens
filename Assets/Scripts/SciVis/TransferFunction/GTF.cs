@@ -41,18 +41,14 @@ namespace Sereno.SciVis
 
         public override float ComputeAlpha(float[] values)
         {
-            if(values.Length > m_scale.Length || values.Length > m_center.Length)
+            if(values.Length < m_scale.Length || values.Length < m_center.Length)
                 return -1;
-
-            float[] r = new float[values.Length];
-            for(uint i = 0; i < values.Length; i++)
-                r[i] = 0.0f;
-
+            
             float rMag = 0;
-            for(uint i = 0; i < values.Length; i++)
+            for(uint i = 0; i < GetDimension(); i++)
             {
-                r[i] = m_scale[i]*(values[i] - m_center[i]);
-                rMag += r[i]*r[i];
+                float r = m_scale[i]*(values[i] - m_center[i]);
+                rMag += r*r;
             }
 
             return (float)(Math.Min(m_alphaMax*Math.Exp(-rMag), 1.0f));
@@ -75,12 +71,12 @@ namespace Sereno.SciVis
         public override uint GetDimension() { return (uint)(m_scale.Length); }
         
         /// <summary>
-        /// The center of the GTF
+        /// The center of the GTF. center.Length should equal to scale.Length
         /// </summary>
         public float[] Center { get => m_center; set => m_center = value; }
 
         /// <summary>
-        /// The scale of the GTF
+        /// The scale of the GTF. center.Length should equal to scale.Length
         /// </summary>
         public float[] Scale  { get => m_scale;  set => m_scale = value; }
 

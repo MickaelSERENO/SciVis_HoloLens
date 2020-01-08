@@ -50,12 +50,28 @@ namespace Sereno.Datasets
         protected bool m_isLoaded = false;
 
         /// <summary>
+        /// The Dataset name (usually its Path)
+        /// </summary>
+        protected String m_name = "";
+
+        /// <summary>
+        /// The parsed Dataset properties
+        /// </summary>
+        protected Properties.DatasetProperties m_props;
+
+        /// <summary>
         /// Constructor, does nothing
         /// </summary>
         /// <param name="id">The ID of the Dataset</param>
-        public Dataset(int id)
-        { 
+        /// <param name="name">The Dataset's name</param>
+        public Dataset(int id, String name)
+        {
             m_id = id;
+            m_name = name;
+            m_props = new Properties.DatasetProperties
+            {
+                Name = m_name
+            };
         }
 
         /// <summary>
@@ -132,5 +148,15 @@ namespace Sereno.Datasets
         /// The Dataset ID
         /// </summary>
         public int ID {get => m_id;}
+
+        /// <summary>
+        /// The Dataset name (usually its Path)
+        /// </summary>
+        public String Name { get => m_name; }
+
+        /// <summary>
+        /// The parsed Dataset Properties
+        /// </summary>
+        public Properties.DatasetProperties DatasetProperties { get => m_props; set => m_props = value; }
     }
 }

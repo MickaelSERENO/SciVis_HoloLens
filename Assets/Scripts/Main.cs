@@ -110,7 +110,12 @@ namespace Sereno
         const float HEADSET_TOP = 0.15f;
 
         /* Private attributes*/
-#region 
+#region
+        /// <summary>
+        /// The application properties
+        /// </summary>
+        private Properties m_appProperties = null;
+
         /// <summary>
         /// The Dataset currently parsed. The key represents the datase ID
         /// </summary>
@@ -374,6 +379,8 @@ namespace Sereno
 
         void Start()
         {
+            m_appProperties = Properties.ParseProperties();
+
             //Default text helpful to bind headset to tablet
             m_textValues.UpdateIPTexts = true;
             m_textValues.EnableIPTexts = true;
@@ -896,7 +903,9 @@ namespace Sereno
                 cellValues[i] = cellDescriptors[msg.PtFieldValueIndices[i]];
 
             //Create the Dataset
-            VTKDataset dataset = new VTKDataset(msg.DataID, parser, ptValues, cellValues);
+            VTKDataset dataset = new VTKDataset(msg.DataID, msg.Path, parser, ptValues, cellValues);
+            dataset.DatasetProperties = m_appProperties.DatasetPropertiesArray.FirstOrDefault(prop => dataset.Name == prop.Name);
+
             lock (this)
             {
                 m_vtkDatasetsLoaded.Enqueue(dataset);
@@ -953,7 +962,9 @@ namespace Sereno
             Debug.Log("Received rotation event");
             SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
             lock (sd)
+            {
                 sd.Rotation = msg.Quaternion;
+            }
         }
 
         public void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg)

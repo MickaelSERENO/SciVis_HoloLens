@@ -184,10 +184,11 @@ namespace Sereno.SciVis
         {
             lock (this)
             {
-                m_newQ = new Quaternion(rotationQuaternion[1],
-                                        rotationQuaternion[2],
-                                        rotationQuaternion[3],
-                                        rotationQuaternion[0]);
+                float[] q = dataset.GraphicalRotation;
+                m_newQ = new Quaternion(q[1],
+                                        q[2],
+                                        q[3],
+                                        q[0]);
                 m_updateQ = true;
             }
         }

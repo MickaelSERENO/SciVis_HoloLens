@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
-
+﻿using System;
+using System.Collections.Generic;
 using Sereno.SciVis;
+using UnityEngine;
 
 namespace Sereno.Datasets
 {
@@ -113,7 +114,7 @@ namespace Sereno.Datasets
         /// <param name="parent">The Dataset parent</param>
         public SubDataset(Dataset parent)
         {
-            m_parent = parent;
+            m_parent   = parent;
         }
 
         /// <summary>
@@ -160,7 +161,7 @@ namespace Sereno.Datasets
         public void RemoveListener(ISubDatasetCallback clbk)
         {
             m_listeners.Remove(clbk);
-        }
+        } 
 
         /// <summary>
         /// The Dataset parent
@@ -190,10 +191,36 @@ namespace Sereno.Datasets
             get => m_rotation; 
             set
             {
-                for(int i = 0; i < Rotation.Length; i++) 
+                for (int i = 0; i < Rotation.Length; i++) 
                     m_rotation[i] = value[i];
-                foreach(var l in m_listeners)
+                
+                foreach (var l in m_listeners)
                     l.OnRotationChange(this, m_rotation);
+            }
+        }
+
+        public float[] GraphicalRotation
+        {
+            get
+            {
+                float[] quat = new float[4];
+                
+                //Apply -90° angle X rotation
+                if (Parent.DatasetProperties.RotateX)
+                {
+                    float qW = (float)Math.Cos(-Math.PI / 4.0);
+                    float qX = (float)Math.Sin(-Math.PI / 4.0);
+
+                    quat[0] = m_rotation[0] * qW - m_rotation[1] * qX;
+                    quat[1] = m_rotation[1] * qW + m_rotation[0] * qX;
+                    quat[2] = m_rotation[2] * qW + m_rotation[3] * qX;
+                    quat[3] = m_rotation[3] * qW - m_rotation[2] * qX;
+                }
+                else
+                    for (int i = 0; i < 4; i++)
+                        quat[i] = m_rotation[i];
+
+                return quat;
             }
         }
 

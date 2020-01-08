@@ -52,7 +52,7 @@ namespace Sereno.SciVis
             float r0 = 1.0f/grad;
             float r1Mag = 0;
 
-            for(uint i = 0; i < values.Length-1; i++)
+            for(uint i = 0; i < GetDimension()-1; i++)
             {
                 float r1 = r0*m_scale[i]*(values[i] - m_center[i]);
                 r1Mag += r1*r1;
