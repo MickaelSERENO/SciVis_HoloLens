@@ -108,6 +108,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnAddSubDataset(MessageBuffer messageBuffer, AddSubDatasetMessage msg);
+
+        /// <summary>
+        /// Function called when the remove a known subdataset command has been submited
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnRemoveSubDataset(MessageBuffer messageBuffer, RemoveSubDatasetMessage msg);
     }
 
     /// <summary>
@@ -295,6 +302,10 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_ADD_SUBDATASET:
                             foreach (var l in m_listeners)
                                 l.OnAddSubDataset(this, (AddSubDatasetMessage)m_msg);
+                            break;
+                        case ServerType.GET_DEL_SUBDATASET:
+                            foreach (var l in m_listeners)
+                                l.OnRemoveSubDataset(this, (RemoveSubDatasetMessage)m_msg);
                             break;
                         default:
                             break;
@@ -488,6 +499,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_ADD_SUBDATASET:
                     m_msg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
+                    break;
+                case ServerType.GET_DEL_SUBDATASET:
+                    m_msg = new RemoveSubDatasetMessage(ServerType.GET_DEL_SUBDATASET);
                     break;
             }
         }

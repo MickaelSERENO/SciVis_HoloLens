@@ -18,6 +18,7 @@ namespace Sereno.Network.MessageHandler
         GET_START_ANNOTATION  = 11, /*!< Start to create an annotation on a specific dataset*/
         GET_ANCHOR_ANNOTATION = 12, /*!< Anchor an annotation on a specific dataset on a specific position*/
         GET_CLEAR_ANNOTATIONS = 13, /*!< Clear all annotations on a specific dataset*/
-        GET_ADD_SUBDATASET    = 14, /*!< Add a new SubDataset*/
+        GET_ADD_SUBDATASET = 14, /*!< Add a new SubDataset*/
+        GET_DEL_SUBDATASET = 15, /*!< Delete a known SubDataset*/
     }
 }

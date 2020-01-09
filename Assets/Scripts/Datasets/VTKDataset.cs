@@ -23,6 +23,11 @@ namespace Sereno.Datasets
         private List<VTKFieldValue> m_cellFieldValues;
 
         /// <summary>
+        /// The mask field value
+        /// </summary>
+        private VTKValue m_mask = null;
+               
+        /// <summary>
         /// Represent a VTKDataset
         /// </summary>
         /// <param name="id">The ID of the Dataset</param>
@@ -52,7 +57,16 @@ namespace Sereno.Datasets
             {
                 bool succeed = true;
 
-                for(int i = 0; i < m_ptFieldDescs.Count; i++)
+                //Load the mask
+                foreach(VTKFieldValue fv in m_parser.GetPointFieldValueDescriptors())
+                {
+                    if (fv.Name == "vtkValidPointMask")
+                    {
+                        m_mask = m_parser.ParseAllFieldValues(fv);
+                        break;
+                    }
+                }
+                for (int i = 0; i < m_ptFieldDescs.Count; i++)
                 {
                     //Get our working variables
                     PointFieldDescriptor desc = m_ptFieldDescs[i];
@@ -75,6 +89,14 @@ namespace Sereno.Datasets
                             () => new float[2] { float.MaxValue, float.MinValue },
                             (j, loopState, partialRes) =>
                             {
+
+                                //Read mask
+                                unsafe
+                                {
+                                    if(m_mask != null && ((byte*)m_mask.Value)[j] == 0)
+                                        return partialRes;
+                                }
+
                                 float val = desc.Value.ReadAsFloat((UInt64)j);
                                 partialRes[0] = Math.Min(partialRes[0], val);
                                 partialRes[1] = Math.Max(partialRes[1], val);
@@ -98,6 +120,13 @@ namespace Sereno.Datasets
                                 () => new float[2] { float.MaxValue, float.MinValue },
                                 (j, loopState, partialRes) =>
                                 {
+                                    //Read mask
+                                    unsafe
+                                    {
+                                        if (m_mask != null && ((byte*)m_mask.Value)[j] == 0)
+                                            return partialRes;
+                                    }
+
                                     float mag = 0;
                                     for (int k = 0; k < desc.NbValuesPerTuple; k++)
                                     {
@@ -159,6 +188,17 @@ namespace Sereno.Datasets
                             {
                                 //Indices
                                 UInt64 ind = (UInt64)(i + j * ptsDesc.Size[0] + k * ptsDesc.Size[1] * ptsDesc.Size[0]);
+                                
+                                //Read mask
+                                unsafe
+                                {
+                                    if (m_mask != null && ((byte*)m_mask.Value)[ind] == 0)
+                                    {
+                                        m_grads[ind] = 0;
+                                        continue;
+                                    }
+                                }
+
                                 UInt64 indX1 = ind - 1;
                                 UInt64 indX2 = ind + 1;
                                 UInt64 indY1 = ind - (UInt64)(ptsDesc.Size[0]);
@@ -230,6 +270,17 @@ namespace Sereno.Datasets
                             {
                                 //Indices
                                 UInt64 ind = (UInt64)(i + j * ptsDesc.Size[0] + k * ptsDesc.Size[1] * ptsDesc.Size[0]);
+
+                                //Read mask
+                                unsafe
+                                {
+                                    if (m_mask != null && ((byte*)m_mask.Value)[ind] == 0)
+                                    {
+                                        m_grads[ind] = 0;
+                                        continue;
+                                    }
+                                }
+
                                 UInt64 indX1 = ind - 1;
                                 UInt64 indX2 = ind + 1;
                                 UInt64 indY1 = ind - (UInt64)(ptsDesc.Size[0]);
@@ -275,6 +326,17 @@ namespace Sereno.Datasets
                         {
                             //Indices
                             UInt64 ind = (UInt64)(i + j * ptsDesc.Size[0] + k * ptsDesc.Size[1] * ptsDesc.Size[0]);
+
+                            //Read mask
+                            unsafe
+                            {
+                                if (m_mask != null && ((byte*)m_mask.Value)[ind] == 0)
+                                {
+                                    m_grads[ind] = 0;
+                                    continue;
+                                }
+                            }
+
                             UInt64 indX1 = ind - 1;
                             UInt64 indX2 = ind + 1;
                             UInt64 indY1 = ind - (UInt64)(ptsDesc.Size[0]);
@@ -358,5 +420,10 @@ namespace Sereno.Datasets
         /// List of cell field values to take account of
         /// </summary>
         public List<VTKFieldValue> CellFieldValues {get => m_cellFieldValues;}
+
+        /// <summary>
+        /// Get the mask array value if defined (null if not defined)
+        /// </summary>
+        public VTKValue MaskValue { get => m_mask; }
     }
 }

@@ -128,14 +128,17 @@ namespace Sereno.SciVis
                     
                     Debug.Log("Updating TF...");
 
-                    if (m_subDataset.Parent.IsLoaded == false || tf == null || tf.GetDimension() > m_subDataset.Parent.PointFieldDescs.Count+1)
+                    VTKDataset vtk = (VTKDataset)m_subDataset.Parent;
+
+
+                    if (vtk.IsLoaded == false || tf == null || tf.GetDimension() > vtk.PointFieldDescs.Count+1)
                     {
                         Parallel.For(0, m_dimensions.x*m_dimensions.y*m_dimensions.z, i =>
                         {
                             colors[i] = new Color32(0,0,0,0);
                         });
                     }
-
+                    
                     else
                     {
                         List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
@@ -150,26 +153,35 @@ namespace Sereno.SciVis
                                         UInt64 readInd = (UInt64)(i*m_descPts.Size[0]/m_dimensions.x + 
                                                                   j*m_descPts.Size[0]*m_descPts.Size[1] / m_dimensions.y +
                                                                   k*m_descPts.Size[0]*m_descPts.Size[1]*m_descPts.Size[2] / m_dimensions.z);
+                                        UInt64 ind = (UInt64)(i + j * m_dimensions.x + k * m_dimensions.x * m_dimensions.y);
 
-                                        UInt64 ind = (UInt64)(i + j*m_dimensions.x + k*m_dimensions.x*m_dimensions.y); 
-
-                                        //Determine transfer function coordinate
-                                        for (int l = 0; l < ptDescs.Count; l++)
+                                        unsafe
                                         {
-                                            if (ptDescs[l].NbValuesPerTuple == 1)
-                                                partialRes[l] = (ptDescs[l].Value.ReadAsFloat(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
+                                            if (vtk.MaskValue != null && ((byte*)(vtk.MaskValue.Value))[readInd] == 0)
+                                            {
+                                                colors[ind] = new Color32(0, 0, 0, 0);
+                                            }
                                             else
-                                                partialRes[l] = ptDescs[l].ReadMagnitude(readInd);
+                                            {
+                                                //Determine transfer function coordinate
+                                                for (int l = 0; l < ptDescs.Count; l++)
+                                                {
+                                                    if (ptDescs[l].NbValuesPerTuple == 1)
+                                                        partialRes[l] = (ptDescs[l].Value.ReadAsFloat(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
+                                                    else
+                                                        partialRes[l] = ptDescs[l].ReadMagnitude(readInd);
+                                                }
+
+                                                partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd];
+
+                                                float t = tf.ComputeColor(partialRes);
+                                                float a = tf.ComputeAlpha(partialRes);
+
+                                                Color c = SciVisColor.GenColor(tf.ColorMode, t);
+                                                colors[ind] = c;
+                                                colors[ind].a = (byte)(255.0f * a);
+                                            }
                                         }
-
-                                        partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd];
-
-                                        float t = tf.ComputeColor(partialRes);
-                                        float a = tf.ComputeAlpha(partialRes);
-
-                                        Color c   = SciVisColor.GenColor(tf.ColorMode, t);
-                                        colors[ind]   = c;
-                                        colors[ind].a = (byte)(255.0f*a);
                                     }
                                 }
                                 return partialRes;

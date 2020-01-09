@@ -32,7 +32,13 @@ namespace Sereno.Network
         //Has the connection message being sent?
         private bool          m_headsetConnectionSent = false;
 
-        public VFVClient(IMessageBufferCallback clbk) : base("192.168.43.44", 8000)
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="clbk">Callback to call when status changes or new messages arrive</param>
+        /// <param name="ip">The server IP address</param>
+        /// <param name="port">The server port to connect to</param>
+        public VFVClient(IMessageBufferCallback clbk, String ip, uint port) : base(ip, port)
         {
             m_msgBuf = new MessageBuffer();
             base.AddListener(new ClientStatusCallback(OnConnectionStatus));

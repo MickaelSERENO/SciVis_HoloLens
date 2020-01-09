@@ -103,26 +103,26 @@
 			 * \param rayOrigin the ray origin
 			 * \param t[6] the t values (pos = rayOrigin +t*varyRayNormal)
 			 * \param tValidity[6] the t validity (is t[i] a valid value?) */
-			void computeRayCubeIntersection(in float3 rayOrigin, in float3 rayNormal, out float t[6], out bool tValidity[6])
+			void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fixed t[6], out bool tValidity[6])
 			{
 				//Left
-				tValidity[0] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(-1, 0, 0),
-					float3(-0.5, 0, 0), t[0]);
+				tValidity[0] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(-1, 0, 0),
+					fixed3(-0.5, 0, 0), t[0]);
 				//Right
-				tValidity[1] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(1, 0, 0),
-					float3(+0.5, 0, 0), t[1]);
+				tValidity[1] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(1, 0, 0),
+					fixed3(+0.5, 0, 0), t[1]);
 				//Bottom
-				tValidity[2] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, -1, 0),
-					float3(0, -0.5, 0), t[2]);
+				tValidity[2] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, -1, 0),
+					fixed3(0, -0.5, 0), t[2]);
 				//tOP
-				tValidity[3] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 1, 0),
-					float3(0, +0.5, 0), t[3]);
+				tValidity[3] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 1, 0),
+					fixed3(0, +0.5, 0), t[3]);
 				//Front
-				tValidity[4] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 0, -1),
-					float3(0, 0, -0.5), t[4]);
+				tValidity[4] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 0, -1),
+					fixed3(0, 0, -0.5), t[4]);
 				//Back
-				tValidity[5] = computeRayPlaneIntersection(rayOrigin, rayNormal, float3(0, 0, 1),
-					float3(0, 0, +0.5), t[5]);
+				tValidity[5] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 0, 1),
+					fixed3(0, 0, +0.5), t[5]);
 
 				//Test the limits
 				for (int i = 0; i < 2; i++)
@@ -130,7 +130,7 @@
 					//Left / Right
 					if (tValidity[i])
 					{
-						float3 p = t[i] * rayNormal + rayOrigin;
+						fixed3 p = t[i] * rayNormal + rayOrigin;
 						if (p.y < -0.5 || p.y > +0.5 ||
 							p.z < -0.5 || p.z > +0.5)
 							tValidity[i] = false;
@@ -139,7 +139,7 @@
 					//Top / Bottom
 					if (tValidity[i + 2])
 					{
-						float3 p = t[i + 2] * rayNormal + rayOrigin;
+						fixed3 p = t[i + 2] * rayNormal + rayOrigin;
 						if (p.x < -0.5 || p.x > +0.5 ||
 							p.z < -0.5 || p.z > +0.5)
 							tValidity[i + 2] = false;
@@ -148,7 +148,7 @@
 					//Front / Back
 					if(tValidity[i + 4])
 					{
-						float3 p = t[i + 4] * rayNormal + rayOrigin;
+						fixed3 p = t[i + 4] * rayNormal + rayOrigin;
 						if (p.x < -0.5 || p.x > +0.5 ||
 							p.y < -0.5 || p.y > +0.5)
 							tValidity[i + 4] = false;
@@ -159,13 +159,13 @@
 			fixed4  frag(v2f input) : COLOR
 			{
 				UNITY_SETUP_INSTANCE_ID(input);
-				fixed4  fragColor = float4(0, 0, 0, 0);
+				fixed4  fragColor = fixed4(0, 0, 0, 0);
 
 				//Optimization when in perspective mode
-				float3 rayNormal = normalize(input.endRayOrigin.xyz / input.endRayOrigin.w - input.begRayOrigin.xyz);
+				fixed3 rayNormal = normalize(input.endRayOrigin.xyz / input.endRayOrigin.w - input.begRayOrigin.xyz);
 
 				//Compute ray - cube intersections
-				float t[6];
+				fixed t[6];
 				bool  tValidity[6];
 				computeRayCubeIntersection(input.begRayOrigin.xyz, rayNormal, t, tValidity);
 
@@ -177,8 +177,8 @@
 					return fragColor;
 
 				//If yes, look at the starting and end points
-				float minT = t[startValidity];
-				float maxT = minT;
+				fixed minT = t[startValidity];
+				fixed maxT = minT;
 
 				for(int i = startValidity + 1; i < 6; i++)
 				{
@@ -194,13 +194,13 @@
 				if(minT == maxT)
 					minT = 0;
 				
-				half3 rayPos        = input.begRayOrigin.xyz + minT * rayNormal;
+				fixed3 rayPos       = input.begRayOrigin.xyz + minT * rayNormal;
 				const half rayStep  = 1.0 / (sqrt(3)*_MaxDimension);
 				half3 rayStepNormal = rayStep*rayNormal;
 
-				float2 uvDepth = input.uvDepth;
+				fixed2 uvDepth = input.uvDepth;
 				//Determine max displacement (the displacement the ray can perform) regarding the depth
-				float depthPos = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, uvDepth));
+				fixed depthPos = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, uvDepth));
 				
 				//Reverse Z
 #if defined(UNITY_REVERSED_Z)
@@ -210,7 +210,7 @@
 				depthPos = 2.0*depthPos-1.0;
 				uvDepth  = 2.0*uvDepth -1.0;
 
-				float4 endRayDepth = mul(input.invMVP, float4(uvDepth, depthPos, 1.0));
+				fixed4 endRayDepth = mul(input.invMVP, fixed4(uvDepth, depthPos, 1.0));
 				endRayDepth /= endRayDepth.w;
 
 				half maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos);
@@ -219,14 +219,14 @@
 				//Ray marching algorithm
 				for(half j = min(maxDepthDisplacement, maxT-minT); j > 0; j -= rayStep, rayPos += rayStepNormal)
 				{
-					half4 tfColor = tex3Dlod(_TextureData, float4(rayPos.xyz, 0.0));
+					half4 tfColor = tex3Dlod(_TextureData, fixed4(rayPos.xyz, 0.0));
 
 					//tfColor.a *= 1.0 ; //Apply the modification of raystep for stability
 					half4 col = half4(tfColor.xyz, 1.0);
 					fragColor = fragColor + (1 - fragColor.a)*tfColor.a*col;
 					
 					//If enough contribution
-					if (fragColor.a > 0.95)
+					if (fragColor.a > 0.90)
 					{
 						fragColor.a = 1.0;
 						return fragColor;

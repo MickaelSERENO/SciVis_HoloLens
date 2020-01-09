@@ -97,6 +97,31 @@ namespace Sereno.SciVis
         }
 
         /// <summary>
+        /// Remove a known small multiple
+        /// </summary>
+        /// <param name="sm">the small multiple to remove</param>
+        public void RemoveSmallMultiple(VTKUnitySmallMultiple sm)
+        {
+            m_smallMultiples.Remove(sm);
+        }
+
+        /// <summary>
+        /// Remove a known small multiple from a subdataset
+        /// </summary>
+        /// <param name="sd">the subdataset to evaluate</param>
+        public void RemoveSmallMultipleFromSubDataset(SubDataset sd)
+        {
+            int i = 0;
+            while (i < m_smallMultiples.Count)
+            {
+                if (m_smallMultiples[i].SubDataset == sd)
+                    m_smallMultiples.RemoveAt(i);
+                else
+                    i++;
+            }
+        }
+
+        /// <summary>
         /// Get the point field name at ID = dataID
         /// </summary>
         /// <param name="dataID">The dataID</param>

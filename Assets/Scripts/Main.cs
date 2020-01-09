@@ -135,7 +135,17 @@ namespace Sereno
         /// SubDataset to visualy load.
         /// </summary>
         private Queue<SubDataset> m_vtkSubDatasetToLoad = new Queue<SubDataset>();
-        
+
+        /// <summary>
+        /// SubDataset to remove.
+        /// </summary>
+        private Queue<SubDataset> m_subDatasetToRemove = new Queue<SubDataset>();
+
+        /// <summary>
+        /// Datasets to remove.
+        /// </summary>
+        private Queue<Dataset> m_datasetToRemove = new Queue<Dataset>();
+
         /// <summary>
         /// All the dataset game objects
         /// </summary>
@@ -392,7 +402,7 @@ namespace Sereno
             Camera.main.depthTextureMode = DepthTextureMode.Depth;
 
             //Start the network communication
-            m_client = new VFVClient(this);
+            m_client = new VFVClient(this, m_appProperties.Network.IP, m_appProperties.Network.Port);
             m_client.AddListener(new ClientStatusCallback(OnConnectionStatus));
             m_client.Connect();
 
@@ -644,6 +654,48 @@ namespace Sereno
             }
         }
 
+        /// <summary>
+        /// Handles the datasets to remove
+        /// </summary>
+        private void HandleDatasetsToRemove()
+        {
+            //Lambda to remove subdatasets
+            Action<SubDataset> removeSubDatasetFunc = (SubDataset sd) =>
+            {
+                m_changeInternalStates.Remove(sd);
+                DefaultSubDatasetGameObject go = GetSDGameObject(sd);
+                if (go != null)
+                {
+                    m_datasetGameObjects.Remove(go);
+                    if (go == m_datasetInAnnotation)
+                        CurrentPointingIT = PointingIT.NONE;
+
+                    if(m_vtkStructuredGrid.ContainsKey(sd.Parent))
+                    {
+                        m_vtkStructuredGrid[sd.Parent].RemoveSmallMultipleFromSubDataset(sd);
+                    }
+                    GameObject.Destroy(go.gameObject);
+                    Debug.Log("Deleting a subdataset game object");
+                }
+            };
+
+            while(m_datasetToRemove.Count > 0)
+            {
+                Dataset d = m_datasetToRemove.Dequeue();
+                foreach (SubDataset sd in d.SubDatasets)
+                    removeSubDatasetFunc(sd);
+
+                m_datasets.Remove(d.ID);
+                m_vtkStructuredGrid.Remove(d);
+            }
+
+            while (m_subDatasetToRemove.Count > 0)
+            {
+                SubDataset sd = m_subDatasetToRemove.Dequeue();
+                removeSubDatasetFunc(sd);
+            }
+        }
+
         private void HandlePointingID()
         {
             if (m_updatePointingID)
@@ -841,6 +893,7 @@ namespace Sereno
             lock(this)
             {
                 HandleDatasetsLoaded();
+                HandleDatasetsToRemove();
                 HandlePointingID();
                 HandleAnchor();
                 HandleIPTxt();
@@ -1104,7 +1157,9 @@ namespace Sereno
         {
             lock(this)
             {
-                m_datasets[msg.DatasetID].SubDatasets[msg.SubDatasetID].OwnerID = msg.HeadsetID;
+                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+                if(sd != null)
+                    sd.OwnerID = msg.HeadsetID;
             }
         }
 
@@ -1113,12 +1168,15 @@ namespace Sereno
             lock(this)
             {
                 //Search got the current DefaultSubDatasetGameObject being in annotation
-                SubDataset sd = m_datasets[msg.DatasetID].SubDatasets[msg.SubDatasetID];
-                
-                //If currently in an annotation this will cancel the previous one
-                m_waitingPointingID = msg.PointingID;
-                m_sdWaitingAnnotation = sd;
-                m_updatePointingID = true;
+                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+
+                if(sd != null)
+                { 
+                    //If currently in an annotation this will cancel the previous one
+                    m_waitingPointingID = msg.PointingID;
+                    m_sdWaitingAnnotation = sd;
+                    m_updatePointingID = true;
+                }
             }
         }
 
@@ -1177,6 +1235,14 @@ namespace Sereno
                     }
                     m_vtkSubDatasetToLoad.Enqueue(sd);
                 }
+            }
+        }
+
+        public void OnRemoveSubDataset(MessageBuffer messageBuffer, RemoveSubDatasetMessage msg)
+        {
+            lock(this)
+            {
+                m_subDatasetToRemove.Enqueue(GetSubDataset(msg.DataID, msg.SubDataID));
             }
         }
 
@@ -1351,7 +1417,9 @@ namespace Sereno
 
                     //Datasets
                     m_vtkSubDatasetToLoad.Clear();
-                    m_vtkDatasetsLoaded.Clear();
+
+                    foreach(Dataset d in m_vtkDatasetsLoaded)
+                        m_datasetToRemove.Enqueue(d);
 
                     txt = "";
                 }
