@@ -57,17 +57,24 @@ namespace Sereno.SciVis
         private bool m_waitToUpdateTF = false;
 
         /// <summary>
+        /// The application data provider
+        /// </summary>
+        private IDataProvider m_dataProvider = null;
+
+        /// <summary>
         /// Initialize the small multiple
         /// </summary>
         /// <param name="parser">The VTK Parser</param>
         /// <param name="subDataset">The SubDataset bound to this VTK view</param>
         /// <param name="dimensions">The dimensions in use</param>
-        /// <param name="mask">The mask to apply along each point</param>
+        /// <param name="dataProvider">The application data provider (a.k.a, Main)</param>
         /// <returns></returns>
-        public unsafe bool Init(VTKParser parser,SubDataset subDataset, Vector3Int dimensions, byte* mask)
+        public unsafe bool Init(VTKParser parser, SubDataset subDataset, Vector3Int dimensions, IDataProvider dataProvider)
         {
             subDataset.AddListener(this);
             m_subDataset = subDataset;
+
+            m_dataProvider = dataProvider;
 
             //Copy the variables
             m_dimensions = dimensions;
@@ -120,7 +127,6 @@ namespace Sereno.SciVis
                         if (m_waitToUpdateTF == true)
                             return;
                     
-                    Color32[] colors = new Color32[m_dimensions.x*m_dimensions.y*m_dimensions.z];
 
                     TransferFunction tf = null;
                     lock(m_subDataset)
@@ -131,16 +137,24 @@ namespace Sereno.SciVis
                     VTKDataset vtk = (VTKDataset)m_subDataset.Parent;
 
 
-                    if (vtk.IsLoaded == false || tf == null || tf.GetDimension() > vtk.PointFieldDescs.Count+1)
+                    if (vtk.IsLoaded == false || tf == null || tf.GetDimension() > vtk.PointFieldDescs.Count+1 ||
+                       (m_subDataset.OwnerID != -1 && m_subDataset.OwnerID != m_dataProvider.GetHeadsetID())) //Not a public subdataset
                     {
-                        Parallel.For(0, m_dimensions.x*m_dimensions.y*m_dimensions.z, i =>
+                        //Parallel.For(0, m_dimensions.x*m_dimensions.y*m_dimensions.z, i =>
+                        //{
+                        //    colors[i] = new Color32(0,0,0,0);
+                        //});
+                        lock (this)
                         {
-                            colors[i] = new Color32(0,0,0,0);
-                        });
+                            m_textureColor = null;
+                        }
+                        return;
                     }
                     
                     else
                     {
+                        Color32[] colors = new Color32[m_dimensions.x * m_dimensions.y * m_dimensions.z];
+
                         List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
                         Parallel.For(0, m_dimensions.z,
                             () => new float[m_subDataset.Parent.PointFieldDescs.Count+1],
@@ -189,11 +203,11 @@ namespace Sereno.SciVis
                             (partialRes) =>
                             {}
                         );
-                    }
-
-                    lock (this)
-                    {
-                        m_textureColor = colors;
+                        
+                        lock (this)
+                        {
+                            m_textureColor = colors;
+                        }
                     }
                 }
             });
@@ -208,9 +222,19 @@ namespace Sereno.SciVis
         public void OnScaleChange(SubDataset dataset, float[] scale)
         {}
 
-        public void OnOwnerIDChange(SubDataset dataset, int ownerID)
+        public void OnLockOwnerIDChange(SubDataset dataset, int ownerID)
         {}
-        
+
+        public void OnOwnerIDChange(SubDataset dataset, int ownerID)
+        {
+            //Check the status from before and after modification. If the visibility has changed, update the transfer function
+            bool before = (m_subDataset.OwnerID == -1 || m_subDataset.OwnerID == m_dataProvider.GetHeadsetID());
+            bool after  = (ownerID == -1 || ownerID == m_dataProvider.GetHeadsetID());
+
+            if (before != after)
+                UpdateTF();
+        }
+
         public void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)
         {
             UpdateTF();

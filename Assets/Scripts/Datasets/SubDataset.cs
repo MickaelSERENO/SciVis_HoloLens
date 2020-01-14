@@ -40,10 +40,17 @@ namespace Sereno.Datasets
         void OnScaleChange(SubDataset dataset, float[] scale);
 
         /// <summary>
-        /// Called when the owner changes
+        /// Called when the modification owner changes
         /// </summary>
         /// <param name="dataset">The dataset being modified</param>
-        /// <param name="ownerID">The new owner ID</param>
+        /// <param name="ownerID">The new modification owner ID</param>
+        void OnLockOwnerIDChange(SubDataset dataset, int ownerID);
+
+        /// <summary>
+        /// Called when the headset owner ID changes.
+        /// </summary>
+        /// <param name="dataset">The dataset being modified</param>
+        /// <param name="ownerID">The new owner ID. -1 == public SubDataset</param>
         void OnOwnerIDChange(SubDataset dataset, int ownerID);
 
         /// <summary>
@@ -73,7 +80,12 @@ namespace Sereno.Datasets
         protected TransferFunction m_tf = null;
 
         /// <summary>
-        /// The Owner ID
+        /// The Modification Owner ID
+        /// </summary>
+        protected int m_lockOwnerID;
+
+        /// <summary>
+        /// The Owner ID. -1 == public
         /// </summary>
         protected int m_ownerID;
 
@@ -106,15 +118,17 @@ namespace Sereno.Datasets
         /// <summary>
         /// The ID of this SubDataset
         /// </summary>
-        protected int m_ID; 
+        protected int m_ID;
 
         /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="parent">The Dataset parent</param>
-        public SubDataset(Dataset parent)
+        /// <param name="ownerID">The HeadsetID onwing (private/public) this SubDataset. -1 == public SubDataset</param>
+        public SubDataset(Dataset parent, int ownerID = -1)
         {
-            m_parent   = parent;
+            m_parent  = parent;
+            m_ownerID = ownerID;
         }
 
         /// <summary>
@@ -124,7 +138,7 @@ namespace Sereno.Datasets
         public SubDataset(SubDataset copy)
         {
             m_parent       = copy.m_parent;
-            m_ownerID      = copy.m_ownerID;
+            m_lockOwnerID  = copy.m_lockOwnerID;
             m_position     = (float[])m_position.Clone();
             m_rotation     = (float[])m_rotation.Clone();
             m_scale        = (float[])m_scale.Clone();
@@ -256,13 +270,30 @@ namespace Sereno.Datasets
             }
         }
 
+        /// <summary>
+        /// The Modification Owner ID
+        /// </summary>
+        public int LockOwnerID
+        {
+            get => m_lockOwnerID;
+            set
+            {
+                m_lockOwnerID = value;
+                foreach(var l in m_listeners)
+                    l.OnLockOwnerIDChange(this, m_lockOwnerID);
+            }
+        }
+        
+        /// <summary>
+        /// The Owner ID. -1 == public
+        /// </summary>
         public int OwnerID
         {
             get => m_ownerID;
             set
             {
                 m_ownerID = value;
-                foreach(var l in m_listeners)
+                foreach (var l in m_listeners)
                     l.OnOwnerIDChange(this, m_ownerID);
             }
         }

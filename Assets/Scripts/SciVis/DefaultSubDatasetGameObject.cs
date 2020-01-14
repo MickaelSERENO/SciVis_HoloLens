@@ -150,9 +150,9 @@ namespace Sereno.SciVis
             }
         }
         
-        public virtual void OnOwnerIDChange(SubDataset dataset, int ownerID)
+        public virtual void OnLockOwnerIDChange(SubDataset dataset, int ownerID)
         {
-            Debug.Log($"New owner : {ownerID}");
+            Debug.Log($"New modification owner : {ownerID}");
             lock (this)
             {
                 if (ownerID == -1)
@@ -170,6 +170,10 @@ namespace Sereno.SciVis
                 }
             }
         }
+
+        public void OnOwnerIDChange(SubDataset dataset, int ownerID)
+        { }
+
 
         public void OnPositionChange(SubDataset dataset, float[] position)
         {

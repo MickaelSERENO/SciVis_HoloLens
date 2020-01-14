@@ -52,6 +52,8 @@ MonoBehaviour:
     type: 3}
   ColorMaterial: {fileID: 2100000, guid: 41d71bb2eb7b887429c3daf009b12d6b, type: 2}
   VTKMiniaturePrefab: {fileID: 4757634199374474188}
+  UnloadModel: {fileID: 2534866581884222612, guid: 525e1f884bd21294893183a160750c53,
+    type: 3}
 --- !u!1001 &456245234013893441
 PrefabInstance:
   m_ObjectHideFlags: 0

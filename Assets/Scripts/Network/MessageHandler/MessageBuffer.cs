@@ -75,11 +75,11 @@ namespace Sereno.Network.MessageHandler
         void OnDefaultByteArray(MessageBuffer messageBuffer, DefaultByteArray msg);
 
         /// <summary>
-        /// Function called when a new owner has been designed for a SudDataset
+        /// Function called when a new lock owner has been designed for a SudDataset
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed containing the owner information</param>
-        void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg);
+        void OnSubDatasetModificationOwner(MessageBuffer messageBuffer, SubDatasetModificationOwnerMessage msg);
         
         /// <summary>
         /// Function called when a start annotation command has been submited
@@ -275,9 +275,9 @@ namespace Sereno.Network.MessageHandler
                             foreach(var l in m_listeners)
                                 l.OnEmptyMessage(this, (EmptyMessage)m_msg);
                             break;
-                        case ServerType.GET_SUBDATASET_OWNER:
+                        case ServerType.GET_SUBDATASET_MODIFICATION_OWNER:
                             foreach(var l in m_listeners)
-                                l.OnSubDatasetOwner(this, (SubDatasetOwnerMessage)m_msg);
+                                l.OnSubDatasetModificationOwner(this, (SubDatasetModificationOwnerMessage)m_msg);
                             break;
                         case ServerType.GET_ON_SCALE_DATASET:
                             foreach(var l in m_listeners)
@@ -479,8 +479,8 @@ namespace Sereno.Network.MessageHandler
                 case ServerType.GET_ANCHOR_EOF:
                     m_msg = new EmptyMessage(ServerType.GET_ANCHOR_EOF);
                     break;
-                case ServerType.GET_SUBDATASET_OWNER:
-                    m_msg = new SubDatasetOwnerMessage(ServerType.GET_SUBDATASET_OWNER);
+                case ServerType.GET_SUBDATASET_MODIFICATION_OWNER:
+                    m_msg = new SubDatasetModificationOwnerMessage(ServerType.GET_SUBDATASET_MODIFICATION_OWNER);
                     break;
                 case ServerType.GET_ON_SCALE_DATASET:
                     m_msg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);

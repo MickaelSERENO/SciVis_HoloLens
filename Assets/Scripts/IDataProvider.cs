@@ -16,6 +16,12 @@ namespace Sereno
         Color GetHeadsetColor(int headsetID);
 
         /// <summary>
+        /// Get the application Headset ID
+        /// </summary>
+        /// <returns>The headset ID, -1 if not yet defined</returns>
+        int GetHeadsetID();
+
+        /// <summary>
         /// Get the targeted game object by the pointing interaction technique
         /// </summary>
         /// <returns>The targeted GameObject or NULL if none</returns>

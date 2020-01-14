@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -467,7 +467,7 @@ namespace Sereno
                 StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
                 annotMsg.DatasetID = 0;
                 annotMsg.SubDatasetID = 0;
-                annotMsg.PointingID = PointingIT.GOGO;
+                annotMsg.PointingID = PointingIT.MANUAL;
                 OnStartAnnotation(null, annotMsg);
 
                 //Headset Status
@@ -984,7 +984,7 @@ namespace Sereno
                 {
                     unsafe
                     {
-                        VTKUnityStructuredGrid grid = new VTKUnityStructuredGrid(dataset, DesiredVTKDensity);
+                        VTKUnityStructuredGrid grid = new VTKUnityStructuredGrid(dataset, DesiredVTKDensity, this);
                         m_vtkStructuredGrid.Add(dataset, grid);
                     }
                 }
@@ -1153,13 +1153,13 @@ namespace Sereno
 #endif
         }
 
-        public void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg)
+        public void OnSubDatasetModificationOwner(MessageBuffer messageBuffer, SubDatasetModificationOwnerMessage msg)
         {
             lock(this)
             {
                 SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
                 if(sd != null)
-                    sd.OwnerID = msg.HeadsetID;
+                    sd.LockOwnerID = msg.HeadsetID;
             }
         }
 
@@ -1219,7 +1219,7 @@ namespace Sereno
                 //Create a new SubDataset
                 lock (this)
                 {
-                    SubDataset sd = new SubDataset(vtk);
+                    SubDataset sd = new SubDataset(vtk, msg.OwnerID);
                     lock(sd)
                     { 
                         sd.ID = msg.SubDatasetID;
@@ -1265,6 +1265,11 @@ namespace Sereno
                     return new Color(0.0f, 0.0f, 1.0f);
                 }
             }
+        }
+
+        public int GetHeadsetID()
+        {
+            return m_headsetID;
         }
 
         public DefaultSubDatasetGameObject GetTargetedGameObject()

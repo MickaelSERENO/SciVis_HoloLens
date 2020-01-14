@@ -21,6 +21,11 @@ namespace Sereno.SciVis
         public VTKUnitySmallMultipleGameObject VTKMiniaturePrefab;
 
         /// <summary>
+        /// The model prefab to use when the data is not yet loaded    
+        /// </summary>
+        public GameObject UnloadModel;
+
+        /// <summary>
         /// The mesh to use
         /// </summary>
         private Mesh m_mesh = null;
@@ -29,6 +34,11 @@ namespace Sereno.SciVis
         /// The material in use (copy from the Material setted in the Unity Editor)
         /// </summary>
         private Material m_material;
+
+        /// <summary>
+        /// The model to use when the data is not yet loaded    
+        /// </summary>
+        private GameObject m_unloadModel;
 
         /// <summary>
         /// The Texture 3D representing this Dataset
@@ -47,10 +57,13 @@ namespace Sereno.SciVis
         public void Init(VTKUnitySmallMultiple sm, IDataProvider provider, bool isMiniature=false)
         {
             base.Init(sm.SubDataset, provider, isMiniature);
+
+            m_unloadModel = Instantiate(UnloadModel, transform);
+            m_unloadModel.SetActive(!m_isMiniature);
+            m_material = new Material(ColorMaterial);
+
             m_sm = sm;
-
-            m_material = new Material(ColorMaterial);            
-
+            
             //Compute the Mesh. A regular rectangle where ray casting will be applied
             Vector3[] meshPos   = new Vector3[4];
             int[]     meshFaces = new int[6];
@@ -90,7 +103,7 @@ namespace Sereno.SciVis
             {
                 lock(m_sm)
                 { 
-                    if (m_sm.TextureColor != null)
+                    if(m_sm.TextureColor != null) //New data?
                     {
                         m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGBA32, false);
                         m_texture3D.wrapModeU = TextureWrapMode.Clamp;
@@ -98,8 +111,20 @@ namespace Sereno.SciVis
                         m_texture3D.wrapModeW = TextureWrapMode.Clamp;
                         m_texture3D.SetPixels32(m_sm.TextureColor);
                         m_texture3D.Apply();
-                        Debug.Log("Applied new texture");
+                        m_unloadModel.SetActive(false);
                         m_sm.TextureColor = null;
+                    }
+
+                    else if(m_sd.OwnerID != -1 && m_sd.OwnerID != m_dataProvider.GetHeadsetID()) //Check owner
+                    {
+                        m_unloadModel.SetActive(true);
+                        m_unloadModel.GetComponent<MeshRenderer>().material.color = m_dataProvider.GetHeadsetColor(m_sd.OwnerID);
+                        m_texture3D = null;
+                    }
+
+                    else //Default color
+                    {
+                        m_unloadModel.GetComponent<MeshRenderer>().material.color = new Color(0.5f, 0.5f, 0.5f);
                     }
                 }
             }
@@ -124,7 +149,7 @@ namespace Sereno.SciVis
             }
 
             //Draw the GameObject
-            if (m_mesh != null && m_material != null)
+            if (m_mesh != null && m_material != null && m_texture3D != null)
             {
                 UpdateMaterial();
                 Graphics.DrawMesh(m_mesh, transform.localToWorldMatrix, m_material, 0, Camera.main);
@@ -178,6 +203,7 @@ namespace Sereno.SciVis
                             maxScreenPos.y = screenPos.y;
                     }
                 }
+
                 //Update the mesh
                 Vector3[] meshPos = new Vector3[4];
                 meshPos[0] = new Vector3(minScreenPos.x, minScreenPos.y, 0);

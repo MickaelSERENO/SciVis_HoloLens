@@ -20,11 +20,6 @@ namespace Sereno.SciVis
         private List<VTKUnitySmallMultiple> m_smallMultiples;
 
         /// <summary>
-        /// The mask in use
-        /// </summary>
-        private unsafe byte* m_mask;
-
-        /// <summary>
         /// The 3D dimensions of this StructuredGrid
         /// </summary>
         private Vector3Int m_dimensions;
@@ -45,15 +40,21 @@ namespace Sereno.SciVis
         private UInt32 m_desiredDensity;
 
         /// <summary>
+        /// The data provider to use
+        /// </summary>
+        private IDataProvider m_dataProvider;
+
+        /// <summary>
         /// The Dataset bound to this SubDataset
         /// </summary>
         public VTKDataset m_dataset;
 
-        public unsafe VTKUnityStructuredGrid (VTKDataset vtkDataset, UInt32 desiredDensity, byte* mask=null)
+        public unsafe VTKUnityStructuredGrid (VTKDataset vtkDataset, UInt32 desiredDensity, IDataProvider dataProvider)
         {
             m_dataset = vtkDataset;
             m_desiredDensity = desiredDensity;
-            m_mask    = mask;
+            m_dataProvider   = dataProvider;
+
             VTKParser parser = m_dataset.Parser;
             if(parser.GetDatasetType() != VTKDatasetType.VTK_STRUCTURED_POINTS)
             {
@@ -87,7 +88,7 @@ namespace Sereno.SciVis
 
             unsafe
             {
-                if(sm.Init(m_dataset.Parser, sd, m_dimensions, m_mask))
+                if(sm.Init(m_dataset.Parser, sd, m_dimensions, m_dataProvider))
                 {
                     m_smallMultiples.Add(sm);
                     return sm;

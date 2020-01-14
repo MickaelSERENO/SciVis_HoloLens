@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Sereno.Network.MessageHandler
 {
-    public class SubDatasetOwnerMessage : ServerMessage
+    public class SubDatasetModificationOwnerMessage : ServerMessage
     {
         /// <summary>
         /// The SubDataset ID
@@ -23,7 +23,7 @@ namespace Sereno.Network.MessageHandler
         /// </summary>
         private int m_headsetID = 0;
 
-        public SubDatasetOwnerMessage(ServerType type) : base(type)
+        public SubDatasetModificationOwnerMessage(ServerType type) : base(type)
         {}
 
         public override void Push(int value)

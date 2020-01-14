@@ -17,7 +17,7 @@ namespace Sereno.Network.MessageHandler
         /// <summary>
         /// The ID of the owner. -1 == public SubDataset
         /// </summary>
-        public Int32 OwnerID;
+        public Int32 OwnerID = -1;
 
         /// <summary>
         /// The name of the SubDataset
