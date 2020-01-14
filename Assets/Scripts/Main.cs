@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -900,6 +900,7 @@ namespace Sereno
                 HandleRandomText();
                 HandleHeadsetStatusLoaded();
                 HandleHeadsetStatusSending();
+                m_connectionLost = false;
             }
         }
 
@@ -1014,6 +1015,8 @@ namespace Sereno
         {
             Debug.Log("Received rotation event");
             SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            if (sd == null)
+                return;
             lock (sd)
             {
                 sd.Rotation = msg.Quaternion;
@@ -1047,6 +1050,8 @@ namespace Sereno
             Debug.Log("Received a Transfer Function even");
 
             SubDataset       sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            if (sd == null)
+                return;
             TransferFunction tf = null;
 
             //Parse the transfer function
@@ -1200,6 +1205,7 @@ namespace Sereno
 
         public void OnAddSubDataset(MessageBuffer messageBuffer, AddSubDatasetMessage msg)
         {
+            Debug.Log("On AddSubDataset message");
             //Search for the parent dataset
             Dataset dataset;
             lock (this)

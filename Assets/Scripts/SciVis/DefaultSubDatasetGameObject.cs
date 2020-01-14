@@ -172,9 +172,8 @@ namespace Sereno.SciVis
         }
 
         public void OnOwnerIDChange(SubDataset dataset, int ownerID)
-        { }
-
-
+        {}
+        
         public void OnPositionChange(SubDataset dataset, float[] position)
         {
             lock (this)

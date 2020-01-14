@@ -195,7 +195,7 @@
 					minT = 0;
 				
 				fixed3 rayPos       = input.begRayOrigin.xyz + minT * rayNormal;
-				const half rayStep  = 1.0 / (sqrt(3)*_MaxDimension);
+				const half rayStep  = 1.0 / (sqrt(2)*_MaxDimension);
 				half3 rayStepNormal = rayStep*rayNormal;
 
 				fixed2 uvDepth = input.uvDepth;
@@ -221,12 +221,11 @@
 				{
 					half4 tfColor = tex3Dlod(_TextureData, fixed4(rayPos.xyz, 0.0));
 
-					//tfColor.a *= 1.0 ; //Apply the modification of raystep for stability
 					half4 col = half4(tfColor.xyz, 1.0);
 					fragColor = fragColor + (1 - fragColor.a)*tfColor.a*col;
 					
 					//If enough contribution
-					if (fragColor.a > 0.90)
+					if (fragColor.a > 0.97)
 					{
 						fragColor.a = 1.0;
 						return fragColor;

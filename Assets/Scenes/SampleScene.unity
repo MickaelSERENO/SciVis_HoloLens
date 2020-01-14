@@ -606,7 +606,7 @@ MonoBehaviour:
     type: 3}
   VTKSMGameObject: {fileID: 4757634199374474188, guid: 640e0d42fa907e4429749e5e66efad2b,
     type: 3}
-  DesiredVTKDensity: 64
+  DesiredVTKDensity: 128
   IPHeaderText: {fileID: 952487348}
   IPValueText: {fileID: 1032050059}
   RandomText: {fileID: 997432055}
