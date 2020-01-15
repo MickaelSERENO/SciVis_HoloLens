@@ -1168,6 +1168,16 @@ namespace Sereno
             }
         }
 
+        public void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg)
+        {
+            lock (this)
+            {
+                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+                if(sd != null)
+                    sd.OwnerID = msg.HeadsetID;
+            }
+        }
+
         public void OnStartAnnotation(MessageBuffer messageBuffer, StartAnnotationMessage msg)
         {
             lock(this)

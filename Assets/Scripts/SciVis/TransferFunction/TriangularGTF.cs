@@ -31,7 +31,7 @@ namespace Sereno.SciVis
         /// <param name="scale">The scale to apply along each dimensions</param>
         /// <param name="center">The center to apply along each dimensions</param>
         /// <param name="alphaMax">The maximum alpha value</param>
-        public TriangularGTF(float[] scale, float[] center, float alphaMax = 1.0f)
+        public TriangularGTF(float[] center, float[] scale, float alphaMax = 0.5f)
         {
             m_scale    = scale;
             m_center   = center;
@@ -54,7 +54,7 @@ namespace Sereno.SciVis
 
             for(uint i = 0; i < GetDimension()-1; i++)
             {
-                float r1 = r0*m_scale[i]*(values[i] - m_center[i]);
+                float r1 = r0*(values[i] - m_center[i])/m_scale[i];
                 r1Mag += r1*r1;
             }
 

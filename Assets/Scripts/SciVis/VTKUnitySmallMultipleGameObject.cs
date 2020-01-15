@@ -139,6 +139,9 @@ namespace Sereno.SciVis
         {
             base.LateUpdate();
 
+            if (m_sm == null)
+                return;
+
             //Update the 3D texture
             if (!m_isMiniature)
             {

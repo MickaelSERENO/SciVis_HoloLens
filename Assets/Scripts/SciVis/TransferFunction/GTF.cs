@@ -32,7 +32,7 @@ namespace Sereno.SciVis
         /// <param name="scale">The scale to apply along each dimensions</param>
         /// <param name="center">The center to apply along each dimensions</param>
         /// <param name="alphaMax">The maximum alpha value</param>
-        public GTF(float[] scale, float[] center, float alphaMax=1.0f)
+        public GTF(float[] center, float[] scale, float alphaMax=0.5f)
         {
             m_scale    = scale;
             m_center   = center;
@@ -47,8 +47,11 @@ namespace Sereno.SciVis
             float rMag = 0;
             for(uint i = 0; i < GetDimension(); i++)
             {
-                float r = m_scale[i]*(values[i] - m_center[i]);
-                rMag += r*r;
+                if(m_scale[i] != 0.0f)
+                {
+                    float r = (values[i] - m_center[i]) / m_scale[i];
+                    rMag += r * r;
+                }
             }
 
             return (float)(Math.Min(m_alphaMax*Math.Exp(-rMag), 1.0f));
