@@ -225,11 +225,11 @@
 					fragColor = fragColor + (1 - fragColor.a)*tfColor.a*col;
 					
 					//If enough contribution
-					if (fragColor.a > 0.97)
+					/*if (fragColor.a > 0.97)
 					{
 						fragColor.a = 1.0;
 						return fragColor;
-					}
+					}*/
 				}
 
 				return fragColor;

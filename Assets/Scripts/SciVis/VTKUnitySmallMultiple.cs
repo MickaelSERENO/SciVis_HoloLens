@@ -227,12 +227,7 @@ namespace Sereno.SciVis
 
         public void OnOwnerIDChange(SubDataset dataset, int ownerID)
         {
-            //Check the status from before and after modification. If the visibility has changed, update the transfer function
-            bool before = (m_subDataset.OwnerID == -1 || m_subDataset.OwnerID == m_dataProvider.GetHeadsetID());
-            bool after  = (ownerID == -1 || ownerID == m_dataProvider.GetHeadsetID());
-
-            if (before != after)
-                UpdateTF();
+            UpdateTF();
         }
 
         public void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)

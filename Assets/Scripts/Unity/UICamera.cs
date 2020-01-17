@@ -13,6 +13,7 @@ namespace Sereno
         {
             Quaternion q = transform.rotation;
             q.z = 0;
+            q.x = 0;
             transform.rotation = q.normalized;
         }
     }
