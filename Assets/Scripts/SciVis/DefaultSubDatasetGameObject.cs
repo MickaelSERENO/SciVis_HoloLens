@@ -31,6 +31,11 @@ namespace Sereno.SciVis
         public DefaultSubDatasetGameObject DefaultMiniaturePrefab;
 
         /// <summary>
+        /// The map texture to display if the dataset requires it
+        /// </summary>
+        public GameObject MapTextureGameObject;
+
+        /// <summary>
         /// The SubDataset bound
         /// </summary>
         protected SubDataset m_sd = null;
@@ -116,6 +121,11 @@ namespace Sereno.SciVis
         private List<Annotation> m_annotationGOsInCreation = new List<Annotation>();
 
         /// <summary>
+        /// The instantiate map texture gameobject
+        /// </summary>
+        private GameObject m_mapTextureGO = null;
+
+        /// <summary>
         /// Initialize the visualization. Call this method only once please.
         /// </summary>
         /// <param name="sd">The sub dataset to use</param>
@@ -135,6 +145,20 @@ namespace Sereno.SciVis
             LinkToSM();
 
             m_outlineColor = m_dataProvider.GetHeadsetColor(-1);
+
+            //Load the map beneath this game object
+            Properties.DatasetMapProperties mapProp = m_sd.Parent.DatasetProperties.MapProperties;
+            if(mapProp != null)
+            {
+                Texture2D tex = Resources.Load<Texture2D>($"Textures/{mapProp.TexturePath}");
+                int texNameID = Shader.PropertyToID("_DetailTex");
+                m_mapTextureGO = Instantiate(MapTextureGameObject, this.transform);
+                m_mapTextureGO.transform.localPosition = new Vector3(0.0f, 0.0f, -0.5f);
+                m_mapTextureGO.transform.localRotation = Quaternion.identity;
+                m_mapTextureGO.GetComponent<Renderer>().material.SetTexture(texNameID, tex);
+                m_mapTextureGO.GetComponent<Renderer>().material.SetTextureScale(texNameID, new Vector2(mapProp.Tiling[0], mapProp.Tiling[1]));
+                m_mapTextureGO.GetComponent<Renderer>().material.SetTextureScale(texNameID, new Vector2(mapProp.Offset[0], mapProp.Offset[1]));
+            }
         }
 
         protected void LinkToSM()

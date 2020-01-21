@@ -50,6 +50,8 @@ MonoBehaviour:
     type: 3}
   DefaultMiniaturePrefab: {fileID: 5339560771976640971, guid: d172793dec486bb49abed9c71a1301c3,
     type: 3}
+  MapTextureGameObject: {fileID: 2156712939980711491, guid: 40583c425cff9e84d8cf3f0d797de5dd,
+    type: 3}
   ColorMaterial: {fileID: 2100000, guid: 41d71bb2eb7b887429c3daf009b12d6b, type: 2}
   VTKMiniaturePrefab: {fileID: 4757634199374474188}
   UnloadModel: {fileID: 2534866581884222612, guid: 525e1f884bd21294893183a160750c53,

@@ -10,16 +10,51 @@ namespace Sereno.Datasets
     [System.Serializable]
     public class Properties
     {
+
+        [Serializable]
+        public class DatasetMapProperties
+        {
+            /// <summary>
+            /// The Texture path to look for in Resources/Textures folder (e.g., texture.png == Resources/Textures/texture.png)
+            /// </summary>
+            public String TexturePath = "";
+
+            /// <summary>
+            /// The tilling texture property
+            /// </summary>
+            public float[] Tiling = new float[] { 1.0f, 1.0f };
+
+            /// <summary>
+            /// The offset texture property
+            /// </summary>
+            public float[] Offset = new float[] { 0.0f, 0.0f };
+        }
+
         /// <summary>
         /// Dataset properties structure
         /// </summary>
         [Serializable]
         public class DatasetProperties
         {
+            /// <summary>
+            /// The dataset name
+            /// </summary>
             public String Name    = "";
+
+            /// <summary>
+            /// Should we rotate the dataset about -90° around the x Axis?
+            /// </summary>
             public bool   RotateX = false;
+
+            /// <summary>
+            /// The map properties to display for a geographical dataset
+            /// </summary>
+            public DatasetMapProperties MapProperties = null;
         }
 
+        /// <summary>
+        /// Network properties structure
+        /// </summary>
         [Serializable]
         public class NetworkProperties
         {
