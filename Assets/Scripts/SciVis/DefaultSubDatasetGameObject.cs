@@ -33,7 +33,7 @@ namespace Sereno.SciVis
         /// <summary>
         /// The map texture to display if the dataset requires it
         /// </summary>
-        public GameObject MapTextureGameObject;
+        public MapTextureGameObject MapTextureGameObject;
 
         /// <summary>
         /// The SubDataset bound
@@ -123,7 +123,7 @@ namespace Sereno.SciVis
         /// <summary>
         /// The instantiate map texture gameobject
         /// </summary>
-        private GameObject m_mapTextureGO = null;
+        private MapTextureGameObject m_mapTextureGO = null;
 
         /// <summary>
         /// Initialize the visualization. Call this method only once please.
@@ -151,13 +151,10 @@ namespace Sereno.SciVis
             if(mapProp != null)
             {
                 Texture2D tex = Resources.Load<Texture2D>($"Textures/{mapProp.TexturePath}");
-                int texNameID = Shader.PropertyToID("_DetailTex");
                 m_mapTextureGO = Instantiate(MapTextureGameObject, this.transform);
                 m_mapTextureGO.transform.localPosition = new Vector3(0.0f, 0.0f, -0.5f);
                 m_mapTextureGO.transform.localRotation = Quaternion.identity;
-                m_mapTextureGO.GetComponent<Renderer>().material.SetTexture(texNameID, tex);
-                m_mapTextureGO.GetComponent<Renderer>().material.SetTextureScale(texNameID, new Vector2(mapProp.Tiling[0], mapProp.Tiling[1]));
-                m_mapTextureGO.GetComponent<Renderer>().material.SetTextureScale(texNameID, new Vector2(mapProp.Offset[0], mapProp.Offset[1]));
+                m_mapTextureGO.ApplyTexture(tex, new Vector2(mapProp.Tiling[0], mapProp.Tiling[1]), new Vector2(mapProp.Offset[0], mapProp.Offset[1]));
             }
         }
 
@@ -224,6 +221,7 @@ namespace Sereno.SciVis
         {
             lock (this)
             {
+                scale = dataset.GraphicalScaling;
                 m_newS = new Vector3(scale[0], scale[1], scale[2]);
                 m_updateS = true;
             }

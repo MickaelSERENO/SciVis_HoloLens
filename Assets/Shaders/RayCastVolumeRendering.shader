@@ -31,9 +31,8 @@
 
             struct v2f
             {
-				float4x4 invMVP       : TEXCOORD4;
+				float4x4 invMVP       : TEXCOORD3;
 				float2   uvDepth      : TEXCOORD2;
-				float4   vertexBis    : TEXCOORD3;
 				float3   begRayOrigin : TEXCOORD1;   //The beginning of ray origin only if in perspective mode
 				float4   endRayOrigin : TEXCOORD0;
 				float4   vertex       : SV_POSITION;
@@ -60,7 +59,6 @@
 				o.vertex    = v.vertex;
 				o.vertex.z = UNITY_NEAR_CLIP_VALUE;
 
-				o.vertexBis = v.vertex;
 				o.invMVP    = mul(transpose(UNITY_MATRIX_IT_MV), unity_CameraInvProjection);
 				o.uvDepth   = float2(o.vertex.x, o.vertex.y*_ProjectionParams.x)*0.5 + 0.5;
 
@@ -88,11 +86,9 @@
 			 * \param planePosition the plane position
 			 * \param t[out] the parameter t of the ray equation
 			 * \return   true if intersection, false otherwise */
-			bool computeRayPlaneIntersection(in float3 rayOrigin, in float3 rayNormal, in float3 planeNormal, in float3 planePosition, out float t)
+			bool computeRayPlaneIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, in fixed3 planeNormal, in fixed3 planePosition, out fixed t)
 			{
-				float nDir = dot(planeNormal, rayNormal);
-				//if (nDir == 0)
-				//	return false;
+				fixed nDir = dot(planeNormal, rayNormal);
 
 				t = dot(planeNormal, planePosition - rayOrigin) / nDir;
 				return t >= 0.0;
@@ -128,7 +124,7 @@
 				for (int i = 0; i < 2; i++)
 				{
 					//Left / Right
-					if (tValidity[i])
+					//if (tValidity[i]) //This if is commented for optimization based on shader properties (less if == better)
 					{
 						fixed3 p = t[i] * rayNormal + rayOrigin;
 						if (p.y < -0.5 || p.y > +0.5 ||
@@ -137,7 +133,7 @@
 					}
 
 					//Top / Bottom
-					if (tValidity[i + 2])
+					//if (tValidity[i + 2])
 					{
 						fixed3 p = t[i + 2] * rayNormal + rayOrigin;
 						if (p.x < -0.5 || p.x > +0.5 ||
@@ -146,7 +142,7 @@
 					}
 
 					//Front / Back
-					if(tValidity[i + 4])
+					//if(tValidity[i + 4])
 					{
 						fixed3 p = t[i + 4] * rayNormal + rayOrigin;
 						if (p.x < -0.5 || p.x > +0.5 ||
@@ -195,8 +191,8 @@
 					minT = 0;
 				
 				fixed3 rayPos       = input.begRayOrigin.xyz + minT * rayNormal;
-				const half rayStep  = 1.0 / (sqrt(2)*_MaxDimension);
-				half3 rayStepNormal = rayStep*rayNormal;
+				const fixed rayStep  = 1.0 / (sqrt(3)*_MaxDimension);
+				fixed3 rayStepNormal = rayStep*rayNormal;
 
 				fixed2 uvDepth = input.uvDepth;
 				//Determine max displacement (the displacement the ray can perform) regarding the depth
@@ -214,22 +210,23 @@
 				endRayDepth /= endRayDepth.w;
 
 				half maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos);
-
 				rayPos += 0.5;
-				//Ray marching algorithm
-				for(half j = min(maxDepthDisplacement, maxT-minT); j > 0; j -= rayStep, rayPos += rayStepNormal)
-				{
-					half4 tfColor = tex3Dlod(_TextureData, fixed4(rayPos.xyz, 0.0));
 
-					half4 col = half4(tfColor.xyz, 1.0);
+				//Ray marching algorithm
+				for(int j = int(min(maxDepthDisplacement, maxT - minT) / rayStep); j > 0; j -= 1)
+				{
+					fixed4 tfColor = tex3Dlod(_TextureData, fixed4(rayPos.xyz, 0.0));
+
+					fixed4 col = fixed4(tfColor.xyz, 1.0);
 					fragColor = fragColor + (1 - fragColor.a)*tfColor.a*col;
 					
 					//If enough contribution
-					/*if (fragColor.a > 0.97)
+					/*if (fragColor.a > 0.95) //Commented due to how IFs reduce performances
 					{
 						fragColor.a = 1.0;
 						return fragColor;
 					}*/
+					rayPos += rayStepNormal;
 				}
 
 				return fragColor;

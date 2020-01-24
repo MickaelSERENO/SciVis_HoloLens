@@ -213,6 +213,9 @@ namespace Sereno.Datasets
             }
         }
 
+        /// <summary>
+        /// the rotation to apply by the graphical object only
+        /// </summary>
         public float[] GraphicalRotation
         {
             get
@@ -267,6 +270,23 @@ namespace Sereno.Datasets
                     m_scale[i] = value[i];
                 foreach(var l in m_listeners)
                     l.OnScaleChange(this, m_scale);
+            }
+        }
+
+        /// <summary>
+        /// the scaling to apply by the graphical object only
+        /// </summary>
+        public float[] GraphicalScaling
+        {
+            get
+            {
+                float[] scale = (float[]) m_scale.Clone();
+
+                //Apply -90° angle X rotation
+                if (Parent.DatasetProperties.InverseX)
+                    scale[0] *= -1;
+                
+                return scale;
             }
         }
 

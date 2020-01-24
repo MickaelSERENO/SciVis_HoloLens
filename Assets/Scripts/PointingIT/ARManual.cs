@@ -129,7 +129,8 @@ namespace Sereno.Pointing
 
         protected virtual void OnDisable()
         {
-            HandPositionGO.SetActive(false);
+            if(HandPositionGO.gameObject != null)
+                HandPositionGO.SetActive(false);
         }
 
         // Update is called once per frame

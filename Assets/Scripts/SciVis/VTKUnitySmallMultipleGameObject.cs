@@ -113,17 +113,26 @@ namespace Sereno.SciVis
                         m_texture3D.Apply();
                         m_unloadModel.SetActive(false);
                         m_sm.TextureColor = null;
+
+                        m_material.SetTexture("_TextureData", m_texture3D);
+                        m_material.SetFloat("_MaxDimension", Math.Max(Math.Max(m_sm.Dimensions.x, m_sm.Dimensions.y), m_sm.Dimensions.z));
                     }
 
                     else if(m_sd.OwnerID != -1 && m_sd.OwnerID != m_dataProvider.GetHeadsetID()) //Check owner
                     {
                         m_unloadModel.SetActive(true);
                         m_unloadModel.GetComponent<MeshRenderer>().material.color = m_dataProvider.GetHeadsetColor(m_sd.OwnerID);
+
+                        if(m_texture3D != null)
+                        { 
+                            m_material.SetTexture("_TextureData", m_texture3D);
+                            m_material.SetFloat("_MaxDimension", Math.Max(Math.Max(m_sm.Dimensions.x, m_sm.Dimensions.y), m_sm.Dimensions.z));
+                        }
                         m_texture3D = null;
                     }
 
                     else //Default color
-                    {
+                        {
                         m_unloadModel.GetComponent<MeshRenderer>().material.color = new Color(0.5f, 0.5f, 0.5f);
                     }
                 }
@@ -143,13 +152,7 @@ namespace Sereno.SciVis
                 return;
 
             //Update the 3D texture
-            if (!m_isMiniature)
-            {
-                lock (m_sm)
-                {
-                    Check3DTexture();
-                }
-            }
+            Check3DTexture();
 
             //Draw the GameObject
             if (m_mesh != null && m_material != null && m_texture3D != null)
@@ -161,9 +164,6 @@ namespace Sereno.SciVis
 
         private void UpdateMaterial()
         {
-            m_material.SetTexture("_TextureData", m_texture3D);
-            m_material.SetFloat("_MaxDimension", Math.Max(Math.Max(m_sm.Dimensions.x, m_sm.Dimensions.y), m_sm.Dimensions.z));
-
             Vector2 minScreenPos = new Vector2(-1, -1);
             Vector2 maxScreenPos = new Vector2(1 ,  1);
 

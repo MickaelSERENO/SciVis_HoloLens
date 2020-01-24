@@ -160,21 +160,19 @@ namespace Sereno.SciVis
                             () => new float[m_subDataset.Parent.PointFieldDescs.Count+1],
                             (k, loopState, partialRes) =>
                             {
-                                for(int j = 0; j < m_dimensions.y; j++)
+                                UInt64 ind = (UInt64)(k * m_dimensions.x * m_dimensions.y);
+                                for (int j = 0; j < m_dimensions.y; j++)
                                 { 
                                     for(int i = 0; i < m_dimensions.x; i++)
-                                    { 
+                                    {
                                         UInt64 readInd = (UInt64)(i*m_descPts.Size[0]/m_dimensions.x + 
                                                                   j*m_descPts.Size[0]*m_descPts.Size[1] / m_dimensions.y +
                                                                   k*m_descPts.Size[0]*m_descPts.Size[1]*m_descPts.Size[2] / m_dimensions.z);
-                                        UInt64 ind = (UInt64)(i + j * m_dimensions.x + k * m_dimensions.x * m_dimensions.y);
-
+                                        
                                         unsafe
                                         {
                                             if (vtk.MaskValue != null && ((byte*)(vtk.MaskValue.Value))[readInd] == 0)
-                                            {
                                                 colors[ind] = new Color32(0, 0, 0, 0);
-                                            }
                                             else
                                             {
                                                 //Determine transfer function coordinate
@@ -196,6 +194,7 @@ namespace Sereno.SciVis
                                                 colors[ind].a = (byte)(255.0f * a);
                                             }
                                         }
+                                        ind += 1;
                                     }
                                 }
                                 return partialRes;

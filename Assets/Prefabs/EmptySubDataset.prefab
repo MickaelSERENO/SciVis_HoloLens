@@ -674,7 +674,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_Children:
-  - {fileID: 3689212100230453910}
+  - {fileID: 3692070205737189399}
   - {fileID: 4023539346831121137}
   - {fileID: 7848028197996443362}
   - {fileID: 5920060380213250444}
@@ -699,12 +699,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e99473e39317bf54d95fc4613f16cc91, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Outline: {fileID: 3691428218523606972}
+  Outline: {fileID: 3692070205737189771}
   ColorOnTargetPointingIT: {r: 1, g: 1, b: 1, a: 1}
   AnnotationPrefab: {fileID: 7564776657790048829, guid: 99e5be874ec5d1b408d60a1be29b157d,
     type: 3}
   DefaultMiniaturePrefab: {fileID: 5339560771976640971}
-  MapTextureGameObject: {fileID: 1768162676121256, guid: 4b12c845de844b040a436ae1138e1a94,
+  MapTextureGameObject: {fileID: 1940345517537522273, guid: 40583c425cff9e84d8cf3f0d797de5dd,
     type: 3}
 --- !u!1 &8450488724328612257
 GameObject:
@@ -948,13 +948,13 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4b12c845de844b040a436ae1138e1a94, type: 3}
---- !u!4 &3689212100230453910 stripped
+--- !u!4 &3692070205737189399 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4055624699337602, guid: 4b12c845de844b040a436ae1138e1a94,
     type: 3}
   m_PrefabInstance: {fileID: 3692070205737189652}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &3691428218523606972 stripped
+--- !u!1 &3692070205737189771 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1768162676121256, guid: 4b12c845de844b040a436ae1138e1a94,
     type: 3}

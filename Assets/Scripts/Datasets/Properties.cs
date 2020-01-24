@@ -47,6 +47,11 @@ namespace Sereno.Datasets
             public bool   RotateX = false;
 
             /// <summary>
+            /// Should we inverse the X scaling?
+            /// </summary>
+            public bool InverseX = false;
+
+            /// <summary>
             /// The map properties to display for a geographical dataset
             /// </summary>
             public DatasetMapProperties MapProperties = null;

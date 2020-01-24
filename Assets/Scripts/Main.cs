@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -924,7 +924,8 @@ namespace Sereno
                  
         public void OnDestroy()
         {
-            m_client.Close();
+            if(m_client != null)
+                m_client.Close();
         }
 
         /* Message Buffer callbacks */
