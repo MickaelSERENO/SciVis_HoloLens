@@ -136,7 +136,6 @@ namespace Sereno.Pointing
         // Update is called once per frame
         void Update()
         {
-#if ENABLE_WINMD_SUPPORT
             if (m_hdProvider != null)
             {
                 lock (m_hdProvider)
@@ -149,7 +148,7 @@ namespace Sereno.Pointing
                         m_isHandDetected = true;
                         HandDetected hd = m_hdProvider.GetOptimalHand(validHDs);
 
-                       m_handPosition = hd.Position;
+                        m_handPosition = hd.Position;
 
                         //Adjust to fingers
                         m_handPosition  += PointingFunctions.GetFingerOffset(m_headsetTransform, m_hdProvider.Handedness);
@@ -157,7 +156,7 @@ namespace Sereno.Pointing
                     }
                 }
             }
-#endif
+
             //We do this because it permits to use the same code for both the local user and the remote collaborators embodiement
             if (m_original != null)
                 HandPositionGO.transform.position = m_original.transform.localToWorldMatrix.MultiplyPoint3x4(m_targetPosition);

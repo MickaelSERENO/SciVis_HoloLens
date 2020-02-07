@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3459076679506231659}
   - component: {fileID: 4757634199374474188}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: VTKUnitySmallMultiple
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -28,7 +28,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_Children:
-  - {fileID: 456245234013893186}
+  - {fileID: 456245234013893222}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a06e8e17bddf967db805d0a800566d68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Outline: {fileID: 456245234013893598}
+  Outline: {fileID: 456245234013893613}
   ColorOnTargetPointingIT: {r: 1, g: 1, b: 1, a: 1}
   AnnotationPrefab: {fileID: 7564776657790048829, guid: 99e5be874ec5d1b408d60a1be29b157d,
     type: 3}
@@ -53,9 +53,12 @@ MonoBehaviour:
   MapTextureGameObject: {fileID: 1940345517537522273, guid: 40583c425cff9e84d8cf3f0d797de5dd,
     type: 3}
   ColorMaterial: {fileID: 2100000, guid: 41d71bb2eb7b887429c3daf009b12d6b, type: 2}
+  ColorMaterialDownScale: {fileID: 2100000, guid: 799b58375a6b43b47a64014b933c014a,
+    type: 2}
+  CopyTextureMaterial: {fileID: 2100000, guid: 45d3a087a687c5348878b3c6e35ede44, type: 2}
   VTKMiniaturePrefab: {fileID: 4757634199374474188}
-  UnloadModel: {fileID: 2534866581884222612, guid: 525e1f884bd21294893183a160750c53,
-    type: 3}
+  ResolutionScaling: 0.66
+  UnloadModel: {fileID: 100000, guid: 525e1f884bd21294893183a160750c53, type: 3}
 --- !u!1001 &456245234013893441
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -113,13 +116,13 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4b12c845de844b040a436ae1138e1a94, type: 3}
---- !u!1 &456245234013893598 stripped
+--- !u!1 &456245234013893613 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1768162676121256, guid: 4b12c845de844b040a436ae1138e1a94,
     type: 3}
   m_PrefabInstance: {fileID: 456245234013893441}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &456245234013893186 stripped
+--- !u!4 &456245234013893222 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4055624699337602, guid: 4b12c845de844b040a436ae1138e1a94,
     type: 3}

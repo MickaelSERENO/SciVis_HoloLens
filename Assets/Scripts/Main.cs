@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -20,6 +20,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.XR.WSA.Sharing;
+using UnityEngine.XR;
 
 namespace Sereno
 {
@@ -110,7 +111,7 @@ namespace Sereno
         const float HEADSET_TOP = 0.15f;
 
         /* Private attributes*/
-#region
+        #region
         /// <summary>
         /// The application properties
         /// </summary>
@@ -245,7 +246,7 @@ namespace Sereno
         /// The HandDetector provider
         /// </summary>
         private HandDetectorProvider m_hdProvider = new HandDetectorProvider();
-        
+                
 #if ENABLE_WINMD_SUPPORT
         /// <summary>
         /// The root spatial coordinate system created by Unity
@@ -297,6 +298,7 @@ namespace Sereno
         /// Should we update the pointing ID
         /// </summary>
         private bool m_updatePointingID = false;
+
         #endregion
 
         /* Public attributes*/
@@ -389,6 +391,8 @@ namespace Sereno
 
         void Start()
         {
+            Camera.main.opaqueSortMode = UnityEngine.Rendering.OpaqueSortMode.FrontToBack;
+
             m_appProperties = Properties.ParseProperties();
 
             //Default text helpful to bind headset to tablet
@@ -425,44 +429,33 @@ namespace Sereno
                 AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
-                addVTKMsg.NbPtFieldValueIndices = 2;
+                addVTKMsg.NbPtFieldValueIndices = 1;
                 addVTKMsg.Path = "Agulhas_10_resampled.vtk";
-                addVTKMsg.PtFieldValueIndices = new int[] { 1,2 };
+                addVTKMsg.PtFieldValueIndices = new int[] { 1 };
                 OnAddVTKDataset(null, addVTKMsg);
-                                
-                AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
-                addSDMsg.DatasetID = 0;
-                addSDMsg.SubDatasetID = 0;
-                addSDMsg.Name = "s";
-                OnAddSubDataset(null, addSDMsg);
 
-                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
-                moveVTKMsg.DataID = 0;
-                moveVTKMsg.SubDataID = 0;
-                moveVTKMsg.Position = new float[3] { 0, 0, 1 };
-                moveVTKMsg.HeadsetID = -1;
-                OnMoveDataset(null, moveVTKMsg);
-                
-                ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
-                scaleMsg.DataID = 0;
-                scaleMsg.SubDataID = 0;
-                scaleMsg.HeadsetID = -1;
-                scaleMsg.Scale = new float[3] { 0.5f, 0.5f, 0.5f };
-                OnScaleDataset(null, scaleMsg);
-                Task.Run(() =>
+                for (int i = 0; i < 1; i++)
                 {
-                    Debug.Log("Start TF update");
-                    SubDataset sd = GetSubDataset(0, 0);
-                    while (sd.Parent.IsLoaded == false)
-                        Thread.Sleep(100);
+                    AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
+                    addSDMsg.DatasetID = 0;
+                    addSDMsg.SubDatasetID = i;
+                    addSDMsg.Name = "s";
+                    OnAddSubDataset(null, addSDMsg);
 
-                    for (int i = 0; i < 100; i++) //Test if the application can handle multiple "update" on TF
-                    {
-                        lock (sd)
-                            sd.TransferFunction = sd.TransferFunction;
-                    }
-                    Debug.Log("End TF update");
-                });
+                    MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                    moveVTKMsg.DataID = 0;
+                    moveVTKMsg.SubDataID = i;
+                    moveVTKMsg.Position = new float[3] { 0, 0, 1+0.5f*i };
+                    moveVTKMsg.HeadsetID = -1;
+                    OnMoveDataset(null, moveVTKMsg);
+
+                    ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
+                    scaleMsg.DataID = 0;
+                    scaleMsg.SubDataID = i;
+                    scaleMsg.HeadsetID = -1;
+                    scaleMsg.Scale = new float[3] { 0.5f, 0.5f, 0.5f };
+                    OnScaleDataset(null, scaleMsg);
+                }
 
                 StartAnnotationMessage annotMsg = new StartAnnotationMessage(ServerType.GET_START_ANNOTATION);
                 annotMsg.DatasetID = 0;
@@ -841,14 +834,27 @@ namespace Sereno
         private void HandleHeadsetStatusSending()
         {
             //Send camera status. No need to send status if there is no root anchor (i.e, synchronization)
-            if(m_rootAnchorGO != null && m_client.IsConnected() && m_client.HeadsetConnectionSent)
+            if(m_client.IsConnected() && m_client.HeadsetConnectionSent)
             {
                 HeadsetUpdateData headsetData = new HeadsetUpdateData();
 
-                headsetData.Position = GetRelativePositionToAnchor(Camera.main.transform.position);
-                
+                Quaternion rel;
+
+                if (m_rootAnchorGO != null)
+                {
+                    headsetData.Position = GetRelativePositionToAnchor(Camera.main.transform.position);
+                    rel = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * Camera.main.transform.rotation;
+                }
+                else
+                {
+                    headsetData.Position = new float[3];
+                    for (int i = 0; i < 3; i++)
+                        headsetData.Position[i] = Camera.main.transform.position[i];
+                    rel = Camera.main.transform.rotation;
+                }
+
+
                 //The relative orientation
-                Quaternion rel = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * Camera.main.transform.rotation;
                 headsetData.Rotation = new float[4]{rel[3], rel[0], rel[1], rel[2]};
 
                 //The current pointing data
@@ -887,9 +893,18 @@ namespace Sereno
         }
         
         // Update is called once per frame
-        void Update()
+        void LateUpdate()
         {
+            /*if (m_oldEyeWidth != XRSettings.eyeTextureWidth)
+            {
+                Screen.SetResolution(Screen.width / 4, Screen.height / 4, Screen.fullScreen);
+                //ScalableBufferManager.ResizeBuffers(0.2f, 0.2f);
+                //Screen.SetResolution(XRSettings.eyeTextureWidth / 5, XRSettings.eyeTextureHeight / 5, true);
+                m_oldEyeWidth = XRSettings.eyeTextureWidth;
+            }*/
+
             HandleSpatialCoordinateSystem();
+
             lock(this)
             {
                 HandleDatasetsLoaded();
@@ -900,14 +915,7 @@ namespace Sereno
                 HandleRandomText();
                 HandleHeadsetStatusLoaded();
                 HandleHeadsetStatusSending();
-                m_connectionLost = false;
-            }
-        }
 
-        void LateUpdate()
-        {
-            lock(this)
-            {
                 m_targetedGameObject = null;
 
                 //Update intersection between each datasets rendered and the selected pointing interaction technique
@@ -919,6 +927,9 @@ namespace Sereno
                        targetPos.z >= -0.5f && targetPos.z <= 0.5f)
                         m_targetedGameObject = m_currentPointingIT.CurrentSubDataset;
                 }
+
+
+                m_connectionLost = false;
             }
         }
                  

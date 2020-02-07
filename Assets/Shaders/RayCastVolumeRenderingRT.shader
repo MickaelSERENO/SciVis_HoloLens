@@ -1,4 +1,4 @@
-﻿ Shader "Sereno/RayCastVolumeRendering"
+﻿ Shader "Sereno/RayCastVolumeRenderingRT"
 {
     Properties
     {
@@ -12,7 +12,7 @@
 		Lighting Off
 		Cull Off
 		ZWrite Off
-		Blend SrcAlpha OneMinusSrcAlpha
+		Blend One Zero
 		Fog {Mode Off}
 
 		Pass

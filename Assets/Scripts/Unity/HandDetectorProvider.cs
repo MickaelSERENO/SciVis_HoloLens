@@ -75,8 +75,8 @@ namespace Sereno.Unity.HandDetector
         {
 #if ENABLE_WINMD_SUPPORT
             //Create the HandDetector object
-            m_handDetector = await Sereno.HandDetector.HandDetector.CreateAsync(null);
-            await m_handDetector.InitializeAsync(this);
+            //m_handDetector = await Sereno.HandDetector.HandDetector.CreateAsync(null);
+            //await m_handDetector.InitializeAsync(this);
 #endif
         }
 
@@ -224,6 +224,7 @@ namespace Sereno.Unity.HandDetector
                 }
             }
         }
+#endif
 
         /// <summary>
         /// Get the hands that are not on the body.
@@ -327,7 +328,6 @@ namespace Sereno.Unity.HandDetector
             }
             return hd;
         }
-#endif
 
         /// <summary>
         /// The hands currently in detection.

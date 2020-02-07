@@ -88,7 +88,7 @@ namespace Sereno.Network
         /// <summary>
         /// The number of time in micro seconds that the reading and writing threads sleep if no data is to be sent/read or in case of disconnection
         /// </summary>
-		private const int THREAD_SLEEP = 5;
+		private const int THREAD_SLEEP = 15;
 
         /******************************/
         /*******PUBLIC FUNCTIONS*******/
@@ -248,19 +248,14 @@ namespace Sereno.Network
         /// </summary>
         private void ReadThread()
 		{
-            bool sleep = false;
 			//The closed command will be sent by "Close()" function
 			while(!m_closed) 
 			{
-                if(sleep)
-                    Thread.Sleep(THREAD_SLEEP);
-                sleep = false;
-
                 //If the socket is not created, recreate it and try to reconnect
-                lock(this)
+                bool askClose = false;
+                if(m_sock == null)
                 {
-                    bool askClose = false;
-                    if(m_sock == null)
+                    lock (this)
                     {
                         try
                         {
@@ -279,11 +274,14 @@ namespace Sereno.Network
                             askClose = true;
                         }
                     }
+                }
 
-                    //Data available
-                    //The message will be sent to HandleMessage
-                    else if(m_sock.Available > 0)
-                    {
+                //Data available
+                //The message will be sent to HandleMessage
+                if(m_sock.Poll(THREAD_SLEEP, SelectMode.SelectRead))
+                {
+                    if(m_sock.Available > 0)
+                    { 
                         //Receive data and handle it
                         byte[] dataBuf = new byte[m_sock.Available];
                         SocketError err;
@@ -309,19 +307,19 @@ namespace Sereno.Network
                     }
 
                     //Server disconnected
-                    else if(m_sock.Poll(THREAD_SLEEP, SelectMode.SelectRead) && m_sock.Available == 0)
+                    else
                     {
                         FiredStatus(ConnectionStatus.DISCONNECTED);
                         askClose = true;
                     }
 
-                    if(askClose)
-                    {
-                        if(m_sock != null)
-                            m_sock.Close();
-                        sleep = true;
-                        m_sock = null;
-                    }
+                }
+
+                if (askClose)
+                {
+                    if(m_sock != null)
+                        m_sock.Close();
+                    m_sock = null;
                 }
             }
 		}
@@ -366,9 +364,7 @@ namespace Sereno.Network
                         m_sock.Send(msg);
                     }
                     catch (SocketException)
-                    {
-                        //The disconnection is handled by the reading thread
-                    }
+                    {}
                 }
             }
         }

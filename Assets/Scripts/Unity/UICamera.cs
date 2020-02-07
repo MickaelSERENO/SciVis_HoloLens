@@ -11,10 +11,9 @@ namespace Sereno
 
         void Update()
         {
-            Quaternion q = transform.rotation;
-            q.z = 0;
-            q.x = 0;
-            transform.rotation = q.normalized;
+            Vector3 euler = transform.rotation.eulerAngles;
+            euler.z = 0;
+            transform.rotation = Quaternion.Euler(euler);
         }
     }
 }

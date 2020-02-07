@@ -271,7 +271,7 @@ namespace Sereno.SciVis
         public virtual void LateUpdate()
         {
             //Update the 3D transform of this game object
-            lock (this)
+            lock(this)
             {
                 if (m_dataProvider != null && m_dataProvider.GetTargetedGameObject() == this)
                 {

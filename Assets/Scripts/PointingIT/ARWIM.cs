@@ -158,7 +158,6 @@ namespace Sereno.Pointing
         // Update is called once per frame
         protected virtual void Update()
         {
-#if ENABLE_WINMD_SUPPORT
             if (m_hdProvider != null)
             {
                 lock (m_hdProvider)
@@ -180,7 +179,7 @@ namespace Sereno.Pointing
                     }
                 }
             }
-#endif
+
             //We do this because it permits to use the same code for both the local user and the remote collaborators embodiement
             if (m_wim != null)
                 HandPositionGO.transform.position = m_wim.transform.localToWorldMatrix.MultiplyPoint3x4(m_targetPosition);
