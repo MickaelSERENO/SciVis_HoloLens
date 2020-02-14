@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Burst;
 using UnityEngine;
 
 namespace Sereno.SciVis
@@ -39,6 +40,7 @@ namespace Sereno.SciVis
             m_alphaMax = alphaMax;
         }
 
+        [BurstCompile(CompileSynchronously = true)]
         public override float ComputeAlpha(float[] values)
         {
             if(values.Length < GetDimension())
@@ -65,6 +67,7 @@ namespace Sereno.SciVis
         /// </summary>
         /// <param name="values">The values to take account of</param>
         /// <returns>values[0]</returns>
+        [BurstCompile(CompileSynchronously = true)]
         public override float ComputeColor(float[] values)
         {
             float mag = 0;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Unity.Burst;
 
 namespace Sereno.Datasets
 {
@@ -51,6 +52,7 @@ namespace Sereno.Datasets
             }
         }
 
+        [BurstCompile(CompileSynchronously = true)]
         public override Task<int> LoadValues()
         {
             return Task.Run(() =>
@@ -159,6 +161,7 @@ namespace Sereno.Datasets
         /// <summary>
         /// Compute the multi dimensionnal gradient of this dataset
         /// </summary>
+        [BurstCompile(CompileSynchronously = true)]
         private void ComputeMultiDGradient()
         {
             if (m_ptFieldDescs.Count == 0)

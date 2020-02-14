@@ -1,14 +1,16 @@
 using System;
+using Unity.Burst;
 using UnityEngine;
 
 //For this file, 
 
 namespace Sereno
-{    
+{
     /// <summary>
     /// Hue Saturation Value color model https://en.wikipedia.org/wiki/HSL_and_HSV
     /// </summary>
-    public class HSVColor
+    [BurstCompile(CompileSynchronously = true)]
+    public struct HSVColor
     {
         /// <summary>
         /// HSV Constructor
@@ -27,6 +29,7 @@ namespace Sereno
 
         public HSVColor(Color color)
         {
+            H = S = V = A = 0;
             SetFromRGB(color);
         }
 
@@ -112,7 +115,8 @@ namespace Sereno
     /// <summary>
     /// the XYZ Color space : https://en.wikipedia.org/wiki/_1931_color_space#Meaning_of_X,_Y_and_Z
     /// </summary>
-    public class XYZColor
+    [BurstCompile(CompileSynchronously = true)]
+    public struct XYZColor
     {
         /// <summary>
         /// Constructor
@@ -185,7 +189,8 @@ namespace Sereno
     /// <summary>
     /// the LAB colorspace https://en.wikipedia.org/wiki/LAB_color_space
     /// </summary>
-    public class LABColor
+    [BurstCompile(CompileSynchronously = true)]
+    public struct LABColor
     {
         /// <summary>
         /// Constructor copy
@@ -205,6 +210,7 @@ namespace Sereno
         /// <param name="color">The RGB color to transform</param>
         public LABColor(Color color)
         {
+            L = A = B = Transparency = 0;
             SetFromRGB(color);
         }
 
@@ -214,6 +220,7 @@ namespace Sereno
         /// <param name="xyz">The XYZ color to transform</param>
         public LABColor(XYZColor xyz)
         {
+            L = A = B = Transparency = 0;
             SetFromXYZ(xyz);
         }
 
@@ -346,29 +353,30 @@ namespace Sereno
         /// <summary>
         /// The L component
         /// </summary>
-        public float L{get; set;}
+        public float L;
 
         /// <summary>
         /// The A component
         /// </summary>
-        public float A{get; set;}
+        public float A;
 
         /// <summary>
         /// The B component
         /// </summary>
-        public float B{get; set;}
+        public float B;
 
 
         /// <summary>
         /// The transparency
         /// </summary>
-        public float Transparency{get; set;}
+        public float Transparency;
     }
 
     /// <summary>
     /// LUV colorspace https://en.wikipedia.org/wiki/CIELUV
     /// </summary>
-    public class LUVColor
+    [BurstCompile(CompileSynchronously = true)]
+    public struct LUVColor
     {
         /// <summary>
         /// Copy constructor
@@ -379,6 +387,7 @@ namespace Sereno
             L = color.L;
             U = color.U;
             V = color.V;
+            A = color.A;
         }
 
         /// <summary>
@@ -402,6 +411,7 @@ namespace Sereno
         /// <param name="color">The RGB color value</param>
         public LUVColor(Color color)
         {
+            L = U = V = A = 0;
             SetFromRGB(color);
         }
 
@@ -411,6 +421,7 @@ namespace Sereno
         /// <param name="xyz">The XYZ color value</param>
         public LUVColor(XYZColor xyz)
         {
+            L = U = V = A = 0;
             SetFromXYZ(xyz);
         }
 
@@ -550,7 +561,8 @@ namespace Sereno
     }
 
     /* \brief The MSH Colorspace (see Diverging Color Maps for Scientific Visualization)*/
-    public class MSHColor
+    [BurstCompile(CompileSynchronously = true)]
+    public struct MSHColor
     {
         /// <summary>
         /// Copy constructor
@@ -561,6 +573,7 @@ namespace Sereno
             M = copy.M;
             S = copy.S;
             H = copy.H;
+            A = copy.A;
         }
 
         /// <summary>
@@ -584,6 +597,7 @@ namespace Sereno
         /// <param name="color">The RGB color to convert</param>
         public MSHColor(Color color)
         {
+            M = S = H = A = 0;
             FromRGB(color);
         }
 
@@ -593,6 +607,7 @@ namespace Sereno
         /// <param name="color">The XYZ color to convert</param>
         public MSHColor(XYZColor color)
         {
+            M = S = H = A = 0;
             FromLABColor(new LABColor(color));
         }
 
@@ -602,6 +617,7 @@ namespace Sereno
         /// <param name="color">the CIELAB color to convert</param>
         public MSHColor(LABColor color)
         {
+            M = S = H = A = 0;
             FromLABColor(color);
         }
 
