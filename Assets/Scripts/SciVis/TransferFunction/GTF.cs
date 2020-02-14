@@ -41,7 +41,7 @@ namespace Sereno.SciVis
 
         public override float ComputeAlpha(float[] values)
         {
-            if(values.Length < m_scale.Length || values.Length < m_center.Length)
+            if(values.Length < GetDimension())
                 return -1;
             
             float rMag = 0;
@@ -49,12 +49,15 @@ namespace Sereno.SciVis
             {
                 if(m_scale[i] != 0.0f)
                 {
-                    float r = (values[i] - m_center[i]) / m_scale[i];
+                    float r = (values[i] - m_center[i])/m_scale[i];
                     rMag += r * r;
                 }
             }
 
-            return (float)(Math.Min(m_alphaMax*Math.Exp(-rMag), 1.0f));
+            float val = (float)(m_alphaMax * Math.Exp(-rMag));
+            if (val > 1.0f)
+                return 1.0f;
+            return val;
         }
 
         /// <summary>
@@ -65,10 +68,18 @@ namespace Sereno.SciVis
         public override float ComputeColor(float[] values)
         {
             float mag = 0;
-            for (int i = 0; i < m_scale.Length; i++)
+            for(int i = 0; i < m_scale.Length; i++)
                 mag += values[i] * values[i];
             mag = (float)(Math.Sqrt(mag / m_scale.Length));
             return mag;
+        }
+
+        public override TransferFunction Clone()
+        {
+            GTF g = new GTF((float[])m_center.Clone(), (float[])m_scale.Clone(), m_alphaMax);
+            g.ColorMode = ColorMode;
+
+            return g;
         }
 
         public override uint GetDimension() { return (uint)(m_scale.Length); }

@@ -7,12 +7,12 @@
 
 	SubShader
 	{
-		Tags{ "Queue" = "Transparent" "RenderType" = "Transparent" }
+		Tags{ "Queue" = "Transparent" "RenderType" = "Transparent" "IgnoreProjector" = "True"}
 
 		Lighting Off
 		Cull Off
 		ZWrite Off
-		Blend One Zero
+		//Blend One Zero
 		Fog {Mode Off}
 
 		Pass

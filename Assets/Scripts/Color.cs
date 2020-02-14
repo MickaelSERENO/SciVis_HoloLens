@@ -143,10 +143,17 @@ namespace Sereno
 
         public Color ToRGB()
         {
-            return new Color(Math.Min(1.0f,  3.2405f*X - 1.5371f*Y - 0.4985f*Z),
-                             Math.Min(1.0f, -0.9692f*X + 1.8760f*Y + 0.0415f*Z),
-                             Math.Min(1.0f,  0.0556f*X - 0.2040f*Y + 1.0572f*Z),
-                             A);
+            Color c = new Color(3.2405f*X - 1.5371f*Y - 0.4985f*Z,
+                               -0.9692f*X + 1.8760f*Y + 0.0415f*Z,
+                                0.0556f*X - 0.2040f*Y + 1.0572f*Z,
+                                A);
+            if (c.r > 1.0f)
+                c.r = 1.0f;
+            if (c.b > 1.0f)
+                c.b = 1.0f;
+            if (c.g > 1.0f)
+                c.g = 1.0f;
+            return c;
         }
 
         /// <summary>
@@ -262,7 +269,6 @@ namespace Sereno
                                 XYZColor.Reference.Y * InvF((float)((L+16.0)/116.0)),
                                 XYZColor.Reference.Z * InvF((float)((L+16.0)/116.0 - B/200.0)),
                                 Transparency);
-
         }
 
         /// <summary>
@@ -335,7 +341,7 @@ namespace Sereno
         /// </summary>
         /// <param name="v">the value to determine</param>
         /// <returns>v^/3.0 if v > 6.0/29.0</returns>
-        private float InvF(float v) => (float)(v > 6.0/29.0 ? v*v*v : 0.128418*(v - 4.0/29.0));
+        private float InvF(float v) => (float)(v > 6.0f/29.0f ? v*v*v : 0.128418f*(v - 4.0f/29.0f));
 
         /// <summary>
         /// The L component
@@ -627,7 +633,11 @@ namespace Sereno
                m2.S > 0.05 &&
                radDiff > Math.PI/3.0f)
             {
-                float midM = (float)(Math.Max(Math.Max(m1.M, m2.M), 98));
+                float midM = m1.M;
+                if (midM < m2.M)
+                    midM = m2.M;
+                if (midM < 98)
+                    midM = 98;
                 if(interp < 0.5f)
                 {
                     m2.M = midM;
@@ -701,7 +711,7 @@ namespace Sereno
         /// Convert a MSH colorspace value into a XYZ colorspace value
         /// </summary>
         /// <returns>The XYZ colorspace value</returns>
-        public XYZColor ToXYZColor()
+        public XYZColor ToXYZ()
         {
             return ToLABColor().ToXYZ();
         }

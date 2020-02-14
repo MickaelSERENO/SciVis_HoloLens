@@ -233,7 +233,7 @@ namespace Sereno.SciVis
 
         public void OnAddAnnotation(SubDataset dataset, Annotation annot)
         {
-            lock (this)
+            lock(this)
             {
                 m_annotationGOsInCreation.Add(annot);
             }
@@ -241,7 +241,7 @@ namespace Sereno.SciVis
 
         public void OnClearAnnotations(SubDataset dataset)
         {
-            lock (this)
+            lock(this)
             {
                 foreach (Annotation annot in dataset.Annotations)
                     m_annotationGOsInRemoving.Add(annot);
@@ -250,7 +250,7 @@ namespace Sereno.SciVis
 
         public void SetSubDatasetState(SubDataset sd)
         {
-            lock (m_sd)
+            lock(this)
             {
                 m_sd.RemoveListener(this);
                 m_sd = sd;

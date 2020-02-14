@@ -101,7 +101,7 @@ namespace Sereno.SciVis
         /// </summary>
         public void UpdateTF()
         {
-            Task.Run(() =>
+            Task.Factory.StartNew(() =>
             {
                 //First, discard multiple call to this function (only two calls are available)
                 lock (m_isTFUpdateLock)
@@ -116,28 +116,21 @@ namespace Sereno.SciVis
                 }
 
                 //The wait to update the TF
-                lock(m_updateTFLock)
+                lock (m_updateTFLock)
                 {
                     //Another one can wait to update the TF if it wants (max: two parallel call, one pending, one executing)
                     lock (m_isTFUpdateLock)
                         m_waitToUpdateTF = false;
 
-                    //This error is rare but exists (forgot its name)
-                    lock (m_isTFUpdateLock)
-                        if (m_waitToUpdateTF == true)
-                            return;
-                    
-
                     TransferFunction tf = null;
-                    lock(m_subDataset)
-                        tf = m_subDataset.TransferFunction;
-                    
+                    lock (m_subDataset)
+                        tf = (TransferFunction)m_subDataset.TransferFunction.Clone();
+
                     Debug.Log("Updating TF...");
 
                     VTKDataset vtk = (VTKDataset)m_subDataset.Parent;
 
-
-                    if (vtk.IsLoaded == false || tf == null || tf.GetDimension() > vtk.PointFieldDescs.Count+1 ||
+                    if (vtk.IsLoaded == false || tf == null || tf.GetDimension() > vtk.PointFieldDescs.Count + 1 ||
                        (m_subDataset.OwnerID != -1 && m_subDataset.OwnerID != m_dataProvider.GetHeadsetID())) //Not a public subdataset
                     {
                         lock (this)
@@ -146,62 +139,71 @@ namespace Sereno.SciVis
                         }
                         return;
                     }
-                    
+
                     else
                     {
                         unsafe
                         {
-                            short[] colors = new short[2*m_dimensions.x * m_dimensions.y * m_dimensions.z];
+                            short[] colors = new short[m_dimensions.x * m_dimensions.y * m_dimensions.z]; //short because RGBA4444 == 2 bytes -> short
 
                             List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
                             Parallel.For(0, m_dimensions.z,
-                                () => new float[m_subDataset.Parent.PointFieldDescs.Count+1],
-                                (k, loopState, partialRes) =>
+                                k =>
                                 {
-
+                                    float[] partialRes = new float[ptDescs.Count + 1];
                                     fixed (short* pcolors = colors)
                                     {
                                         UInt64 ind = (UInt64)(k * m_dimensions.x * m_dimensions.y);
                                         for (int j = 0; j < m_dimensions.y; j++)
-                                        { 
-                                            for(int i = 0; i < m_dimensions.x; i++)
+                                        {
+                                            //Pre compute the indice up to J--K coordinate
+                                            UInt64 readIntJK = (UInt64)(m_descPts.Size[0] * (j * m_descPts.Size[1] / m_dimensions.y) +
+                                                                        m_descPts.Size[0] * m_descPts.Size[1] * (k * m_descPts.Size[2] / m_dimensions.z));
+
+                                            for (int i = 0; i < m_dimensions.x; i++)
                                             {
-                                                UInt64 readInd = (UInt64)(i*m_descPts.Size[0]/m_dimensions.x + 
-                                                                            m_descPts.Size[0]*(j*m_descPts.Size[1] / m_dimensions.y) +
-                                                                            m_descPts.Size[0]*m_descPts.Size[1]*(k*m_descPts.Size[2]/m_dimensions.z));
+                                                UInt64 readInd = (UInt64)(i * m_descPts.Size[0] / m_dimensions.x) + readIntJK;
 
                                                 if (vtk.MaskValue != null && ((byte*)(vtk.MaskValue.Value))[readInd] == 0)
                                                     pcolors[ind] = 0;
                                                 else
                                                 {
-                                                    //Determine transfer function coordinate
+                                                    //Determine transfer function coordinates
                                                     for (int l = 0; l < ptDescs.Count; l++)
                                                     {
                                                         if (ptDescs[l].NbValuesPerTuple == 1)
                                                             partialRes[l] = (ptDescs[l].Value.ReadAsFloat(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
                                                         else
-                                                            partialRes[l] = ptDescs[l].ReadMagnitude(readInd);
+                                                            partialRes[l] = (ptDescs[l].ReadMagnitude(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
                                                     }
 
-                                                    partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd];
+                                                    partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd]; //In case we need the gradient
 
                                                     float t = tf.ComputeColor(partialRes);
                                                     float a = tf.ComputeAlpha(partialRes);
 
                                                     Color c = SciVisColor.GenColor(tf.ColorMode, t);
-                                                    pcolors[ind] = (short)((short)(Math.Min(15, (int)(16*c.r)) << 12) + (short)(Math.Min(15, (int)(16 * c.g)) << 8) +
-                                                                            (short)(Math.Min(15, (int)(16*c.b)) << 4)  + (short)(Math.Min(15, (int)(16 * a))));
+                                                    short r = (short)(16 * c.r);
+                                                    if (r > 15)
+                                                        r = 15;
+                                                    short g = (short)(16 * c.g);
+                                                    if (g > 15)
+                                                        g = 15;
+                                                    short b = (short)(16 * c.b);
+                                                    if (b > 15)
+                                                        b = 15;
+                                                    short _a = (short)(16 * a);
+                                                    if (_a > 15)
+                                                        _a = 15;
+                                                    pcolors[ind] = (short)((r << 12) + (g << 8) + //RGBA4444 color format
+                                                                           (b << 4)  + _a);
                                                 }
                                                 ind += 1;
                                             }
                                         }
-                                        return partialRes;
                                     }
-                                },
-                                (partialRes) =>
-                                {}
-                            );
-                        
+                                });
+
                             lock (this)
                             {
                                 m_textureColor = colors;

@@ -43,6 +43,12 @@ namespace Sereno.SciVis
         public abstract float ComputeAlpha(float[] values);
 
         /// <summary>
+        /// Clone this object
+        /// </summary>
+        /// <returns></returns>
+        public abstract TransferFunction Clone();
+
+        /// <summary>
         /// The ColorMode bound to this Transfer Function
         /// </summary>
         public ColorMode ColorMode { get => m_mode; set => m_mode = value; }

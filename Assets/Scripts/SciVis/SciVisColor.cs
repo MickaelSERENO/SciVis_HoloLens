@@ -37,13 +37,13 @@ namespace Sereno.SciVis
                 {
                     if(t < 0.5f)
                         return (coldColorLUV*(1.0f-2.0f*t) + whiteColorLUV*(2.0f*t)).ToXYZ().ToRGB();
-                    return (whiteColorLUV*(2.0f-2.0f-t) + warmColorLUV*(2.0f*t-1.0f)).ToXYZ().ToRGB();
+                    return (whiteColorLUV*(2.0f-2.0f*t) + warmColorLUV*(2.0f*t-1.0f)).ToXYZ().ToRGB();
                 }
                 case ColorMode.WARM_COLD_MSH:
                 {
                     MSHColor col = new MSHColor(0.0f, 0.0f, 0.0f);
                     col.FromColorInterpolation(coldColorMSH, warmColorMSH, t);
-                    return col.ToXYZColor().ToRGB();
+                    return col.ToXYZ().ToRGB();
                 }
             }
 

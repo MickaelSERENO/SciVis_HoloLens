@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -391,8 +391,6 @@ namespace Sereno
 
         void Start()
         {
-            Camera.main.opaqueSortMode = UnityEngine.Rendering.OpaqueSortMode.FrontToBack;
-
             m_appProperties = Properties.ParseProperties();
 
             //Default text helpful to bind headset to tablet
@@ -412,7 +410,7 @@ namespace Sereno
 
             //Start the hand detector
             m_hdProvider.Smoothness = 0.75f;
-            m_hdProvider.InitializeHandDetector();
+            //m_hdProvider.InitializeHandDetector();
 
             //Initialize our selection techniques
             GoGoGameObject.Init(m_hdProvider);
@@ -895,14 +893,6 @@ namespace Sereno
         // Update is called once per frame
         void LateUpdate()
         {
-            /*if (m_oldEyeWidth != XRSettings.eyeTextureWidth)
-            {
-                Screen.SetResolution(Screen.width / 4, Screen.height / 4, Screen.fullScreen);
-                //ScalableBufferManager.ResizeBuffers(0.2f, 0.2f);
-                //Screen.SetResolution(XRSettings.eyeTextureWidth / 5, XRSettings.eyeTextureHeight / 5, true);
-                m_oldEyeWidth = XRSettings.eyeTextureWidth;
-            }*/
-
             HandleSpatialCoordinateSystem();
 
             lock(this)
@@ -1435,6 +1425,7 @@ namespace Sereno
                 else if(m_wasConnected)
                 {
                     m_connectionLost = true;
+                    m_wasConnected = false;
 
                     //Restore anchor data
                     if (m_transferBatch != null)

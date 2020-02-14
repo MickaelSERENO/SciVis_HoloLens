@@ -402,8 +402,8 @@ GameObject:
   - component: {fileID: 934722973}
   - component: {fileID: 934722972}
   - component: {fileID: 934722970}
-  - component: {fileID: 934722969}
   - component: {fileID: 934722974}
+  - component: {fileID: 934722969}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -433,12 +433,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 934722967}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bf98dd1206224111a38765365e98e207, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  setCursorInvisibleWhenFocusLocked: 1
+  setCursorInvisibleWhenFocusLocked: 0
   maxGazeCollisionDistance: 10
   raycastLayerMasks:
   - serializedVersion: 2
@@ -475,7 +475,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 934722967}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!20 &934722973
 Camera:
   m_ObjectHideFlags: 0
@@ -514,9 +514,9 @@ Camera:
   m_TargetEye: 3
   m_HDR: 1
   m_AllowMSAA: 1
-  m_AllowDynamicResolution: 1
+  m_AllowDynamicResolution: 0
   m_ForceIntoRT: 0
-  m_OcclusionCulling: 1
+  m_OcclusionCulling: 0
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
 --- !u!114 &934722974

@@ -131,8 +131,8 @@ namespace Sereno.SciVis
             m_sm = sm;
 
             //Compute the Mesh. A regular rectangle where ray casting will be applied
-            Vector2[] meshUV    = new Vector2[4];
             Vector3[] meshPos   = new Vector3[4];
+            Vector2[] meshUV = new Vector2[4];
             int[]     meshFaces = new int[6];
 
             meshPos[0] = new Vector3(-1, -1, 0);
@@ -157,8 +157,8 @@ namespace Sereno.SciVis
             //Quad screen mesh
             m_screenTextureMesh = new Mesh();
             m_screenTextureMesh.vertices  = meshPos;
-            m_screenTextureMesh.triangles = meshFaces;
             m_screenTextureMesh.uv        = meshUV;
+            m_screenTextureMesh.triangles = meshFaces;
             m_screenTextureMesh.UploadMeshData(false);
             m_screenTextureMesh.bounds = new Bounds(new Vector3(0, 0, 0), new Vector3(1, 1, 1));
 
@@ -188,8 +188,6 @@ namespace Sereno.SciVis
                         m_unloadModel.SetActive(true);
                         m_unloadModel.GetComponent<MeshRenderer>().material.color = m_dataProvider.GetHeadsetColor(m_sd.OwnerID);
                         m_texture3D = null;
-                        m_materialNormalScale.SetTexture("_TextureData", m_texture3D);
-                        m_materialDownScale.SetTexture("_TextureData", m_texture3D);
                     }
 
                     else if (m_sm.TextureColor != null) //New data?
@@ -198,6 +196,7 @@ namespace Sereno.SciVis
                         m_texture3D.wrapModeU  = TextureWrapMode.Clamp;
                         m_texture3D.wrapModeV  = TextureWrapMode.Clamp;
                         m_texture3D.wrapModeW  = TextureWrapMode.Clamp;
+                        m_texture3D.filterMode = FilterMode.Trilinear; 
                         m_texture3D.SetPixelData<short>(m_sm.TextureColor, 0);
                         m_texture3D.Apply();
                         m_unloadModel.SetActive(false);
@@ -205,6 +204,8 @@ namespace Sereno.SciVis
 
                         m_materialNormalScale.SetTexture("_TextureData", m_texture3D);
                         m_materialDownScale.SetTexture("_TextureData", m_texture3D);
+
+                        UpdateMaterial();
                     }
 
                     else if(m_texture3D == null) //Default color
@@ -218,9 +219,13 @@ namespace Sereno.SciVis
         public override void OnDestroy()
         {
             base.OnDestroy();
+
             //Release all the render textures allocated
             foreach (var v in m_renderTextures)
+            {
                 v.Value.RenderTexture.Release();
+                v.Key.RemoveCommandBuffer(CameraEvent.AfterForwardOpaque, v.Value.CommandBuffer);
+            }
         }
 
         public override void LateUpdate()
@@ -236,11 +241,12 @@ namespace Sereno.SciVis
             //Draw the GameObject on render texture if the scaling needs to diminish
             if(ResolutionScaling < 1f)
                 RenderToTextures();
-
             else if(m_mesh != null && m_materialNormalScale != null && m_texture3D != null)
             {
-                UpdateMaterial(Camera.main);
-                Graphics.DrawMesh(m_mesh, transform.localToWorldMatrix, m_materialNormalScale, 8, null, 0, null, false, false, false);
+                foreach(var rt in m_renderTextures)
+                    rt.Value.CommandBuffer.Clear(); //Stop drawing
+
+                Graphics.DrawMesh(m_mesh, transform.localToWorldMatrix, m_materialNormalScale, gameObject.layer, null, 0, null, false, false, false);
             }
         }
 
@@ -261,14 +267,9 @@ namespace Sereno.SciVis
                     if (dictPair.Key == null)
                     {
                         //Initialize a RenderTexture to render on it
-                        RenderTextureDescriptor eyeDesc = XRSettings.eyeTextureDesc;
-                        eyeDesc.depthBufferBits = 0; //No need of depth buffer
-                        eyeDesc.width  = (int)(eyeDesc.width  * ResolutionScaling);
-                        eyeDesc.height = (int)(eyeDesc.height * ResolutionScaling);
-                        renderTexture = new RenderTextureData { RenderTexture = new RenderTexture(eyeDesc), Material = new Material(CopyTextureMaterial) };
+                        renderTexture = new RenderTextureData { RenderTexture = CreateRenderTexture(), Material = new Material(CopyTextureMaterial) };
 
                         //Initialize the material
-                        renderTexture.Material.SetShaderPassEnabled("BackToFront", false);
                         renderTexture.Material.SetTexture("_MainTex", renderTexture.RenderTexture);
                                                                      
                         //Initialize the command buffers associated
@@ -281,35 +282,58 @@ namespace Sereno.SciVis
                         renderTexture = dictPair.Value;
 
                     //Check if we need to resize the texture
-                    if (renderTexture.RenderTexture.width != (int)(XRSettings.eyeTextureDesc.width * ResolutionScaling) || renderTexture.RenderTexture.height != (int)(XRSettings.eyeTextureDesc.height * ResolutionScaling))
+                    if(renderTexture.RenderTexture.width  != (int)(XRSettings.eyeTextureDesc.width  * ResolutionScaling) || 
+                       renderTexture.RenderTexture.height != (int)(XRSettings.eyeTextureDesc.height * ResolutionScaling))
                     {
-                        Debug.Log($"Created a {renderTexture.RenderTexture.dimension} texture");
-
-                        RenderTextureDescriptor eyeDesc = XRSettings.eyeTextureDesc;
                         //Initialize a RenderTexture to render on it
-                        eyeDesc.depthBufferBits = 0; //No need of depth buffer
-                        eyeDesc.width  = (int)(eyeDesc.width * ResolutionScaling);
-                        eyeDesc.height = (int)(eyeDesc.height * ResolutionScaling);
-
                         renderTexture.RenderTexture.Release();
-                        renderTexture.RenderTexture = new RenderTexture(eyeDesc);
+                        renderTexture.RenderTexture = CreateRenderTexture();
                         renderTexture.Material.SetTexture("_MainTex", renderTexture.RenderTexture);
                     }
-
-                    //Clear the render texture
-                    //Draw the volumetric data
-                    UpdateMaterial(cam);
-
+                    
+                    //Update the command buffer
                     renderTexture.CommandBuffer.Clear();
                     renderTexture.CommandBuffer.SetRenderTarget(renderTexture.RenderTexture, 0, CubemapFace.Unknown, -1); //-1 == all the color buffers (I guess, this is undocumented)
                     renderTexture.CommandBuffer.ClearRenderTarget(false, true, new Color(0, 0, 0, 0));
                     renderTexture.CommandBuffer.SetSinglePassStereo((SinglePassStereoMode)XRSettings.stereoRenderingMode);
-                    //if(XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced)
-                    //    renderTexture.CommandBuffer.SetInstanceMultiplier(2);
-                    renderTexture.CommandBuffer.DrawMesh(m_mesh, transform.localToWorldMatrix, m_materialDownScale, 0);
+                    renderTexture.CommandBuffer.DrawMesh(m_mesh, transform.localToWorldMatrix, m_materialDownScale, 0, -1, null);
+
+                    //Draw the texture on screen. Because we are using the event "CameraEvent.AfterForwardOpaque", the command buffer is ran BEFORE the following DrawMesh that happen in Transparency pipeline
                     Graphics.DrawMesh(m_screenTextureMesh, transform.localToWorldMatrix, renderTexture.Material, gameObject.layer, cam, 0, null, false, false, false);
                 }
             }
+        }
+
+        /// <summary>
+        /// Get the render eye texture descriptor used for this object given a resolution scaling to apply
+        /// </summary>
+        /// <returns>The RenderTextureDescriptor to use</returns>
+        private RenderTextureDescriptor GetRenderTextureDescriptor()
+        {
+            RenderTextureDescriptor eyeDesc = XRSettings.eyeTextureDesc;
+            eyeDesc.useMipMap = false;
+            eyeDesc.colorFormat = RenderTextureFormat.ARGB4444;
+            eyeDesc.depthBufferBits = 0; //No need of depth buffer
+            eyeDesc.width  = (int)(eyeDesc.width  * ResolutionScaling); //Apply the resolution scaling
+            eyeDesc.height = (int)(eyeDesc.height * ResolutionScaling);
+
+            return eyeDesc;
+        }
+
+        /// <summary>
+        /// Create a RenderTexture to draw the volumetric dataset
+        /// </summary>
+        /// <returns></returns>
+        private RenderTexture CreateRenderTexture()
+        {
+            RenderTexture renderTexture   = new RenderTexture(GetRenderTextureDescriptor());
+            renderTexture.filterMode      = FilterMode.Point;
+            renderTexture.wrapMode        = TextureWrapMode.Clamp;
+            renderTexture.useDynamicScale = true;
+            renderTexture.antiAliasing    = 0;
+            renderTexture.Create();
+
+            return renderTexture;
         }
 
         /*private void OnRenderObject()
@@ -331,28 +355,27 @@ namespace Sereno.SciVis
         }*/
 
         /// <summary>
-        /// Update the material and the mesh of the GameObject
+        /// Update the material parameters
         /// </summary>
-        /// <param name="camera">The camera used to determine the screen boundaries of the raymarching algorithm</param>
-        private void UpdateMaterial(Camera camera)
+        private void UpdateMaterial()
         {
-            UpdateMesh(camera);
-            if (ResolutionScaling < 1f)
-                m_materialDownScale.SetVector("_Dimensions", new Vector3(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z));
-            else
-                m_materialNormalScale.SetVector("_Dimensions", new Vector3(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z));
+            //Camera.SetupCurrent(camera);
+            //UpdateMesh(camera, inRT);
+            m_materialDownScale.SetVector("_Dimensions", new Vector3(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z));
+            m_materialNormalScale.SetVector("_Dimensions", new Vector3(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z));
         }
 
         /// <summary>
         /// Update the mesh of the GameObject. The mesh represent the quad where the raymarching algorithm will perform
         /// </summary>
         /// <param name="camera">The camera used to determine the screen boundaries of the raymarching algorithm</param>
-        private void UpdateMesh(Camera camera)
+        /// <param name="inRT">Will be object be drawn in a render texture?</param>
+        private void UpdateMesh(Camera camera, bool inRT)
         {
-            Vector2 minScreenPos = new Vector2(-1, -1);
-            Vector2 maxScreenPos = new Vector2(1 ,  1);
+            Vector2 minScreenPos = new Vector2(1,   1);
+            Vector2 maxScreenPos = new Vector2(-1, -1);
 
-            if (Camera.main != null)
+            if (camera != null)
             {
                 StereoscopicEye[] enumEye = new StereoscopicEye[2];
                 enumEye[0] = StereoscopicEye.Left;
@@ -361,23 +384,24 @@ namespace Sereno.SciVis
                 foreach(StereoscopicEye eye in enumEye)
                 { 
                     //Determine the part of the object on screen to narrow down the viewport
-                    Matrix4x4 mvp = (GL.GetGPUProjectionMatrix(camera.GetStereoProjectionMatrix(eye), true) * camera.GetStereoViewMatrix(eye) * transform.localToWorldMatrix);
+                    Matrix4x4 mvp = (GL.GetGPUProjectionMatrix(camera.GetStereoProjectionMatrix(eye), inRT) * camera.GetStereoViewMatrix(eye) * transform.localToWorldMatrix);
 
-                    Vector3[] localPos = new Vector3[8];
-                    localPos[0] = m_mesh.bounds.min;
-                    localPos[1] = m_mesh.bounds.max;
-                    localPos[2] = new Vector3(m_mesh.bounds.min.x, m_mesh.bounds.min.y, m_mesh.bounds.max.z);
-                    localPos[3] = new Vector3(m_mesh.bounds.min.x, m_mesh.bounds.max.y, m_mesh.bounds.min.z);
-                    localPos[4] = new Vector3(m_mesh.bounds.max.x, m_mesh.bounds.min.y, m_mesh.bounds.min.z);
-                    localPos[5] = new Vector3(m_mesh.bounds.max.x, m_mesh.bounds.min.y, m_mesh.bounds.max.z);
-                    localPos[6] = new Vector3(m_mesh.bounds.max.x, m_mesh.bounds.max.y, m_mesh.bounds.min.z);
-                    localPos[7] = new Vector3(m_mesh.bounds.min.x, m_mesh.bounds.max.y, m_mesh.bounds.max.z);
+                    Vector4[] localPos = new Vector4[8];
+                    localPos[0] = m_mesh.bounds.min; localPos[0].w = 1.0f;
+                    localPos[1] = m_mesh.bounds.max; localPos[1].w = 1.0f;
+                    localPos[2] = new Vector4(m_mesh.bounds.min.x, m_mesh.bounds.min.y, m_mesh.bounds.max.z, 1.0f);
+                    localPos[3] = new Vector4(m_mesh.bounds.min.x, m_mesh.bounds.max.y, m_mesh.bounds.min.z, 1.0f);
+                    localPos[4] = new Vector4(m_mesh.bounds.max.x, m_mesh.bounds.min.y, m_mesh.bounds.min.z, 1.0f);
+                    localPos[5] = new Vector4(m_mesh.bounds.max.x, m_mesh.bounds.min.y, m_mesh.bounds.max.z, 1.0f);
+                    localPos[6] = new Vector4(m_mesh.bounds.max.x, m_mesh.bounds.max.y, m_mesh.bounds.min.z, 1.0f);
+                    localPos[7] = new Vector4(m_mesh.bounds.min.x, m_mesh.bounds.max.y, m_mesh.bounds.max.z, 1.0f);
 
-                    Vector3 screenPos;
+                    Vector4 screenPos;
 
                     for(int i = 0; i < 8; i++)
                     {
                         screenPos = mvp * localPos[i];
+                        screenPos /= screenPos.w;
                         //Min
                         if (minScreenPos.x > screenPos.x)
                             minScreenPos.x = screenPos.x;
@@ -392,6 +416,12 @@ namespace Sereno.SciVis
                     }
                 }
 
+                //Screen border
+                minScreenPos.x = Math.Max(minScreenPos.x, -1.0f);
+                minScreenPos.y = Math.Max(minScreenPos.y, -1.0f);
+                maxScreenPos.x = Math.Min(maxScreenPos.x,  1.0f);
+                maxScreenPos.y = Math.Min(maxScreenPos.y,  1.0f);
+
                 //Update the mesh
                 Vector3[] meshPos = new Vector3[4];
                 meshPos[0] = new Vector3(minScreenPos.x, minScreenPos.y, 0);
@@ -401,6 +431,8 @@ namespace Sereno.SciVis
 
                 m_mesh.vertices  = meshPos;
                 m_mesh.UploadMeshData(false);
+                //m_screenTextureMesh.vertices = meshPos;
+                //m_screenTextureMesh.UploadMeshData(false);
             }
         }
 

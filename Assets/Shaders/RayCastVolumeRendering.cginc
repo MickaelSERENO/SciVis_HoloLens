@@ -52,6 +52,7 @@ v2f vert(appdata v)
 	{
 		float4 begRayOrigin = mul(o.invMVP, float4(v.vertex.x, v.vertex.y*_ProjectionParams.x, -1.0, 1.0));
 		o.begRayOrigin = begRayOrigin.xyz / begRayOrigin.w;
+		o.endRayOrigin = mul(o.invMVP, float4(v.vertex.x, v.vertex.y* _ProjectionParams.x, 1.0, 1.0));
 	}
 
 	return o;
@@ -87,7 +88,7 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 	//Bottom
 	tValidity[2] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, -1, 0),
 		fixed3(0, -0.5, 0), t[2]);
-	//tOP
+	//Top
 	tValidity[3] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 1, 0),
 		fixed3(0, +0.5, 0), t[3]);
 	//Front
@@ -101,7 +102,7 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 	for (int i = 0; i < 2; i++)
 	{
 		//Left / Right
-		//if (tValidity[i])
+		if (tValidity[i])
 		{
 			fixed3 p = t[i] * rayNormal + rayOrigin;
 			if (p.y < -0.5 || p.y > +0.5 ||
@@ -110,7 +111,7 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 		}
 
 		//Top / Bottom
-		//if (tValidity[i + 2])
+		if (tValidity[i + 2])
 		{
 			fixed3 p = t[i + 2] * rayNormal + rayOrigin;
 			if (p.x < -0.5 || p.x > +0.5 ||
@@ -119,7 +120,7 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 		}
 
 		//Front / Back
-		//if(tValidity[i + 4])
+		if(tValidity[i + 4])
 		{
 			fixed3 p = t[i + 4] * rayNormal + rayOrigin;
 			if (p.x < -0.5 || p.x > +0.5 ||
@@ -134,6 +135,9 @@ fixed4  frag(v2f input) : COLOR
 	//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 	UNITY_SETUP_INSTANCE_ID(input);
 
+	//Determine max displacement (the displacement the ray can perform) regarding the depth. Done here for optimization process
+	fixed depthPos = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uvDepth)));
+	
 	fixed4  fragColor = fixed4(0, 0, 0, 0);
 
 	//Optimization when in perspective mode
@@ -147,7 +151,6 @@ fixed4  frag(v2f input) : COLOR
 	//Determine if the ray touched the cube or not
 	int startValidity = 0;
 	for (; !tValidity[startValidity] && startValidity < 6; startValidity++);
-
 	if(startValidity == 6)
 		return fragColor;
 
@@ -170,12 +173,9 @@ fixed4  frag(v2f input) : COLOR
 		minT = 0;
 		
 	fixed3 rayPos        = input.begRayOrigin.xyz + minT * rayNormal;
-	const fixed rayStep  = 1.0/sqrt(dot(rayNormal*_Dimensions, rayNormal * _Dimensions));
+	const fixed rayStep  = 1.0/length(rayNormal*_Dimensions);
 	fixed3 rayStepNormal = rayStep*rayNormal;
-		
-	//Determine max displacement (the displacement the ray can perform) regarding the depth
-	fixed depthPos = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uvDepth)));
-		
+				
 	//Reverse Z
 #if defined(UNITY_REVERSED_Z)
 	depthPos = 1.0 - depthPos;
@@ -191,36 +191,21 @@ fixed4  frag(v2f input) : COLOR
 	rayPos += 0.5;
 
 	//Ray marching algorithm
-	const int count = int(fixed(min(maxDepthDisplacement, maxT - minT) / rayStep));
-	const int subStep = 4;
+	const int count = int(min(maxDepthDisplacement, maxT - minT) / rayStep);
 
-	fixed4 texPos = fixed4(rayPos.xyz, 0.0);
-
-	int j = 0;
-	for(j = 0; j < count+subStep; j+=subStep)
+	for(int j = 0; j < count; j+=1)
 	{
-		for(int k = 0; k < 4; k++) //We try to pre-fetch as much as possible some texture data
-		{
-			fixed4 tfColor = tex3Dlod(_TextureData, texPos);
-			texPos.xyz += rayStepNormal;
+		fixed4 texPos = fixed4(j * rayStepNormal + rayPos.xyz, 0.0);
+		fixed4 tfColor = tex3Dlod(_TextureData, texPos);
 
-			fragColor = fragColor + ((1.0 - fragColor.a) * tfColor.a) * fixed4(tfColor.xyz, 1.0);
-		}
+		fragColor = fragColor + ((1.0 - fragColor.a) * tfColor.a) * fixed4(tfColor.xyz, 1.0);
 		//If enough contribution
-		/*if (fragColor.a > 0.95) //Commented due to how IFs reduce performances
+		/*if (fragColor.a > 0.975)
 		{
 			fragColor.a = 1.0;
 			return fragColor;
 		}*/
 	}
 
-	//Finish the ray marching
-	for (; j < count; j++)
-	{
-		fixed4 tfColor = tex3Dlod(_TextureData, texPos);
-		texPos.xyz += rayStepNormal;
-		fragColor = fragColor + ((1.0 - fragColor.a) * tfColor.a) * fixed4(tfColor.xyz, 1.0);
-	}
-		
 	return fragColor;
 }

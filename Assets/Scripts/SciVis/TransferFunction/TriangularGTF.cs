@@ -58,7 +58,10 @@ namespace Sereno.SciVis
                 r1Mag += r1*r1;
             }
 
-            return (float)Math.Min(m_alphaMax*Math.Exp(-r1Mag), 1.0f);
+            float val = (float)(m_alphaMax * Math.Exp(-r1Mag));
+            if (val > 1.0f)
+                return 1.0f;
+            return val;
         }
 
         /// <summary>
@@ -76,6 +79,14 @@ namespace Sereno.SciVis
                 mag += values[i]*values[i];
             mag = (float)(Math.Sqrt(mag/m_scale.Length));
             return mag;
+        }
+
+        public override TransferFunction Clone()
+        {
+            TriangularGTF g = new TriangularGTF((float[])m_center.Clone(), (float[])m_scale.Clone(), m_alphaMax);
+            g.ColorMode = ColorMode;
+
+            return g;
         }
 
         public override uint GetDimension() { return (uint)(m_scale.Length+1); }

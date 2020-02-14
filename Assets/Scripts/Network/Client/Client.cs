@@ -88,7 +88,7 @@ namespace Sereno.Network
         /// <summary>
         /// The number of time in micro seconds that the reading and writing threads sleep if no data is to be sent/read or in case of disconnection
         /// </summary>
-		private const int THREAD_SLEEP = 15;
+		private const int THREAD_SLEEP = 50;
 
         /******************************/
         /*******PUBLIC FUNCTIONS*******/

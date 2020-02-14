@@ -258,7 +258,25 @@ namespace Sereno
         /// <returns></returns>
         unsafe public float ReadAsFloat(UInt64 valueID)
         {
-            return (float)ReadAsDouble(valueID);
+            float c = 0.0f;
+            switch (Format)
+            {
+                case VTKValueFormat.VTK_DOUBLE:
+                    c = (float)((double*)Value)[valueID];
+                    break;
+                case VTKValueFormat.VTK_FLOAT:
+                    c = ((float*)Value)[valueID];
+                    break;
+                case VTKValueFormat.VTK_INT:
+                    c = (float)((Int32*)Value)[valueID];
+                    break;
+                case VTKValueFormat.VTK_UNSIGNED_CHAR:
+                case VTKValueFormat.VTK_CHAR:
+                    c = (float)((byte*)Value)[valueID];
+                    break;
+            }
+
+            return c;
         }
 
         /// <summary>

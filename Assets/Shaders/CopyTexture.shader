@@ -25,15 +25,15 @@
 
 			struct appdata
 			{
-				float4 vertex : POSITION;
-				float2 uv     : TEXCOORD0;
+				fixed4 vertex : POSITION;
+				fixed2 uv     : TEXCOORD0;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
 			struct v2f
 			{
-				float4 vertex : SV_POSITION;
-				float2 uv     : TEXCOORD0;
+				fixed4 vertex : SV_POSITION;
+				fixed2 uv     : TEXCOORD0;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
@@ -50,10 +50,11 @@
 				//UNITY_INITIALIZE_OUTPUT(v2f, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 							   
-				o.vertex   = float4(v.vertex.x, v.vertex.y*_ProjectionParams.x, v.vertex.zw);
+				o.vertex   = fixed4(v.vertex.x, v.vertex.y*_ProjectionParams.x, v.vertex.zw);
 				o.vertex.z = UNITY_NEAR_CLIP_VALUE;
-				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-							   				
+
+				o.uv = v.uv;
+
 				return o;
 			}
 
@@ -61,8 +62,7 @@
 			{
 				//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 				UNITY_SETUP_INSTANCE_ID(input);
-				fixed4 color = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv));
-				return color;
+				return UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv));
 			}
 			ENDCG
 		}

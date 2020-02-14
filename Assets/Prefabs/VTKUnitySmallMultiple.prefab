@@ -28,7 +28,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_Children:
-  - {fileID: 456245234013893222}
+  - {fileID: 457819113144133827}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a06e8e17bddf967db805d0a800566d68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Outline: {fileID: 456245234013893613}
+  Outline: {fileID: 455603246127115753}
   ColorOnTargetPointingIT: {r: 1, g: 1, b: 1, a: 1}
   AnnotationPrefab: {fileID: 7564776657790048829, guid: 99e5be874ec5d1b408d60a1be29b157d,
     type: 3}
@@ -57,7 +57,7 @@ MonoBehaviour:
     type: 2}
   CopyTextureMaterial: {fileID: 2100000, guid: 45d3a087a687c5348878b3c6e35ede44, type: 2}
   VTKMiniaturePrefab: {fileID: 4757634199374474188}
-  ResolutionScaling: 0.66
+  ResolutionScaling: 0.5
   UnloadModel: {fileID: 100000, guid: 525e1f884bd21294893183a160750c53, type: 3}
 --- !u!1001 &456245234013893441
 PrefabInstance:
@@ -116,13 +116,13 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4b12c845de844b040a436ae1138e1a94, type: 3}
---- !u!1 &456245234013893613 stripped
+--- !u!1 &455603246127115753 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1768162676121256, guid: 4b12c845de844b040a436ae1138e1a94,
     type: 3}
   m_PrefabInstance: {fileID: 456245234013893441}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &456245234013893222 stripped
+--- !u!4 &457819113144133827 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4055624699337602, guid: 4b12c845de844b040a436ae1138e1a94,
     type: 3}

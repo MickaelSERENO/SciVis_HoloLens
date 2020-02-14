@@ -331,7 +331,9 @@ PlayerSettings:
     Android: 0
     iPhone: 1
     tvOS: 1
-  m_BuildTargetGroupLightmapEncodingQuality: []
+  m_BuildTargetGroupLightmapEncodingQuality:
+  - m_BuildTarget: Windows Store Apps
+    m_EncodingQuality: 1
   m_BuildTargetGroupLightmapSettings: []
   playModeTestRunnerEnabled: 0
   runPlayModeTestAsEditModeTest: 0
@@ -577,6 +579,7 @@ PlayerSettings:
   apiCompatibilityLevelPerPlatform:
     : 6
     Metro: 6
+    Windows Store Apps: 6
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
   metroPackageName: SciVisHololens
