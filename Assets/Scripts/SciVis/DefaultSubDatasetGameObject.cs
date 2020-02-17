@@ -16,6 +16,16 @@ namespace Sereno.SciVis
         public GameObject Outline = null;
 
         /// <summary>
+        /// The Name UI GameObject to display the dataset name
+        /// </summary>
+        public TextMesh NameUI = null;
+
+        /// <summary>
+        /// The NameUI pivot used to always put the name "on top" of the gameobject
+        /// </summary>
+        public GameObject NameUIPivot = null;
+
+        /// <summary>
         /// The Color to apply when the GameObject is being targeted
         /// </summary>
         public Color ColorOnTargetPointingIT = new Color(1.0f, 1.0f, 1.0f);
@@ -76,6 +86,11 @@ namespace Sereno.SciVis
         protected Vector3 m_newS;
 
         /// <summary>
+        /// The new name received from the SmallMultiple
+        /// </summary>
+        protected String m_newName;
+
+        /// <summary>
         /// Should we update the rotation quaternion?
         /// </summary>
         protected bool m_updateQ = false;
@@ -89,6 +104,11 @@ namespace Sereno.SciVis
         /// Should we update the 3D scaling?
         /// </summary>
         protected bool m_updateS = false;
+
+        /// <summary>
+        /// Should we update the displayed name?
+        /// </summary>
+        protected bool m_updateName = false;
 
         /// <summary>
         /// Is this GameObject targeted?
@@ -166,6 +186,7 @@ namespace Sereno.SciVis
                 OnRotationChange(m_sd, m_sd.Rotation);
                 OnPositionChange(m_sd, m_sd.Position);
                 OnScaleChange(m_sd, m_sd.Scale);
+                OnNameChange(m_sd, m_sd.Name);
                 m_sd.AddListener(this);
                 m_sdChanged = true;
             }
@@ -224,6 +245,15 @@ namespace Sereno.SciVis
                 scale = dataset.GraphicalScaling;
                 m_newS = new Vector3(scale[0], scale[1], scale[2]);
                 m_updateS = true;
+            }
+        }
+
+        public void OnNameChange(SubDataset dataset, String name)
+        {
+            lock(this)
+            {
+                m_newName    = name;
+                m_updateName = true;
             }
         }
 
@@ -293,12 +323,23 @@ namespace Sereno.SciVis
                     m_updateP = false;
 
                     if (m_updateQ)
+                    {
                         transform.localRotation = m_newQ;
+                        NameUIPivot.transform.localRotation = Quaternion.Inverse(m_newQ) * new Quaternion(0.0f, m_sd.Rotation[2], 0.0f, m_sd.Rotation[0]).normalized;
+                    }
                     m_updateQ = false;
 
                     if (m_updateS)
+                    {
                         transform.localScale = m_newS;
+                        if (m_newS.x != 0 && m_newS.y != 0 && m_newS.z != 0)
+                            NameUIPivot.transform.localScale = new Vector3(1.0f/m_newS.x, 1.0f/m_newS.y, 1.0f/m_newS.z);
+                    }
                     m_updateS = false;
+
+                    if(m_updateName)
+                        NameUI.text = m_newName;
+                    m_updateName = false;
                                        
                     if (m_updateOutlineColor && !m_isTargeted)
                     {

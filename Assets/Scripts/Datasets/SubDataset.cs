@@ -54,6 +54,13 @@ namespace Sereno.Datasets
         void OnOwnerIDChange(SubDataset dataset, int ownerID);
 
         /// <summary>
+        /// Called when the SubDataset name changes
+        /// </summary>
+        /// <param name="dataset">The dataset being modified</param>
+        /// <param name="name">The dataset name</param>
+        void OnNameChange(SubDataset dataset, String name);
+
+        /// <summary>
         /// Called when a new annotation has been added
         /// </summary>
         /// <param name="dataset">The dataset being modified</param>
@@ -111,6 +118,11 @@ namespace Sereno.Datasets
         private float[] m_scale    = new float[3]{1.0f, 1.0f, 1.0f};
 
         /// <summary>
+        /// The SubDataset name
+        /// </summary>
+        private String m_name = "";
+
+        /// <summary>
         /// The listeners to call when the internal state changed
         /// </summary>
         protected List<ISubDatasetCallback> m_listeners = new List<ISubDatasetCallback>();
@@ -125,9 +137,11 @@ namespace Sereno.Datasets
         /// </summary>
         /// <param name="parent">The Dataset parent</param>
         /// <param name="ownerID">The HeadsetID onwing (private/public) this SubDataset. -1 == public SubDataset</param>
-        public SubDataset(Dataset parent, int ownerID = -1)
+        /// <param name="name">The SubDataset name</param>
+        public SubDataset(Dataset parent, int ownerID = -1, String name = "")
         {
             m_parent  = parent;
+            m_name    = name;
             m_ownerID = ownerID;
         }
 
@@ -315,6 +329,20 @@ namespace Sereno.Datasets
                 m_ownerID = value;
                 foreach (var l in m_listeners)
                     l.OnOwnerIDChange(this, m_ownerID);
+            }
+        }
+
+        /// <summary>
+        /// The SubDataset name
+        /// </summary>
+        public String Name
+        {
+            get => m_name;
+            set
+            {
+                m_name = value;
+                foreach (var l in m_listeners)
+                    l.OnNameChange(this, value);
             }
         }
 

@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -446,7 +446,7 @@ namespace Sereno
                     moveVTKMsg.Position = new float[3] { 0, 0, 1+0.5f*i };
                     moveVTKMsg.HeadsetID = -1;
                     OnMoveDataset(null, moveVTKMsg);
-
+                    
                     ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                     scaleMsg.DataID = 0;
                     scaleMsg.SubDataID = i;
@@ -675,9 +675,9 @@ namespace Sereno
                 Dataset d = m_datasetToRemove.Dequeue();
                 foreach (SubDataset sd in d.SubDatasets)
                     removeSubDatasetFunc(sd);
-
-                m_datasets.Remove(d.ID);
+                
                 m_vtkStructuredGrid.Remove(d);
+                m_datasets.Remove(d.ID);
             }
 
             while (m_subDatasetToRemove.Count > 0)
@@ -1237,7 +1237,7 @@ namespace Sereno
                 //Create a new SubDataset
                 lock (this)
                 {
-                    SubDataset sd = new SubDataset(vtk, msg.OwnerID);
+                    SubDataset sd = new SubDataset(vtk, msg.OwnerID, msg.Name);
                     lock(sd)
                     { 
                         sd.ID = msg.SubDatasetID;

@@ -1,6 +1,4 @@
-﻿#define CHI2020 //This define a part of the project for CHI2020
-
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
@@ -215,33 +213,29 @@ namespace Sereno.SciVis
             return null;
         }
         
-        public void OnRotationChange(SubDataset dataset, float[] rotationQuaternion)
-        {}
+        public void OnRotationChange(SubDataset dataset, float[] rotationQuaternion){}
 
-        public void OnPositionChange(SubDataset dataset, float[] position)
-        {}
+        public void OnPositionChange(SubDataset dataset, float[] position){}
 
-        public void OnScaleChange(SubDataset dataset, float[] scale)
-        {}
+        public void OnScaleChange(SubDataset dataset, float[] scale){}
 
-        public void OnLockOwnerIDChange(SubDataset dataset, int ownerID)
-        {}
+        public void OnLockOwnerIDChange(SubDataset dataset, int ownerID){}
 
         public void OnOwnerIDChange(SubDataset dataset, int ownerID)
         {
             UpdateTF();
         }
 
+        public void OnNameChange(SubDataset dataset, String name){}
+
         public void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)
         {
             UpdateTF();
         }
 
-        public void OnAddAnnotation(SubDataset dataset, Annotation annot)
-        {}
+        public void OnAddAnnotation(SubDataset dataset, Annotation annot){}
 
-        public void OnClearAnnotations(SubDataset dataset)
-        {}
+        public void OnClearAnnotations(SubDataset dataset){}
 
         /// <summary>
         /// The 3D Texure RGBA4444 byte array computed via the given transfer function.
