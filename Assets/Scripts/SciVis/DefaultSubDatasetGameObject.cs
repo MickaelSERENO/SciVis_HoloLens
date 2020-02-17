@@ -233,7 +233,7 @@ namespace Sereno.SciVis
                 m_newQ = new Quaternion(q[1],
                                         q[2],
                                         q[3],
-                                        q[0]);
+                                        q[0]).normalized;
                 m_updateQ = true;
             }
         }
@@ -333,7 +333,7 @@ namespace Sereno.SciVis
                     {
                         transform.localScale = m_newS;
                         if (m_newS.x != 0 && m_newS.y != 0 && m_newS.z != 0)
-                            NameUIPivot.transform.localScale = new Vector3(1.0f/m_newS.x, 1.0f/m_newS.y, 1.0f/m_newS.z);
+                            NameUI.transform.localScale = new Vector3(1.0f/m_newS.x, 1.0f/m_newS.y, 1.0f/m_newS.z);
                     }
                     m_updateS = false;
 

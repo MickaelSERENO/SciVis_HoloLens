@@ -224,7 +224,9 @@ namespace Sereno.SciVis
             foreach (var v in m_renderTextures)
             {
                 v.Value.RenderTexture.Release();
-                v.Key.RemoveCommandBuffer(CameraEvent.AfterForwardOpaque, v.Value.CommandBuffer);
+                v.Value.CommandBuffer.Clear();
+                if(v.Key != null) //!= is overloaded in this case
+                    v.Key.RemoveCommandBuffer(CameraEvent.AfterForwardOpaque, v.Value.CommandBuffer);
             }
         }
 
@@ -330,7 +332,7 @@ namespace Sereno.SciVis
             renderTexture.filterMode      = FilterMode.Point;
             renderTexture.wrapMode        = TextureWrapMode.Clamp;
             renderTexture.useDynamicScale = true;
-            renderTexture.antiAliasing    = 0;
+            renderTexture.antiAliasing    = 1;
             renderTexture.Create();
 
             return renderTexture;

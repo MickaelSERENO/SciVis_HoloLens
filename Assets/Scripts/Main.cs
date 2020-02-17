@@ -446,7 +446,15 @@ namespace Sereno
                     moveVTKMsg.Position = new float[3] { 0, 0, 1+0.5f*i };
                     moveVTKMsg.HeadsetID = -1;
                     OnMoveDataset(null, moveVTKMsg);
-                    
+
+                    /*RotateDatasetMessage rotateVTKMsg = new RotateDatasetMessage(ServerType.GET_ON_ROTATE_DATASET);
+                    rotateVTKMsg.DataID = 0;
+                    rotateVTKMsg.SubDataID = i;
+                    Quaternion q = Quaternion.Euler(45f, 45f, 0.0f);
+                    rotateVTKMsg.Quaternion = new float[4] { q.w, q.x, q.y, q.z };
+                    rotateVTKMsg.HeadsetID = -1;
+                    OnRotateDataset(null, rotateVTKMsg);*/
+
                     ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                     scaleMsg.DataID = 0;
                     scaleMsg.SubDataID = i;
