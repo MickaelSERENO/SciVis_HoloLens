@@ -1,0 +1,19 @@
+{
+  "Network": {
+    "IP" : "192.168.43.44",
+    "Port" : 8000
+  },
+
+  "DatasetPropertiesArray": [
+    {
+      "Name": "Agulhas_10_resampled.vtk",
+      "RotateX": true,
+      "InverseX":true,
+      "MapProperties":{
+        "TexturePath":"africaMercator",
+        "Tiling": [0.65, 0.52],
+        "Offset": [0.172,0.027]
+      }
+    }
+  ]
+}
