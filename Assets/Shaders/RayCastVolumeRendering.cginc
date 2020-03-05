@@ -141,7 +141,7 @@ fixed4  frag(v2f input) : COLOR
 	fixed4  fragColor = fixed4(0, 0, 0, 0);
 
 	//Optimization when in perspective mode
-	fixed3 rayNormal = normalize(input.endRayOrigin.xyz / input.endRayOrigin.w - input.begRayOrigin.xyz);
+	const fixed3 rayNormal = normalize(input.endRayOrigin.xyz / input.endRayOrigin.w - input.begRayOrigin.xyz);
 
 	//Compute ray - cube intersections
 	fixed t[6];
@@ -174,7 +174,7 @@ fixed4  frag(v2f input) : COLOR
 		
 	fixed3 rayPos        = input.begRayOrigin.xyz + minT * rayNormal;
 	const fixed rayStep  = 1.0/length(rayNormal*_Dimensions);
-	fixed3 rayStepNormal = rayStep*rayNormal;
+	const fixed3 rayStepNormal = rayStep*rayNormal;
 				
 	//Reverse Z
 #if defined(UNITY_REVERSED_Z)
@@ -182,7 +182,7 @@ fixed4  frag(v2f input) : COLOR
 #endif
 	//Between -1 and 1.0
 	depthPos = 2.0*depthPos-1.0;
-	fixed2 uvDepth = 2.0*input.uvDepth -1.0;
+	const fixed2 uvDepth = 2.0*input.uvDepth -1.0;
 
 	fixed4 endRayDepth = mul(input.invMVP, fixed4(uvDepth, depthPos, 1.0));
 	endRayDepth /= endRayDepth.w;
@@ -195,16 +195,17 @@ fixed4  frag(v2f input) : COLOR
 
 	for(int j = 0; j < count; j+=1)
 	{
-		fixed4 texPos = fixed4(j * rayStepNormal + rayPos.xyz, 0.0);
+		fixed4 texPos  = fixed4(clamp(j * rayStepNormal + rayPos.xyz, fixed3(0, 0, 0), fixed3(1, 1, 1)), 0.0);
 		fixed4 tfColor = tex3Dlod(_TextureData, texPos);
 
 		fragColor = fragColor + ((1.0 - fragColor.a) * tfColor.a) * fixed4(tfColor.xyz, 1.0);
+		
 		//If enough contribution
-		/*if (fragColor.a > 0.975)
+		if (fragColor.a > 0.975)
 		{
 			fragColor.a = 1.0;
 			return fragColor;
-		}*/
+		}
 	}
 
 	return fragColor;
