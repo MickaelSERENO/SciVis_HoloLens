@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -428,8 +428,8 @@ namespace Sereno
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
-                addVTKMsg.Path = "Agulhas_10_resampled.vtk";
-                addVTKMsg.PtFieldValueIndices = new int[] { 1 };
+                addVTKMsg.Path = "history.vtk";
+                addVTKMsg.PtFieldValueIndices = new int[] { 3 };
                 OnAddVTKDataset(null, addVTKMsg);
 
                 for (int i = 0; i < 1; i++)
@@ -1254,8 +1254,11 @@ namespace Sereno
                         float[] scale  = new float[sd.Parent.PointFieldDescs.Count];
                         float[] center = new float[sd.Parent.PointFieldDescs.Count];
                         for (int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
-                            scale[i] = center[i] = 0.5f;
-                        sd.TransferFunction = new TriangularGTF(scale, center);
+                        {
+                            center[i] = 0.5f;
+                            scale[i]  = 0.5f;
+                        }
+                        sd.TransferFunction = new TriangularGTF(center, scale);
 
                         vtk.AddSubDataset(sd, false);
                     }

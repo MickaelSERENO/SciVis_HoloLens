@@ -160,8 +160,8 @@ namespace Sereno.SciVis
                                 UInt64 ind = (UInt64)(k * m_dimensions.x * m_dimensions.y);
                                 for (int j = 0; j < m_dimensions.y; j++)
                                 {
-                                                //Pre compute the indice up to J--K coordinate
-                                                UInt64 readIntJK = (UInt64)(m_descPts.Size[0] * (j * m_descPts.Size[1] / m_dimensions.y) +
+                                    //Pre compute the indice up to J--K coordinate
+                                    UInt64 readIntJK = (UInt64)(m_descPts.Size[0] * (j * m_descPts.Size[1] / m_dimensions.y) +
                                                                 m_descPts.Size[0] * m_descPts.Size[1] * (k * m_descPts.Size[2] / m_dimensions.z));
 
                                     for (int i = 0; i < m_dimensions.x; i++)
@@ -172,8 +172,8 @@ namespace Sereno.SciVis
                                             pcolors[ind] = 0;
                                         else
                                         {
-                                                        //Determine transfer function coordinates
-                                                        for (int l = 0; l < ptDescs.Count; l++)
+                                            //Determine transfer function coordinates
+                                            for (int l = 0; l < ptDescs.Count; l++)
                                             {
                                                 if (ptDescs[l].NbValuesPerTuple == 1)
                                                     partialRes[l] = (ptDescs[l].Value.ReadAsFloat(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
@@ -183,9 +183,9 @@ namespace Sereno.SciVis
 
                                             partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd]; //In case we need the gradient
 
-                                                        float t = tf.ComputeColor(partialRes);
+                                            float t = tf.ComputeColor(partialRes);
                                             float a = tf.ComputeAlpha(partialRes);
-
+                                            
                                             Color c = SciVisColor.GenColor(tf.ColorMode, t);
                                             short r = (short)(16 * c.r);
                                             if (r > 15)

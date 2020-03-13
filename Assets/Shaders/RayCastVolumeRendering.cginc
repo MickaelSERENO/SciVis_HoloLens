@@ -18,7 +18,7 @@ struct v2f
 };
 
 /** The Camera depth texture*/
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthTexture);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_LastCameraDepthTexture);
 
 /** The volume data*/
 sampler3D _TextureData;
@@ -29,8 +29,8 @@ v2f vert(appdata v)
 {
 	v2f o;
 	UNITY_SETUP_INSTANCE_ID(v);
-	UNITY_TRANSFER_INSTANCE_ID(v, o);
 	//UNITY_INITIALIZE_OUTPUT(v2f, o);
+	UNITY_TRANSFER_INSTANCE_ID(v, o);
 	UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 	o.vertex   = v.vertex;
@@ -132,12 +132,9 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 
 fixed4  frag(v2f input) : COLOR
 {
-	//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-	UNITY_SETUP_INSTANCE_ID(input);
+	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+	//UNITY_SETUP_INSTANCE_ID(input);
 
-	//Determine max displacement (the displacement the ray can perform) regarding the depth. Done here for optimization process
-	fixed depthPos = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uvDepth)));
-	
 	fixed4  fragColor = fixed4(0, 0, 0, 0);
 
 	//Optimization when in perspective mode
@@ -175,11 +172,15 @@ fixed4  frag(v2f input) : COLOR
 	fixed3 rayPos        = input.begRayOrigin.xyz + minT * rayNormal;
 	const fixed rayStep  = 1.0/length(rayNormal*_Dimensions);
 	const fixed3 rayStepNormal = rayStep*rayNormal;
-				
+	
+	//Determine max displacement (the displacement the ray can perform) regarding the depth. Done here for optimization process
+	fixed depthPos = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_LastCameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uvDepth)));
+
 	//Reverse Z
 #if defined(UNITY_REVERSED_Z)
 	depthPos = 1.0 - depthPos;
 #endif
+	
 	//Between -1 and 1.0
 	depthPos = 2.0*depthPos-1.0;
 	const fixed2 uvDepth = 2.0*input.uvDepth -1.0;
@@ -197,9 +198,8 @@ fixed4  frag(v2f input) : COLOR
 	{
 		fixed4 texPos  = fixed4(clamp(j * rayStepNormal + rayPos.xyz, fixed3(0, 0, 0), fixed3(1, 1, 1)), 0.0);
 		fixed4 tfColor = tex3Dlod(_TextureData, texPos);
-
 		fragColor = fragColor + ((1.0 - fragColor.a) * tfColor.a) * fixed4(tfColor.xyz, 1.0);
-		
+
 		//If enough contribution
 		if (fragColor.a > 0.975)
 		{

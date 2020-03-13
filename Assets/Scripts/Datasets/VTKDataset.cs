@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Unity.Burst;
+using UnityEngine;
 
 namespace Sereno.Datasets
 {
@@ -100,6 +101,17 @@ namespace Sereno.Datasets
                                 }
 
                                 float val = desc.Value.ReadAsFloat((UInt64)j);
+                                if(float.IsNaN(val))
+                                {
+                                    if (m_mask != null)
+                                    { 
+                                        unsafe
+                                        {
+                                            ((byte*)m_mask.Value)[j] = 0;
+                                        }
+                                    }
+                                    return partialRes;
+                                }
                                 partialRes[0] = Math.Min(partialRes[0], val);
                                 partialRes[1] = Math.Max(partialRes[1], val);
                                 return partialRes;
@@ -133,8 +145,19 @@ namespace Sereno.Datasets
                                     for (int k = 0; k < desc.NbValuesPerTuple; k++)
                                     {
                                         float val = desc.Value.ReadAsFloat((UInt64)(j * desc.NbValuesPerTuple + k));
+                                        if (float.IsNaN(val))
+                                        {
+                                            if (m_mask != null)
+                                            {
+                                                unsafe
+                                                {
+                                                    ((byte*)m_mask.Value)[j] = 0;
+                                                }
+                                            }
+                                            return partialRes;
+                                        }
                                         mag += val * val;
-                                    }
+                                    }                                  
 
                                     mag = (float)Math.Sqrt((double)mag);
                                     partialRes[0] = Math.Min(partialRes[0], mag);
@@ -227,7 +250,9 @@ namespace Sereno.Datasets
 
                                     //Fill df
                                     for (int ii = 0; ii < 3; ii++)
+                                    {
                                         partialRes.df[3*l+ii] = partialRes.localGrad[ii] / (m_ptFieldDescs[l].MaxVal - m_ptFieldDescs[l].MinVal); 
+                                    }
                                 }
 
                                 //Compute g = Df^T * Df

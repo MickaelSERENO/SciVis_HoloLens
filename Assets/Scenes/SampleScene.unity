@@ -438,7 +438,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf98dd1206224111a38765365e98e207, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  setCursorInvisibleWhenFocusLocked: 0
+  setCursorInvisibleWhenFocusLocked: 1
   maxGazeCollisionDistance: 10
   raycastLayerMasks:
   - serializedVersion: 2
@@ -448,7 +448,7 @@ MonoBehaviour:
   gazeTransform: {fileID: 0}
   minHeadVelocityThreshold: 0.5
   maxHeadVelocityThreshold: 2
-  useEyeTracking: 0
+  useEyeTracking: 1
 --- !u!114 &934722970
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -627,7 +627,7 @@ MonoBehaviour:
     type: 3}
   VTKSMGameObject: {fileID: 4757634199374474188, guid: 640e0d42fa907e4429749e5e66efad2b,
     type: 3}
-  DesiredVTKDensity: 128
+  DesiredVTKDensity: 380
   IPHeaderText: {fileID: 952487348}
   IPValueText: {fileID: 1032050059}
   RandomText: {fileID: 997432055}
