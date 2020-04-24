@@ -1,20 +1,9 @@
 using Sereno.Pointing;
 using System;
+using Sereno.Enumerates;
 
 namespace Sereno.Network.MessageHandler
 {
-    /// <summary>
-    /// Enumeration of headset current action
-    /// </summary>
-    public enum HeadsetCurrentAction
-    {
-        NOTHING   = 0,
-        MOVING    = 1,
-        SCALING   = 2,
-        ROTATING  = 3,
-        SKETCHING = 4
-    }
-
     /// <summary>
     /// Status of a collabroator Headset
     /// </summary>

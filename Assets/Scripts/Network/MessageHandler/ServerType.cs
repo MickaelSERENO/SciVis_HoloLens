@@ -21,5 +21,6 @@ namespace Sereno.Network.MessageHandler
         GET_ADD_SUBDATASET = 14, /*!< Add a new SubDataset*/
         GET_DEL_SUBDATASET = 15, /*!< Delete a known SubDataset*/
         GET_SUBDATASET_OWNER = 16, /*!< Change the headset owning this SubDataset*/
+        GET_CURRENT_ACTION = 17, /*!< Get the current action of this headset*/
     }
 }

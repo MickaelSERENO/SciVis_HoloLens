@@ -122,6 +122,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg);
+
+        /// <summary>
+        /// Function called when the current action has changed
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnCurrentAction(MessageBuffer messageBuffer, CurrentActionMessage msg);
     }
 
     /// <summary>
@@ -317,6 +324,10 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_SUBDATASET_OWNER:
                             foreach (var l in m_listeners)
                                 l.OnSubDatasetOwner(this, (SubDatasetOwnerMessage)m_msg);
+                            break;
+                        case ServerType.GET_CURRENT_ACTION:
+                            foreach(var l in m_listeners)
+                                l.OnCurrentAction(this, (CurrentActionMessage)m_msg);
                             break;
                         default:
                             break;
@@ -516,6 +527,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_SUBDATASET_OWNER:
                     m_msg = new SubDatasetOwnerMessage(ServerType.GET_SUBDATASET_OWNER);
+                    break;
+                case ServerType.GET_CURRENT_ACTION:
+                    m_msg = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
                     break;
             }
         }

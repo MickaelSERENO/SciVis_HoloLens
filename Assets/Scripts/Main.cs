@@ -10,6 +10,7 @@ using Sereno.Network.MessageHandler;
 using Sereno.Pointing;
 using Sereno.SciVis;
 using Sereno.Unity.HandDetector;
+using Sereno.Enumerates;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -173,6 +174,11 @@ namespace Sereno
         private int m_tabletID = -1;
 
         /// <summary>
+        /// The current action
+        /// </summary>
+        private HeadsetCurrentAction m_currentAction = HeadsetCurrentAction.NOTHING;
+
+        /// <summary>
         /// The client color
         /// </summary>
         private Color32 m_clientColor;
@@ -298,7 +304,6 @@ namespace Sereno
         /// Should we update the pointing ID
         /// </summary>
         private bool m_updatePointingID = false;
-
         #endregion
 
         /* Public attributes*/
@@ -418,7 +423,7 @@ namespace Sereno
             GoGoGameObject.transform.position = new Vector3(0, 0, 0);
             GoGoGameObject.transform.rotation = Quaternion.identity;
             GoGoGameObject.gameObject.SetActive(false);
-
+            
             CurrentPointingIT = PointingIT.NONE;
 
 #if TEST
@@ -1272,6 +1277,14 @@ namespace Sereno
             lock(this)
             {
                 m_subDatasetToRemove.Enqueue(GetSubDataset(msg.DataID, msg.SubDataID));
+            }
+        }
+
+        public void OnCurrentAction(MessageBuffer messageBuffer, CurrentActionMessage msg)
+        {
+            lock(this)
+            {
+                m_currentAction = (HeadsetCurrentAction)msg.CurrentAction;
             }
         }
 

@@ -375,7 +375,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83d9acc7968244a8886f3af591305bcb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activeProfile: {fileID: 11400000, guid: c597772ef9afe1a4ea3cc6b0b7cdeb13, type: 2}
 --- !u!4 &924395418
 Transform:
   m_ObjectHideFlags: 0
@@ -438,17 +437,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf98dd1206224111a38765365e98e207, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  setCursorInvisibleWhenFocusLocked: 1
-  maxGazeCollisionDistance: 10
-  raycastLayerMasks:
-  - serializedVersion: 2
-    m_Bits: 4294967291
-  stabilizer:
-    storedStabilitySamples: 60
-  gazeTransform: {fileID: 0}
-  minHeadVelocityThreshold: 0.5
-  maxHeadVelocityThreshold: 2
-  useEyeTracking: 1
 --- !u!114 &934722970
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -461,13 +449,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a21b486d0bb44444b1418aaa38b44de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_HorizontalAxis: Horizontal
-  m_VerticalAxis: Vertical
-  m_SubmitButton: Submit
-  m_CancelButton: Cancel
-  m_InputActionsPerSecond: 10
-  m_RepeatDelay: 0.5
-  m_ForceModuleActive: 0
 --- !u!81 &934722972
 AudioListener:
   m_ObjectHideFlags: 0
@@ -646,6 +627,8 @@ MonoBehaviour:
     type: 3}
   CubePrefab: {fileID: 1768162676121256, guid: 4b12c845de844b040a436ae1138e1a94, type: 3}
   ARCollabPointingITPrefab: {fileID: 8668732497188583125, guid: 6e96845a9bd6f1543944f5c9fee048fd,
+    type: 3}
+  TabletPrefab: {fileID: 261364030986515346, guid: 784833022781a9f4693f70b49dfc39ae,
     type: 3}
 --- !u!4 &1481252857
 Transform:
