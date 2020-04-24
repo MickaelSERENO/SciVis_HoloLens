@@ -59,6 +59,48 @@ namespace Sereno
     }
 
     /// <summary>
+    /// Class representing the tablet selection data
+    /// </summary>
+    public class TabletSelectionData
+    {
+        /// <summary>
+        /// Is the tablet matrix updated?
+        /// </summary>
+        public bool IsMatrixUpdated = false;
+
+        /// <summary>
+        /// The current tablet position
+        /// </summary>
+        public Vector3 Position = new Vector3(0,0,0);
+
+        /// <summary>
+        /// The current tablet scaling. 
+        /// Since the tablet is in orthographic view, this corresponds to the orthographic parameters
+        /// </summary>
+        public Vector3 Scaling = new Vector3(1,1,1);
+
+        /// <summary>
+        /// The current tablet rotation
+        /// </summary>
+        public Quaternion Rotation = Quaternion.identity;
+
+        /// <summary>
+        /// The list of the lasso points. First and Last points are stitched together
+        /// </summary>
+        public List<Vector2> LassoPoints = new List<Vector2>();
+
+        /// <summary>
+        /// The graphical object representing this tablet
+        /// </summary>
+        public GameObject GraphicalObject;
+
+        /// <summary>
+        /// The graphical lasso
+        /// </summary>
+        public LineRenderer GraphicalLasso;
+    }
+
+    /// <summary>
     /// Results of the anchor creation communication
     /// </summary>
     public enum AnchorCommunication
@@ -89,13 +131,13 @@ namespace Sereno
         public ARCollabPointingIT ARPointingGO;
     }
 
-    public class Main : MonoBehaviour, IMessageBufferCallback, IDataProvider
+    public class Main:MonoBehaviour, IMessageBufferCallback, IDataProvider
     {
         /// <summary>
         /// Default text displayed for the IP address
         /// </summary>
         const String DEFAULT_IP_ADDRESS_TEXT = "Server not found";
-        
+
         /// <summary>
         /// Maximum number of retry for importing anchor data
         /// </summary>
@@ -202,12 +244,12 @@ namespace Sereno
         /// Information received from the communication thread in order to update the IP text values being displayed
         /// </summary>
         private IPTextValue m_textValues = new IPTextValue();
-        
+
         /// <summary>
         /// When should the random text be disabled? -1 == never
         /// </summary>
         private Int64 m_disableRandomTextTimestamp = -1;
-        
+
         /// <summary>
         /// The anchor communication the server asked
         /// </summary>
@@ -227,7 +269,7 @@ namespace Sereno
         /// List of GameObject representing the headset colors
         /// </summary>
         private List<HeadsetGameObjects> m_headsetGameObjects = new List<HeadsetGameObjects>();
-        
+
         /// <summary>
         /// The final import anchor data once created. Need to be kept because of the number of retry.
         /// </summary>
@@ -252,7 +294,7 @@ namespace Sereno
         /// The HandDetector provider
         /// </summary>
         private HandDetectorProvider m_hdProvider = new HandDetectorProvider();
-                
+
 #if ENABLE_WINMD_SUPPORT
         /// <summary>
         /// The root spatial coordinate system created by Unity
@@ -304,6 +346,11 @@ namespace Sereno
         /// Should we update the pointing ID
         /// </summary>
         private bool m_updatePointingID = false;
+
+        /// <summary>
+        /// The Tablet selection internal data (matrix, in selection, etc.)
+        /// </summary>
+        private TabletSelectionData m_tabletSelectionData = new TabletSelectionData();
         #endregion
 
         /* Public attributes*/
@@ -392,7 +439,12 @@ namespace Sereno
         /// The AR Collaborator pointing IT prefab
         /// </summary>
         public ARCollabPointingIT ARCollabPointingITPrefab;
-#endregion
+
+        /// <summary>
+        /// The tablet prefab
+        /// </summary>
+        public GameObject TabletPrefab;
+        #endregion
 
         void Start()
         {
@@ -423,7 +475,13 @@ namespace Sereno
             GoGoGameObject.transform.position = new Vector3(0, 0, 0);
             GoGoGameObject.transform.rotation = Quaternion.identity;
             GoGoGameObject.gameObject.SetActive(false);
-            
+
+            //Initialize the tablet selection representation
+            m_tabletSelectionData.GraphicalObject = Instantiate(TabletPrefab, this.transform);
+            m_tabletSelectionData.GraphicalLasso = m_tabletSelectionData.GraphicalObject.GetComponent<LineRenderer>();
+            m_tabletSelectionData.GraphicalLasso.startWidth = m_tabletSelectionData.GraphicalLasso.endWidth = 0.005f; //width == 5mm
+            m_tabletSelectionData.GraphicalObject.SetActive(false);
+
             CurrentPointingIT = PointingIT.NONE;
 
 #if TEST
@@ -516,9 +574,9 @@ namespace Sereno
         /// <returns>null if no game object is found, the DefaultSubDatasetGameObject otherwise</returns>
         private DefaultSubDatasetGameObject GetSDGameObject(SubDataset sd)
         {
-            foreach (DefaultSubDatasetGameObject go in m_datasetGameObjects)
+            foreach(DefaultSubDatasetGameObject go in m_datasetGameObjects)
             {
-                if (go.SubDatasetState == sd)
+                if(go.SubDatasetState == sd)
                 {
                     return go;
                 }
@@ -608,15 +666,15 @@ namespace Sereno
                 m_textValues.UpdateRandomText = true;
                 m_disableRandomTextTimestamp = -1;
             }
-            
+
             //Update the displayed text requiring networking attention
-            if (m_textValues.UpdateRandomText)
+            if(m_textValues.UpdateRandomText)
             {
                 //Enable/Disable the IP Text
                 RandomText.enabled = m_textValues.EnableRandomText;
 
                 //If we should enable the text, set the text value
-                if (m_textValues.EnableRandomText)
+                if(m_textValues.EnableRandomText)
                 {
                     RandomText.text = m_textValues.RandomStr;
                 }
@@ -631,7 +689,7 @@ namespace Sereno
         {
             if(m_connectionLost)
             {
-                foreach (var go in m_datasetGameObjects)
+                foreach(var go in m_datasetGameObjects)
                     Destroy(go.gameObject);
                 m_datasetGameObjects.Clear();
                 m_datasets.Clear();
@@ -644,7 +702,7 @@ namespace Sereno
             while(m_vtkSubDatasetToLoad.Count > 0)
             {
                 SubDataset sd = m_vtkSubDatasetToLoad.Dequeue();
-                if (m_vtkStructuredGrid.ContainsKey(sd.Parent))
+                if(m_vtkStructuredGrid.ContainsKey(sd.Parent))
                 {
                     VTKUnitySmallMultipleGameObject gameObject = Instantiate(VTKSMGameObject);
                     VTKUnitySmallMultiple sm = m_vtkStructuredGrid[sd.Parent].CreatePointFieldSmallMultiple(sd);
@@ -686,14 +744,14 @@ namespace Sereno
             while(m_datasetToRemove.Count > 0)
             {
                 Dataset d = m_datasetToRemove.Dequeue();
-                foreach (SubDataset sd in d.SubDatasets)
+                foreach(SubDataset sd in d.SubDatasets)
                     removeSubDatasetFunc(sd);
-                
+
                 m_vtkStructuredGrid.Remove(d);
                 m_datasets.Remove(d.ID);
             }
 
-            while (m_subDatasetToRemove.Count > 0)
+            while(m_subDatasetToRemove.Count > 0)
             {
                 SubDataset sd = m_subDatasetToRemove.Dequeue();
                 removeSubDatasetFunc(sd);
@@ -702,13 +760,13 @@ namespace Sereno
 
         private void HandlePointingID()
         {
-            if (m_updatePointingID)
+            if(m_updatePointingID)
             {
-                if (m_sdWaitingAnnotation != null)
+                if(m_sdWaitingAnnotation != null)
                 {
                     DefaultSubDatasetGameObject sdGo = GetSDGameObject(m_sdWaitingAnnotation);
 
-                    if (sdGo != null)
+                    if(sdGo != null)
                     {
                         m_datasetInAnnotation = sdGo;
                         CurrentPointingIT     = m_waitingPointingID;
@@ -750,7 +808,7 @@ namespace Sereno
                 arCollabGO.transform.SetParent(null, false);
 
                 HeadsetGameObjects go = new HeadsetGameObjects() { Headset = headset, Glyph = glyph, ARPointingGO = arCollabGO };
-                
+
                 //Affiliate correctly the pointing tehcnique and the glyph
                 go.ARPointingGO.HeadsetTransform = go.Headset.transform;
 
@@ -758,7 +816,7 @@ namespace Sereno
             }
 
             //hide the useless ones
-            for (int i = m_headsetStatus.Count; i < m_headsetGameObjects.Count; i++)
+            for(int i = m_headsetStatus.Count; i < m_headsetGameObjects.Count; i++)
             {
                 m_headsetGameObjects[i].Glyph.SetActive(false);
                 m_headsetGameObjects[i].ARPointingGO.PointingIT = PointingIT.NONE;
@@ -780,7 +838,7 @@ namespace Sereno
 
                 //Handle the special case of the glyph
                 m_headsetGameObjects[i].Glyph.transform.localPosition  = Vector3.forward*(-HEADSET_SIZE/2.0f) + //Middle of the head
-                                                                         Vector3.up     *( HEADSET_TOP);        //Top of the head
+                                                                         Vector3.up     *(HEADSET_TOP);        //Top of the head
 
                 //Update the glyph color
                 m_headsetGameObjects[i].Glyph.GetComponent<MeshRenderer>().material.color = new Color(((byte)(m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
@@ -807,7 +865,7 @@ namespace Sereno
                         break;
                 }
 
-                if (m_headsetStatus[i].ID != m_headsetID)
+                if(m_headsetStatus[i].ID != m_headsetID)
                 {
                     //Update the pointing interaction technique
                     m_headsetGameObjects[i].ARPointingGO.PointingIT           = m_headsetStatus[i].PointingIT;
@@ -826,6 +884,44 @@ namespace Sereno
                     m_headsetGameObjects[i].ARPointingGO.HeadsetStartOrientation = headsetOrientation;
                 }
             }
+        }
+
+        /// <summary>
+        /// Handle the tablet selection data
+        /// </summary>
+        private void HandleTabletSelection()
+        {
+            if(m_currentAction == HeadsetCurrentAction.SELECTING)
+            {
+                //Update the graphical position (and enable to graphical object)
+                m_tabletSelectionData.GraphicalObject.SetActive(true);
+                m_tabletSelectionData.GraphicalObject.transform.localPosition = m_tabletSelectionData.Position;
+                m_tabletSelectionData.GraphicalObject.transform.localScale    = m_tabletSelectionData.Scaling;
+                m_tabletSelectionData.GraphicalObject.transform.localRotation = m_tabletSelectionData.Rotation;
+
+                //This is a test
+                //m_tabletSelectionData.LassoPoints.Clear();
+                //m_tabletSelectionData.LassoPoints.AddRange(from x in Enumerable.Range(0, 10) select new Vector2((float)Math.Cos(x/5.0f*Math.PI), (float)Math.Sin(x/5.0f*Math.PI)));
+
+                //Set the lasso
+                if(m_tabletSelectionData.LassoPoints.Count > 0)
+                {
+                    Vector3[] lasso = new Vector3[m_tabletSelectionData.LassoPoints.Count+1];
+                    for(int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
+                        lasso[i] = new Vector3(m_tabletSelectionData.LassoPoints[i].x, 0.0f, m_tabletSelectionData.LassoPoints[i].y);
+                    lasso[lasso.Length-1] = lasso[0]; //Cycle
+                    m_tabletSelectionData.GraphicalLasso.positionCount = lasso.Length;
+                    m_tabletSelectionData.GraphicalLasso.SetPositions(lasso);
+                }
+                else
+                    m_tabletSelectionData.GraphicalLasso.positionCount = 0;
+            }
+            else
+            {
+                m_tabletSelectionData.GraphicalObject.SetActive(false);
+            }
+
+            //TODO draw the selection mesh
         }
 
         /// <summary>
@@ -851,7 +947,7 @@ namespace Sereno
 
                 Quaternion rel;
 
-                if (m_rootAnchorGO != null)
+                if(m_rootAnchorGO != null)
                 {
                     headsetData.Position = GetRelativePositionToAnchor(Camera.main.transform.position);
                     rel = Quaternion.Inverse(m_rootAnchorGO.transform.localRotation) * Camera.main.transform.rotation;
@@ -859,14 +955,14 @@ namespace Sereno
                 else
                 {
                     headsetData.Position = new float[3];
-                    for (int i = 0; i < 3; i++)
+                    for(int i = 0; i < 3; i++)
                         headsetData.Position[i] = Camera.main.transform.position[i];
                     rel = Camera.main.transform.rotation;
                 }
 
 
                 //The relative orientation
-                headsetData.Rotation = new float[4]{rel[3], rel[0], rel[1], rel[2]};
+                headsetData.Rotation = new float[4] { rel[3], rel[0], rel[1], rel[2] };
 
                 //The current pointing data
                 headsetData.PointingIT = CurrentPointingIT;
@@ -877,7 +973,7 @@ namespace Sereno
                     headsetData.PointingSubDatasetID = curSD.Parent.SubDatasets.FindIndex(s => s == curSD);
                     headsetData.PointingInPublic = true; //TODO modify it when needed
 
-                    for (int i = 0; i < 3; i++)
+                    for(int i = 0; i < 3; i++)
                         headsetData.PointingLocalSDPosition[i] = m_currentPointingIT.TargetPosition[i];
 
                     headsetData.PointingHeadsetStartPosition = GetRelativePositionToAnchor(m_currentPointingIT.HeadsetStartPosition);
@@ -902,7 +998,7 @@ namespace Sereno
             }
 #endif
         }
-        
+
         // Update is called once per frame
         void LateUpdate()
         {
@@ -918,14 +1014,15 @@ namespace Sereno
                 HandleRandomText();
                 HandleHeadsetStatusLoaded();
                 HandleHeadsetStatusSending();
+                HandleTabletSelection();
 
                 m_targetedGameObject = null;
 
                 //Update intersection between each datasets rendered and the selected pointing interaction technique
-                if (m_currentPointingIT != null && m_currentPointingIT.TargetPositionIsValid)
+                if(m_currentPointingIT != null && m_currentPointingIT.TargetPositionIsValid)
                 {
                     Vector3 targetPos = m_currentPointingIT.TargetPosition;
-                    if (targetPos.x >= -0.5f && targetPos.x <= 0.5f &&
+                    if(targetPos.x >= -0.5f && targetPos.x <= 0.5f &&
                        targetPos.y >= -0.5f && targetPos.y <= 0.5f &&
                        targetPos.z >= -0.5f && targetPos.z <= 0.5f)
                         m_targetedGameObject = m_currentPointingIT.CurrentSubDataset;
@@ -935,7 +1032,7 @@ namespace Sereno
                 m_connectionLost = false;
             }
         }
-                 
+
         public void OnDestroy()
         {
             if(m_client != null)
@@ -943,7 +1040,7 @@ namespace Sereno
         }
 
         /* Message Buffer callbacks */
-#region
+        #region
         public void OnEmptyMessage(MessageBuffer messageBuffer, EmptyMessage msg)
         {
             if(msg.Type == ServerType.GET_ANCHOR_EOF)
@@ -975,7 +1072,7 @@ namespace Sereno
             VTKDataset dataset = new VTKDataset(msg.DataID, msg.Path, parser, ptValues, cellValues);
             dataset.DatasetProperties = m_appProperties.DatasetPropertiesArray.FirstOrDefault(prop => dataset.Name == prop.Name);
 
-            lock (this)
+            lock(this)
             {
                 m_vtkDatasetsLoaded.Enqueue(dataset);
                 m_datasets.Add(dataset.ID, dataset);
@@ -983,10 +1080,10 @@ namespace Sereno
                 //Load the values in an asynchronous way
                 dataset.LoadValues().ContinueWith((status) =>
                 {
-                    lock (this)
+                    lock(this)
                     {
                         //Update the transfer functions (again, asynchronously)
-                        foreach (SubDataset sd in dataset.SubDatasets)
+                        foreach(SubDataset sd in dataset.SubDatasets)
                         {
                             Debug.Log("Updating SD after loading dataset");
                             lock(sd)
@@ -994,7 +1091,7 @@ namespace Sereno
                         }
                     }
                 });
-                
+
                 //Create the associate visualization
                 //if(parser.GetDatasetType() == VTKDatasetType.VTK_STRUCTURED_GRID)
                 {
@@ -1004,8 +1101,8 @@ namespace Sereno
                         m_vtkStructuredGrid.Add(dataset, grid);
                     }
                 }
-                foreach (SubDataset sd in dataset.SubDatasets)
-                        m_vtkSubDatasetToLoad.Enqueue(sd);
+                foreach(SubDataset sd in dataset.SubDatasets)
+                    m_vtkSubDatasetToLoad.Enqueue(sd);
             }
         }
 
@@ -1017,10 +1114,10 @@ namespace Sereno
         /// <returns>The SubDataset found with the correct IDs, null otherwise</returns>
         private SubDataset GetSubDataset(int datasetID, int subDatasetID)
         {
-            if (datasetID < 0 || subDatasetID < 0)
+            if(datasetID < 0 || subDatasetID < 0)
                 return null;
 
-            if (m_datasets.Count <= datasetID)
+            if(m_datasets.Count <= datasetID)
                 return null;
 
             return m_datasets[datasetID].GetSubDataset(subDatasetID);
@@ -1030,9 +1127,9 @@ namespace Sereno
         {
             Debug.Log("Received rotation event");
             SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if (sd == null)
+            if(sd == null)
                 return;
-            lock (sd)
+            lock(sd)
             {
                 sd.Rotation = msg.Quaternion;
             }
@@ -1042,9 +1139,9 @@ namespace Sereno
         {
             Debug.Log($"Received movement event : {msg.Position[0]}, {msg.Position[1]}, {msg.Position[2]}");
             SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if (sd != null)
+            if(sd != null)
             {
-                lock (sd)
+                lock(sd)
                     sd.Position = msg.Position;
             }
         }
@@ -1053,24 +1150,24 @@ namespace Sereno
         {
             Debug.Log($"Received Scale event : {msg.Scale[0]}, {msg.Scale[1]}, {msg.Scale[2]}");
             SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if (sd != null)
+            if(sd != null)
             {
-                lock (sd)
+                lock(sd)
                     sd.Scale = msg.Scale;
             }
         }
-        
+
         public void OnTFDataset(MessageBuffer messageBuffer, TFSubDatasetMessage msg)
         {
             Debug.Log("Received a Transfer Function even");
 
             SubDataset       sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if (sd == null)
+            if(sd == null)
                 return;
             TransferFunction tf = null;
 
             //Parse the transfer function
-            switch (msg.TFID)
+            switch(msg.TFID)
             {
                 case TFType.TF_GTF:
                 case TFType.TF_TRIANGULAR_GTF:
@@ -1079,7 +1176,7 @@ namespace Sereno
                     float[] centers = new float[msg.GTFData.Props.Length];
                     float[] scales  = new float[msg.GTFData.Props.Length];
 
-                    foreach (TFSubDatasetMessage.GTFProp prop in msg.GTFData.Props)
+                    foreach(TFSubDatasetMessage.GTFProp prop in msg.GTFData.Props)
                     {
                         int ind = sd.Parent.GetTFIndiceFromPropID(prop.PID);
                         if(ind != -1)
@@ -1090,7 +1187,7 @@ namespace Sereno
                     }
 
                     //Generate the propert transfer function
-                    if (msg.TFID == TFType.TF_GTF)
+                    if(msg.TFID == TFType.TF_GTF)
                         tf = new GTF(centers, scales);
                     else
                         tf = new TriangularGTF(centers, scales);
@@ -1099,11 +1196,11 @@ namespace Sereno
                 }
             }
 
-            if (tf != null)
+            if(tf != null)
                 tf.ColorMode = msg.ColorType;
 
             //Update the TF. Numerous thread will be separately launched to update the visual
-            lock (sd)
+            lock(sd)
                 sd.TransferFunction = tf;
         }
 
@@ -1111,10 +1208,10 @@ namespace Sereno
         {
             Debug.Log($"Received init headset message. Color : {msg.Color:X}, tablet connected: {msg.TabletConnected}, first connected: {msg.IsFirstConnected}");
 
-            lock (this)
+            lock(this)
             {
                 //Remove the connection message
-                if (msg.TabletConnected)
+                if(msg.TabletConnected)
                 {
                     m_textValues.UpdateIPTexts = true;
                     m_textValues.EnableIPTexts = false;
@@ -1124,7 +1221,7 @@ namespace Sereno
                 {
                     IPAddress addr = m_client.GetIPAddress();
                     String s = DEFAULT_IP_ADDRESS_TEXT;
-                    if (addr != null)
+                    if(addr != null)
                         s = IPAddress.Parse(addr.ToString()).ToString();
                     m_textValues.IPStr = s;
                     m_textValues.UpdateIPTexts = true;
@@ -1144,7 +1241,7 @@ namespace Sereno
 
                 //Send anchor dataset to the server. 
                 //The server will store that and send that information to other headsets if needed
-                if (msg.IsFirstConnected)
+                if(msg.IsFirstConnected)
                     m_anchorCommunication = AnchorCommunication.EXPORT;
             }
         }
@@ -1185,7 +1282,7 @@ namespace Sereno
 
         public void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg)
         {
-            lock (this)
+            lock(this)
             {
                 SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
                 if(sd != null)
@@ -1201,7 +1298,7 @@ namespace Sereno
                 SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
 
                 if(sd != null)
-                { 
+                {
                     //If currently in an annotation this will cancel the previous one
                     m_waitingPointingID = msg.PointingID;
                     m_sdWaitingAnnotation = sd;
@@ -1219,7 +1316,7 @@ namespace Sereno
                     sd.AddAnnotation(new Annotation(msg.LocalPosition));
             }
         }
-        
+
         public void OnClearAnnotations(MessageBuffer messageBuffer, ClearAnnotationsMessage msg)
         {
             SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
@@ -1233,32 +1330,32 @@ namespace Sereno
             Debug.Log("On AddSubDataset message");
             //Search for the parent dataset
             Dataset dataset;
-            lock (this)
+            lock(this)
             {
-                if (!m_datasets.ContainsKey(msg.DatasetID))
+                if(!m_datasets.ContainsKey(msg.DatasetID))
                     return;
                 dataset = m_datasets[msg.DatasetID];
             }
-            
+
             //If VTK type
             if(dataset.GetType() == typeof(VTKDataset))
             {
                 VTKDataset vtk = dataset as VTKDataset;
-                if (vtk.PtFieldValues.Count == 0)
+                if(vtk.PtFieldValues.Count == 0)
                     return;
 
                 //Create a new SubDataset
-                lock (this)
+                lock(this)
                 {
                     SubDataset sd = new SubDataset(vtk, msg.OwnerID, msg.Name);
                     lock(sd)
-                    { 
+                    {
                         sd.ID = msg.SubDatasetID;
 
                         //TGTF transfer function by default
                         float[] scale  = new float[sd.Parent.PointFieldDescs.Count];
                         float[] center = new float[sd.Parent.PointFieldDescs.Count];
-                        for (int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
+                        for(int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
                         {
                             center[i] = 0.5f;
                             scale[i]  = 0.5f;
@@ -1355,7 +1452,7 @@ namespace Sereno
                 m_enumPointingIT = value;
 
                 //Set the m_currentPointingIT variable (and treat the new one)
-                switch (m_enumPointingIT)
+                switch(m_enumPointingIT)
                 {
                     case PointingIT.NONE:
                         break;
@@ -1394,7 +1491,7 @@ namespace Sereno
                     }
 
                     case PointingIT.MANUAL:
-                        if (m_datasetGameObjects.Count > 0)
+                        if(m_datasetGameObjects.Count > 0)
                         {
                             ARManual go = Instantiate(ARManualPrefab, null);
                             go.Init(m_hdProvider, m_datasetInAnnotation);
@@ -1417,9 +1514,9 @@ namespace Sereno
         /// <param name="pointingIT">The pointing interaction technique calling this method</param>
         private void OnPointingSelection(IPointingIT pointingIT)
         {
-            lock (this)
+            lock(this)
             {
-                if (pointingIT.TargetPositionIsValid)
+                if(pointingIT.TargetPositionIsValid)
                 {
                     m_client.SendAnchorAnnotation(m_sdInAnnotation, new float[3] { pointingIT.TargetPosition.x, pointingIT.TargetPosition.y, pointingIT.TargetPosition.z });
                     m_updatePointingID = true;
@@ -1439,7 +1536,7 @@ namespace Sereno
             {
                 m_textValues.EnableIPTexts = true;
                 String txt = "";
-                if (status == ConnectionStatus.CONNECTED)
+                if(status == ConnectionStatus.CONNECTED)
                 {
                     m_wasConnected = true;
                     txt = IPAddress.Parse(((IPEndPoint)s.LocalEndPoint).Address.ToString()).ToString();
@@ -1452,7 +1549,7 @@ namespace Sereno
                     m_wasConnected = false;
 
                     //Restore anchor data
-                    if (m_transferBatch != null)
+                    if(m_transferBatch != null)
                     {
                         m_transferBatch.Dispose();
                         m_transferBatch = null;
@@ -1499,7 +1596,7 @@ namespace Sereno
         }
 
         /* Anchoring import/export callbacks */
-#region 
+        #region 
         /// <summary>
         /// Method called each time anchor data is available (segment of data)
         /// </summary>
