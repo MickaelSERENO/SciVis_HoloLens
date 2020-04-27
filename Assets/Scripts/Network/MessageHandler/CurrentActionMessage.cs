@@ -8,6 +8,9 @@ namespace Sereno.Network.MessageHandler
 {
     public class CurrentActionMessage : ServerMessage 
     {
+        ///<summary>
+        ///The action ID to set as the current action
+        ///</summary>
         public int CurrentAction = 0;
 
         public CurrentActionMessage(ServerType type) : base(type)
@@ -16,6 +19,7 @@ namespace Sereno.Network.MessageHandler
         public override void Push(Int32 value)
         {
             CurrentAction = value;
+            base.Push(value);
         }
 
         public override byte GetCurrentType()
