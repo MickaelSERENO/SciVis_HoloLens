@@ -11,6 +11,7 @@
         SCALING = 2,
         ROTATING = 3,
         SKETCHING = 4,
-        SELECTING = 5,
+        LASSO     = 6,
+        SELECTING = 7,
     }
 }
