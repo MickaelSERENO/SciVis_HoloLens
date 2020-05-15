@@ -22,5 +22,7 @@ namespace Sereno.Network.MessageHandler
         GET_DEL_SUBDATASET = 15, /*!< Delete a known SubDataset*/
         GET_SUBDATASET_OWNER = 16, /*!< Change the headset owning this SubDataset*/
         GET_CURRENT_ACTION = 17, /*!< Get the current action of this headset*/
+        GET_LOCATION = 19, /*!< Get the tablet's virtual location*/
+        GET_LASSO = 20, /*!< Get the tablet's virtual location*/
     }
 }

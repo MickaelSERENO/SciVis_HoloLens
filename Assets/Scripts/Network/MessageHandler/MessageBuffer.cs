@@ -129,6 +129,18 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnCurrentAction(MessageBuffer messageBuffer, CurrentActionMessage msg);
+        /// <summary>
+        /// Function called when the tablet's location changes
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnLocation(MessageBuffer messageBuffer, LocationMessage msg);
+        /// <summary>
+        /// Function called when a lasso is received
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnLasso(MessageBuffer messageBuffer, LassoMessage msg);
     }
 
     /// <summary>
@@ -328,6 +340,14 @@ namespace Sereno.Network.MessageHandler
                         case ServerType.GET_CURRENT_ACTION:
                             foreach(var l in m_listeners)
                                 l.OnCurrentAction(this, (CurrentActionMessage)m_msg);
+                            break;
+                        case ServerType.GET_LOCATION:
+                            foreach(var l in m_listeners)
+                                l.OnLocation(this, (LocationMessage)m_msg);
+                            break;
+                        case ServerType.GET_LASSO:
+                            foreach(var l in m_listeners)
+                                l.OnLasso(this, (LassoMessage)m_msg);
                             break;
                         default:
                             break;
@@ -530,6 +550,12 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_CURRENT_ACTION:
                     m_msg = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
+                    break;
+                case ServerType.GET_LOCATION:
+                    m_msg = new LocationMessage(ServerType.GET_LOCATION);
+                    break;
+                case ServerType.GET_LASSO:
+                    m_msg = new LassoMessage(ServerType.GET_LASSO);
                     break;
             }
         }

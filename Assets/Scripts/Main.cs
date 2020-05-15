@@ -491,7 +491,7 @@ namespace Sereno
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
-                addVTKMsg.Path = "history.vtk";
+                addVTKMsg.Path = "Agulhas_10_resampled.vtk";
                 addVTKMsg.PtFieldValueIndices = new int[] { 3 };
                 OnAddVTKDataset(null, addVTKMsg);
 
@@ -1384,7 +1384,35 @@ namespace Sereno
                 m_currentAction = (HeadsetCurrentAction)msg.CurrentAction;
             }
         }
+        
+        public void OnLocation(MessageBuffer messageBuffer, LocationMessage msg)
+        {
+            //Debug.Log("Tablet position: " + msg.position[0] + " " + msg.position[1] + " " + msg.position[2] + "; "
+            //        + "Tablet rotation: " + msg.rotation[0] + " " + msg.rotation[1] + " " + msg.rotation[2] + " " + msg.rotation[3]);
+            lock(this)
+            {
+                m_tabletSelectionData.Position.x = msg.position[0];
+                m_tabletSelectionData.Position.y = msg.position[1];
+                m_tabletSelectionData.Position.z = msg.position[2];
+                
+                m_tabletSelectionData.Rotation.x = msg.rotation[0];
+                m_tabletSelectionData.Rotation.y = msg.rotation[1];
+                m_tabletSelectionData.Rotation.z = msg.rotation[2];
+                m_tabletSelectionData.Rotation.w = msg.rotation[3];
+            }
+        }
 
+        public void OnLasso(MessageBuffer messageBuffer, LassoMessage msg)
+        {
+            Debug.Log("Lasso received: size: " + msg.size);
+            
+            lock(this)
+            {
+                m_tabletSelectionData.LassoPoints.Clear();
+                for(int i = 0; i < msg.size; i+=3)
+                    m_tabletSelectionData.LassoPoints.Add(new Vector2(msg.data.ElementAt(i), msg.data.ElementAt(i+1)));
+            }
+        }
         #endregion
 
         public Color GetHeadsetColor(int headsetID)
