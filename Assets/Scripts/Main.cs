@@ -1413,6 +1413,14 @@ namespace Sereno
                     m_tabletSelectionData.LassoPoints.Add(new Vector2(msg.data.ElementAt(i), msg.data.ElementAt(i+1)));
             }
         }
+
+        public void OnTabletScale(MessageBuffer messageBuffer, TabletScaleMessage msg)
+        {
+            Debug.Log("Scale received : " + msg.scale + " width : " + msg.width + " height : " + msg.height + " posx : " + msg.posx + " posy : " + msg.posy);
+            m_tabletSelectionData.Scaling.x = msg.scale;
+            m_tabletSelectionData.Scaling.y = msg.scale;
+            m_tabletSelectionData.Scaling.z = msg.scale;
+        }
         #endregion
 
         public Color GetHeadsetColor(int headsetID)

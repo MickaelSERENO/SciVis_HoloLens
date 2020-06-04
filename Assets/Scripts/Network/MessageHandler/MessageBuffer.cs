@@ -141,6 +141,12 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnLasso(MessageBuffer messageBuffer, LassoMessage msg);
+        /// <summary>
+        /// Function called when the tablet scale is received
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnTabletScale(MessageBuffer messageBuffer, TabletScaleMessage msg);
     }
 
     /// <summary>
@@ -341,13 +347,17 @@ namespace Sereno.Network.MessageHandler
                             foreach(var l in m_listeners)
                                 l.OnCurrentAction(this, (CurrentActionMessage)m_msg);
                             break;
-                        case ServerType.GET_LOCATION:
+                        case ServerType.GET_TABLET_LOCATION:
                             foreach(var l in m_listeners)
                                 l.OnLocation(this, (LocationMessage)m_msg);
                             break;
                         case ServerType.GET_LASSO:
                             foreach(var l in m_listeners)
                                 l.OnLasso(this, (LassoMessage)m_msg);
+                            break;
+                        case ServerType.GET_TABLET_SCALE:
+                            foreach(var l in m_listeners)
+                                l.OnTabletScale(this, (TabletScaleMessage)m_msg);
                             break;
                         default:
                             break;
@@ -551,11 +561,14 @@ namespace Sereno.Network.MessageHandler
                 case ServerType.GET_CURRENT_ACTION:
                     m_msg = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
                     break;
-                case ServerType.GET_LOCATION:
-                    m_msg = new LocationMessage(ServerType.GET_LOCATION);
+                case ServerType.GET_TABLET_LOCATION:
+                    m_msg = new LocationMessage(ServerType.GET_TABLET_LOCATION);
                     break;
                 case ServerType.GET_LASSO:
                     m_msg = new LassoMessage(ServerType.GET_LASSO);
+                    break;
+                case ServerType.GET_TABLET_SCALE:
+                    m_msg = new TabletScaleMessage(ServerType.GET_TABLET_SCALE);
                     break;
             }
         }
