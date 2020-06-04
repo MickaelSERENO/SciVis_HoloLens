@@ -1417,9 +1417,9 @@ namespace Sereno
         public void OnTabletScale(MessageBuffer messageBuffer, TabletScaleMessage msg)
         {
             Debug.Log("Scale received : " + msg.scale + " width : " + msg.width + " height : " + msg.height + " posx : " + msg.posx + " posy : " + msg.posy);
-            m_tabletSelectionData.Scaling.x = msg.scale;
+            m_tabletSelectionData.Scaling.x = msg.scale * msg.width/2;
             m_tabletSelectionData.Scaling.y = msg.scale;
-            m_tabletSelectionData.Scaling.z = msg.scale;
+            m_tabletSelectionData.Scaling.z = msg.scale * msg.height/2;
         }
         #endregion
 
