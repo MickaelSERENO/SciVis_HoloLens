@@ -630,6 +630,8 @@ MonoBehaviour:
     type: 3}
   TabletPrefab: {fileID: 261364030986515346, guid: 784833022781a9f4693f70b49dfc39ae,
     type: 3}
+  SelectionMeshPrefab: {fileID: 4446784393966462764, guid: 3412b81858b306a4895fc5aad0e529f4,
+    type: 3}
 --- !u!4 &1481252857
 Transform:
   m_ObjectHideFlags: 0

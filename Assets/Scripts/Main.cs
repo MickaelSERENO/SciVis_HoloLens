@@ -69,20 +69,35 @@ namespace Sereno
         public bool IsMatrixUpdated = false;
 
         /// <summary>
-        /// The current tablet position
-        /// </summary>
-        public Vector3 Position = new Vector3(0,0,0);
-
-        /// <summary>
         /// The current tablet scaling. 
         /// Since the tablet is in orthographic view, this corresponds to the orthographic parameters
         /// </summary>
         public Vector3 Scaling = new Vector3(1,1,1);
 
         /// <summary>
+        /// The current tablet position
+        /// </summary>
+        public Vector3 Position = new Vector3(0,0,0);
+
+        /// <summary>
         /// The current tablet rotation
         /// </summary>
         public Quaternion Rotation = Quaternion.identity;
+
+        /// <summary>
+        /// tablet positions for current selection
+        /// </summary>
+        public List<Vector3> PositionList = new List<Vector3>();
+
+        /// <summary>
+        /// tablet rotations for current selection
+        /// </summary>
+        public List<Quaternion> RotationList = new List<Quaternion>();
+
+        /// <summary>
+        /// how many steps of the selecton have been handled
+        /// </summary>
+        public int SelectionProgress = 0;
 
         /// <summary>
         /// The list of the lasso points. First and Last points are stitched together
@@ -98,6 +113,31 @@ namespace Sereno
         /// The graphical lasso
         /// </summary>
         public LineRenderer GraphicalLasso;
+        
+        /// <summary>
+        /// The selection mesh gameObject
+        /// </summary>
+        public GameObject SelectionMeshObject;
+        
+        /// <summary>
+        /// The selection mesh gameObject
+        /// </summary>
+        public MeshFilter SelectionMeshFilter;
+
+        /// <summary>
+        /// The selection mesh
+        /// </summary>
+        public Mesh SelectionMesh;
+        
+        /// <summary>
+        /// Vertices for the selection mesh
+        /// </summary>
+        public List<Vector3> selectionVertices = new List<Vector3>();
+        
+        /// <summary>
+        /// Triangles for the selection mesh
+        /// </summary>
+        public List<int> selectionTriangles = new List<int>();
     }
 
     /// <summary>
@@ -444,6 +484,11 @@ namespace Sereno
         /// The tablet prefab
         /// </summary>
         public GameObject TabletPrefab;
+
+        /// <summary>
+        /// The selection mesh prefab
+        /// </summary>
+        public GameObject SelectionMeshPrefab;
         #endregion
 
         void Start()
@@ -481,6 +526,9 @@ namespace Sereno
             m_tabletSelectionData.GraphicalLasso = m_tabletSelectionData.GraphicalObject.GetComponent<LineRenderer>();
             m_tabletSelectionData.GraphicalLasso.startWidth = m_tabletSelectionData.GraphicalLasso.endWidth = 0.005f; //width == 5mm
             m_tabletSelectionData.GraphicalObject.SetActive(false);
+            m_tabletSelectionData.SelectionMeshObject = Instantiate(SelectionMeshPrefab, this.transform);
+            m_tabletSelectionData.SelectionMeshFilter = m_tabletSelectionData.SelectionMeshObject.GetComponent<MeshFilter>();
+            m_tabletSelectionData.SelectionMeshObject.SetActive(false);
 
             CurrentPointingIT = PointingIT.NONE;
 
@@ -903,15 +951,89 @@ namespace Sereno
                 //m_tabletSelectionData.LassoPoints.Clear();
                 //m_tabletSelectionData.LassoPoints.AddRange(from x in Enumerable.Range(0, 10) select new Vector2((float)Math.Cos(x/5.0f*Math.PI), (float)Math.Sin(x/5.0f*Math.PI)));
 
-                //Set the lasso
-                if(m_tabletSelectionData.LassoPoints.Count > 0)
+                if(m_tabletSelectionData.LassoPoints.Count > 1)
                 {
+                    //Set the lasso
                     Vector3[] lasso = new Vector3[m_tabletSelectionData.LassoPoints.Count+1];
                     for(int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
                         lasso[i] = new Vector3(m_tabletSelectionData.LassoPoints[i].x, 0.0f, m_tabletSelectionData.LassoPoints[i].y);
                     lasso[lasso.Length-1] = lasso[0]; //Cycle
                     m_tabletSelectionData.GraphicalLasso.positionCount = lasso.Length;
                     m_tabletSelectionData.GraphicalLasso.SetPositions(lasso);
+                    
+                    // Update the selection mesh
+                    if(m_tabletSelectionData.SelectionProgress == 0)
+                    {
+                        // reset selection mesh
+                        m_tabletSelectionData.SelectionMesh = new Mesh();
+                        m_tabletSelectionData.selectionVertices.Clear();
+                        m_tabletSelectionData.selectionTriangles.Clear();
+
+                        // add vertices from current position
+                        for(int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
+                        {
+                            m_tabletSelectionData.selectionVertices.Add(m_tabletSelectionData.PositionList[0] + m_tabletSelectionData.RotationList[0] * new Vector3(m_tabletSelectionData.LassoPoints[i].x * m_tabletSelectionData.Scaling.x, 0.0f, m_tabletSelectionData.LassoPoints[i].y * m_tabletSelectionData.Scaling.z));
+                        }
+                        
+                        m_tabletSelectionData.SelectionProgress = 1;
+                    }
+                    while(m_tabletSelectionData.SelectionProgress < m_tabletSelectionData.PositionList.Count)
+                    {
+                        // add vertices from next posiion and connect them to the previous ones with triangles
+                        for(int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
+                        {
+                            m_tabletSelectionData.selectionVertices.Add(m_tabletSelectionData.PositionList[m_tabletSelectionData.SelectionProgress] + m_tabletSelectionData.RotationList[m_tabletSelectionData.SelectionProgress] * new Vector3(m_tabletSelectionData.LassoPoints[i].x * m_tabletSelectionData.Scaling.x, 0.0f, m_tabletSelectionData.LassoPoints[i].y * m_tabletSelectionData.Scaling.z));
+                            if(i > 0)
+                            {
+                                // side 1 triangle 1
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i-1);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i-1);
+                                
+                                // side 1 triangle 2
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i-1);
+                                
+                                // side 2 triangle 1
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i-1);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i);
+
+                                // side 2 triangle 2
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i-1);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i-1);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i);
+                            }
+                        }
+                        // side 1 triangle 1
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress+1) -1);
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress      );
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    -1);
+                        
+                        // side 1 triangle 2
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress      );
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1)   );
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    -1);
+                        
+                        // side 2 triangle 1
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress      );
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress+1) -1);
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1)   );
+                        
+                        // side 2 triangle 2
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress+1) -1);
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    -1);
+                        m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1)   );
+
+                        m_tabletSelectionData.SelectionProgress ++;
+                    }
+                    m_tabletSelectionData.SelectionMeshObject.SetActive(true);
+
+                    m_tabletSelectionData.SelectionMesh.vertices = m_tabletSelectionData.selectionVertices.ToArray();
+                    m_tabletSelectionData.SelectionMesh.triangles = m_tabletSelectionData.selectionTriangles.ToArray();
+                    m_tabletSelectionData.SelectionMesh.RecalculateNormals();
+                    m_tabletSelectionData.SelectionMeshFilter.mesh = m_tabletSelectionData.SelectionMesh;
                 }
                 else
                     m_tabletSelectionData.GraphicalLasso.positionCount = 0;
@@ -919,6 +1041,7 @@ namespace Sereno
             else
             {
                 m_tabletSelectionData.GraphicalObject.SetActive(false);
+                m_tabletSelectionData.SelectionMeshObject.SetActive(false);
             }
 
             //TODO draw the selection mesh
@@ -1391,6 +1514,7 @@ namespace Sereno
             //        + "Tablet rotation: " + msg.rotation[0] + " " + msg.rotation[1] + " " + msg.rotation[2] + " " + msg.rotation[3]);
             lock(this)
             {
+                // update current location
                 m_tabletSelectionData.Position.x = msg.position[0];
                 m_tabletSelectionData.Position.y = msg.position[1];
                 m_tabletSelectionData.Position.z = msg.position[2];
@@ -1399,24 +1523,37 @@ namespace Sereno
                 m_tabletSelectionData.Rotation.y = msg.rotation[1];
                 m_tabletSelectionData.Rotation.z = msg.rotation[2];
                 m_tabletSelectionData.Rotation.w = msg.rotation[3];
+
+                // record the movement
+                if(m_currentAction == HeadsetCurrentAction.SELECTING && m_tabletSelectionData.LassoPoints.Count > 0)
+                {
+                    m_tabletSelectionData.PositionList.Add(m_tabletSelectionData.Position);
+                    m_tabletSelectionData.RotationList.Add(m_tabletSelectionData.Rotation);
+                }
+                
             }
         }
 
         public void OnLasso(MessageBuffer messageBuffer, LassoMessage msg)
         {
-            Debug.Log("Lasso received: size: " + msg.size);
+            //Debug.Log("Lasso received: size: " + msg.size);
             
             lock(this)
             {
+                // store lasso
                 m_tabletSelectionData.LassoPoints.Clear();
                 for(int i = 0; i < msg.size; i+=3)
                     m_tabletSelectionData.LassoPoints.Add(new Vector2(msg.data.ElementAt(i), msg.data.ElementAt(i+1)));
+                // reset selection volume
+                m_tabletSelectionData.PositionList.Clear();
+                m_tabletSelectionData.RotationList.Clear();
+                m_tabletSelectionData.SelectionProgress = 0;
             }
         }
 
         public void OnTabletScale(MessageBuffer messageBuffer, TabletScaleMessage msg)
         {
-            Debug.Log("Scale received : " + msg.scale + " width : " + msg.width + " height : " + msg.height + " posx : " + msg.posx + " posy : " + msg.posy);
+            //Debug.Log("Scale received : " + msg.scale + " width : " + msg.width + " height : " + msg.height + " posx : " + msg.posx + " posy : " + msg.posy);
             m_tabletSelectionData.Scaling.x = msg.scale * msg.width/2;
             m_tabletSelectionData.Scaling.y = msg.scale;
             m_tabletSelectionData.Scaling.z = msg.scale * msg.height/2;
