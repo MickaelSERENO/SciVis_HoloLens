@@ -6,12 +6,13 @@
     /// </summary>
     public enum HeadsetCurrentAction
     {
-        NOTHING = 0,
-        MOVING = 1,
-        SCALING = 2,
-        ROTATING = 3,
-        SKETCHING = 4,
-        LASSO     = 6,
-        SELECTING = 7,
+        NOTHING             = 0,
+        MOVING              = 1,
+        SCALING             = 2,
+        ROTATING            = 3,
+        SKETCHING           = 4,
+        LASSO               = 6,
+        SELECTING           = 7,
+        REVIEWING_SELECTION = 8
     }
 }

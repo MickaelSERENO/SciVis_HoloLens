@@ -18,12 +18,13 @@ namespace Sereno.Network.MessageHandler
         GET_START_ANNOTATION  = 11, /*!< Start to create an annotation on a specific dataset*/
         GET_ANCHOR_ANNOTATION = 12, /*!< Anchor an annotation on a specific dataset on a specific position*/
         GET_CLEAR_ANNOTATIONS = 13, /*!< Clear all annotations on a specific dataset*/
-        GET_ADD_SUBDATASET = 14, /*!< Add a new SubDataset*/
-        GET_DEL_SUBDATASET = 15, /*!< Delete a known SubDataset*/
-        GET_SUBDATASET_OWNER = 16, /*!< Change the headset owning this SubDataset*/
-        GET_CURRENT_ACTION = 17, /*!< Get the current action of this headset*/
-        GET_TABLET_LOCATION = 19, /*!< Get the tablet's virtual location*/
-        GET_LASSO = 20, /*!< Get the tablet's virtual location*/
-        GET_TABLET_SCALE = 21, /*!< Get the tablet's scale*/
+        GET_ADD_SUBDATASET    = 14, /*!< Add a new SubDataset*/
+        GET_DEL_SUBDATASET    = 15, /*!< Delete a known SubDataset*/
+        GET_SUBDATASET_OWNER  = 16, /*!< Change the headset owning this SubDataset*/
+        GET_CURRENT_ACTION    = 17, /*!< Get the current action of this headset*/
+        GET_TABLET_LOCATION   = 19, /*!< Get the tablet's virtual location*/
+        GET_TABLET_SCALE      = 20, /*!< Get the tablet's scale*/
+        GET_LASSO             = 21, /*!< Get the tablet's virtual location*/
+        GET_CONFIRM_SELECTION = 22, /*!< Confirm a selection*/
     }
 }

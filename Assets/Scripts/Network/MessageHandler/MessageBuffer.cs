@@ -136,17 +136,23 @@ namespace Sereno.Network.MessageHandler
         /// <param name="msg">The message parsed</param>
         void OnLocation(MessageBuffer messageBuffer, LocationMessage msg);
         /// <summary>
+        /// Function called when the tablet scale is received
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnTabletScale(MessageBuffer messageBuffer, TabletScaleMessage msg);
+        /// <summary>
         /// Function called when a lasso is received
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnLasso(MessageBuffer messageBuffer, LassoMessage msg);
         /// <summary>
-        /// Function called when the tablet scale is received
+        /// Function called when the tablet confirms the selection
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
-        void OnTabletScale(MessageBuffer messageBuffer, TabletScaleMessage msg);
+        void OnConfirmSelection(MessageBuffer messageBuffer, ConfirmSelectionMessage msg);
     }
 
     /// <summary>
@@ -351,13 +357,17 @@ namespace Sereno.Network.MessageHandler
                             foreach(var l in m_listeners)
                                 l.OnLocation(this, (LocationMessage)m_msg);
                             break;
+                        case ServerType.GET_TABLET_SCALE:
+                            foreach(var l in m_listeners)
+                                l.OnTabletScale(this, (TabletScaleMessage)m_msg);
+                            break;
                         case ServerType.GET_LASSO:
                             foreach(var l in m_listeners)
                                 l.OnLasso(this, (LassoMessage)m_msg);
                             break;
-                        case ServerType.GET_TABLET_SCALE:
+                        case ServerType.GET_CONFIRM_SELECTION:
                             foreach(var l in m_listeners)
-                                l.OnTabletScale(this, (TabletScaleMessage)m_msg);
+                                l.OnConfirmSelection(this, (ConfirmSelectionMessage)m_msg);
                             break;
                         default:
                             break;
@@ -564,11 +574,14 @@ namespace Sereno.Network.MessageHandler
                 case ServerType.GET_TABLET_LOCATION:
                     m_msg = new LocationMessage(ServerType.GET_TABLET_LOCATION);
                     break;
+                case ServerType.GET_TABLET_SCALE:
+                    m_msg = new TabletScaleMessage(ServerType.GET_TABLET_SCALE);
+                    break;
                 case ServerType.GET_LASSO:
                     m_msg = new LassoMessage(ServerType.GET_LASSO);
                     break;
-                case ServerType.GET_TABLET_SCALE:
-                    m_msg = new TabletScaleMessage(ServerType.GET_TABLET_SCALE);
+                case ServerType.GET_CONFIRM_SELECTION:
+                    m_msg = new ConfirmSelectionMessage(ServerType.GET_CONFIRM_SELECTION);
                     break;
             }
         }
