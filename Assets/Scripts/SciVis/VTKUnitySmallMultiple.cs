@@ -173,7 +173,7 @@ namespace Sereno.SciVis
                                         else
                                         {
                                             //Determine transfer function coordinates
-                                            for (int l = 0; l < ptDescs.Count; l++)
+                                            for(int l = 0; l < ptDescs.Count; l++)
                                             {
                                                 if (ptDescs[l].NbValuesPerTuple == 1)
                                                     partialRes[l] = (ptDescs[l].Value.ReadAsFloat(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
@@ -181,7 +181,10 @@ namespace Sereno.SciVis
                                                     partialRes[l] = (ptDescs[l].ReadMagnitude(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
                                             }
 
-                                            partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd]; //In case we need the gradient
+                                            if(m_subDataset.Parent.Gradient != null)
+                                                partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd]; //In case we need the gradient
+                                            else
+                                                partialRes[partialRes.Length - 1] = 0.0f;
 
                                             float t = tf.ComputeColor(partialRes);
                                             float a = tf.ComputeAlpha(partialRes);

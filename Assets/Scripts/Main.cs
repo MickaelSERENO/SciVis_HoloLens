@@ -216,10 +216,15 @@ namespace Sereno
         private Queue<VTKDataset> m_vtkDatasetsLoaded = new Queue<VTKDataset>();
 
         /// <summary>
+        /// Cloud Point SubDataset to visualiy load
+        /// </summary>
+        private Queue<SubDataset> m_cloudPointSubDatasetToLoad = new Queue<SubDataset>(); 
+
+        /// <summary>
         /// SubDataset to visualy load.
         /// </summary>
         private Queue<SubDataset> m_vtkSubDatasetToLoad = new Queue<SubDataset>();
-
+        
         /// <summary>
         /// SubDataset to remove.
         /// </summary>
@@ -406,6 +411,11 @@ namespace Sereno
         public VTKUnitySmallMultipleGameObject VTKSMGameObject;
 
         /// <summary>
+        /// Prefab of CloudPointGameObject correctly configured
+        /// </summary>
+        public CloudPointGameObject CloudPointGameObjectPrefab;
+
+        /// <summary>
         /// The desired density for VTK structured grid datasets
         /// </summary>
         public UInt32 DesiredVTKDensity;
@@ -471,11 +481,6 @@ namespace Sereno
         public ARManual ARManualPrefab;
 
         /// <summary>
-        /// a stupid cube prefab
-        /// </summary>
-        public GameObject CubePrefab;
-
-        /// <summary>
         /// The AR Collaborator pointing IT prefab
         /// </summary>
         public ARCollabPointingIT ARCollabPointingITPrefab;
@@ -535,7 +540,25 @@ namespace Sereno
 #if TEST
             Task t = new Task( () =>
             {
-                AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
+                AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
+                addCloudMsg.Path   = "temp.cp";
+                addCloudMsg.DataID = 0;
+                OnAddCloudPointDataset(null, addCloudMsg);
+                
+                AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
+                addSDMsg.DatasetID = 0;
+                addSDMsg.SubDatasetID = 0;
+                addSDMsg.Name = "data";
+                OnAddSubDataset(null, addSDMsg);
+
+                ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
+                scaleMsg.DataID = 0;
+                scaleMsg.SubDataID = 0;
+                scaleMsg.HeadsetID = -1;
+                scaleMsg.Scale = new float[3] { 0.5f, 0.5f, 0.5f };
+                OnScaleDataset(null, scaleMsg);
+
+                /*AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
@@ -558,13 +581,13 @@ namespace Sereno
                     moveVTKMsg.HeadsetID = -1;
                     OnMoveDataset(null, moveVTKMsg);
 
-                    /*RotateDatasetMessage rotateVTKMsg = new RotateDatasetMessage(ServerType.GET_ON_ROTATE_DATASET);
+                    RotateDatasetMessage rotateVTKMsg = new RotateDatasetMessage(ServerType.GET_ON_ROTATE_DATASET);
                     rotateVTKMsg.DataID = 0;
                     rotateVTKMsg.SubDataID = i;
                     Quaternion q = Quaternion.Euler(45f, 45f, 0.0f);
                     rotateVTKMsg.Quaternion = new float[4] { q.w, q.x, q.y, q.z };
                     rotateVTKMsg.HeadsetID = -1;
-                    OnRotateDataset(null, rotateVTKMsg);*/
+                    OnRotateDataset(null, rotateVTKMsg);
 
                     ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                     scaleMsg.DataID = 0;
@@ -750,6 +773,8 @@ namespace Sereno
             while(m_vtkSubDatasetToLoad.Count > 0)
             {
                 SubDataset sd = m_vtkSubDatasetToLoad.Dequeue();
+
+                //Structure grid dataset
                 if(m_vtkStructuredGrid.ContainsKey(sd.Parent))
                 {
                     VTKUnitySmallMultipleGameObject gameObject = Instantiate(VTKSMGameObject);
@@ -761,6 +786,18 @@ namespace Sereno
 
                     m_datasetGameObjects.Add(gameObject);
                 }
+            }
+
+            while(m_cloudPointSubDatasetToLoad.Count > 0)
+            {
+                SubDataset sd = m_cloudPointSubDatasetToLoad.Dequeue();
+
+                CloudPointGameObject gameObject = Instantiate(CloudPointGameObjectPrefab);
+
+                gameObject.transform.parent = transform;
+                gameObject.Init((CloudPointDataset)sd.Parent, sd, this);
+                m_changeInternalStates.Add(sd, gameObject);
+                m_datasetGameObjects.Add(gameObject);
             }
         }
 
@@ -953,60 +990,62 @@ namespace Sereno
 
                 if(m_tabletSelectionData.LassoPoints.Count > 1)
                 {
-                    //Set the lasso
-                    Vector3[] lasso = new Vector3[m_tabletSelectionData.LassoPoints.Count+1];
-                    for(int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
-                        lasso[i] = new Vector3(m_tabletSelectionData.LassoPoints[i].x, 0.0f, m_tabletSelectionData.LassoPoints[i].y);
-                    lasso[lasso.Length-1] = lasso[0]; //Cycle
-                    m_tabletSelectionData.GraphicalLasso.positionCount = lasso.Length;
-                    m_tabletSelectionData.GraphicalLasso.SetPositions(lasso);
-                    
-                    // Update the selection mesh
-                    if(m_tabletSelectionData.SelectionProgress == 0 && m_tabletSelectionData.PositionList.Count > 0)
-                    {
-                        // reset selection mesh
-                        m_tabletSelectionData.SelectionMesh = new Mesh();
-                        m_tabletSelectionData.selectionVertices.Clear();
-                        m_tabletSelectionData.selectionTriangles.Clear();
-
-                        // add vertices from current position
+                    if(m_tabletSelectionData.SelectionProgress == 0)
+                    { 
+                        //Set the lasso
+                        Vector3[] lasso = new Vector3[m_tabletSelectionData.LassoPoints.Count+1];
                         for(int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
+                            lasso[i] = new Vector3(m_tabletSelectionData.LassoPoints[i].x, 0.0f, m_tabletSelectionData.LassoPoints[i].y);
+                        lasso[lasso.Length-1] = lasso[0]; //Cycle
+                        m_tabletSelectionData.GraphicalLasso.positionCount = lasso.Length;
+                        m_tabletSelectionData.GraphicalLasso.SetPositions(lasso);
+                    
+                        if(m_tabletSelectionData.PositionList.Count > 0)
                         {
-                            m_tabletSelectionData.selectionVertices.Add(m_tabletSelectionData.PositionList[0] + m_tabletSelectionData.RotationList[0] * new Vector3(m_tabletSelectionData.LassoPoints[i].x * m_tabletSelectionData.Scaling.x, 0.0f, m_tabletSelectionData.LassoPoints[i].y * m_tabletSelectionData.Scaling.z));
-                        }
-                        
-                        m_tabletSelectionData.SelectionProgress = 1;
-                    }
-                    if(m_tabletSelectionData.SelectionProgress > 0)
-                    {
-                        while(m_tabletSelectionData.SelectionProgress < m_tabletSelectionData.PositionList.Count)
-                        {
-                            // add vertices from next posiion and connect them to the previous ones with triangles
+                            // reset selection mesh
+                            m_tabletSelectionData.SelectionMesh = new Mesh();
+                            m_tabletSelectionData.selectionVertices.Clear();
+                            m_tabletSelectionData.selectionTriangles.Clear();
+
+                            // add vertices from current position
                             for(int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
                             {
-                                m_tabletSelectionData.selectionVertices.Add(m_tabletSelectionData.PositionList[m_tabletSelectionData.SelectionProgress] + m_tabletSelectionData.RotationList[m_tabletSelectionData.SelectionProgress] * new Vector3(m_tabletSelectionData.LassoPoints[i].x * m_tabletSelectionData.Scaling.x, 0.0f, m_tabletSelectionData.LassoPoints[i].y * m_tabletSelectionData.Scaling.z));
-                                if(i > 0)
-                                {
-                                    // side 1 triangle 1
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i-1);
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i);
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i-1);
-                                    
-                                    // side 1 triangle 2
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i);
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i);
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i-1);
-                                    
-                                    // side 2 triangle 1
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i);
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i-1);
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i);
+                                m_tabletSelectionData.selectionVertices.Add(m_tabletSelectionData.PositionList[0] + m_tabletSelectionData.RotationList[0] * new Vector3(m_tabletSelectionData.LassoPoints[i].x * m_tabletSelectionData.Scaling.x, 0.0f, m_tabletSelectionData.LassoPoints[i].y * m_tabletSelectionData.Scaling.z));
+                            }
+                        
+                            m_tabletSelectionData.SelectionProgress = 1;
+                        }
+                    }
 
-                                    // side 2 triangle 2
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i-1);
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i-1);
-                                    m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i);
-                                }
+                    if(m_tabletSelectionData.SelectionProgress > 0)
+                    {
+                        for(; m_tabletSelectionData.SelectionProgress < m_tabletSelectionData.PositionList.Count; m_tabletSelectionData.SelectionProgress++)
+                        {
+                            // add vertices from next posiion and connect them to the previous ones with triangles
+                            m_tabletSelectionData.selectionVertices.Add(m_tabletSelectionData.PositionList[m_tabletSelectionData.SelectionProgress] + m_tabletSelectionData.RotationList[m_tabletSelectionData.SelectionProgress] * new Vector3(m_tabletSelectionData.LassoPoints[0].x * m_tabletSelectionData.Scaling.x, 0.0f, m_tabletSelectionData.LassoPoints[0].y * m_tabletSelectionData.Scaling.z));
+                            for(int i = 1; i < m_tabletSelectionData.LassoPoints.Count; i++)
+                            {
+                                m_tabletSelectionData.selectionVertices.Add(m_tabletSelectionData.PositionList[m_tabletSelectionData.SelectionProgress] + m_tabletSelectionData.RotationList[m_tabletSelectionData.SelectionProgress] * new Vector3(m_tabletSelectionData.LassoPoints[i].x * m_tabletSelectionData.Scaling.x, 0.0f, m_tabletSelectionData.LassoPoints[i].y * m_tabletSelectionData.Scaling.z));
+                               
+                                // side 1 triangle 1
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i-1);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i-1);
+                                    
+                                // side 1 triangle 2
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i-1);
+                                    
+                                // side 2 triangle 1
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i-1);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i);
+
+                                // side 2 triangle 2
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    + i-1);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i-1);
+                                m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1) + i);
                             }
                             // side 1 triangle 1
                             m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress+1) -1);
@@ -1027,9 +1066,8 @@ namespace Sereno
                             m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress+1) -1);
                             m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count *  m_tabletSelectionData.SelectionProgress    -1);
                             m_tabletSelectionData.selectionTriangles.Add(m_tabletSelectionData.LassoPoints.Count * (m_tabletSelectionData.SelectionProgress-1)   );
-
-                            m_tabletSelectionData.SelectionProgress ++;
                         }
+
                         m_tabletSelectionData.SelectionMesh.vertices = m_tabletSelectionData.selectionVertices.ToArray();
                         m_tabletSelectionData.SelectionMesh.triangles = m_tabletSelectionData.selectionTriangles.ToArray();
                         m_tabletSelectionData.SelectionMesh.RecalculateNormals();
@@ -1046,7 +1084,7 @@ namespace Sereno
             else
             {
                 m_tabletSelectionData.GraphicalObject.SetActive(false);
-                if(m_currentAction != HeadsetCurrentAction.REVIEWING_SELECTION)
+                if(m_currentAction != HeadsetCurrentAction.REVIEWING_SELECTION && m_tabletSelectionData.SelectionMesh != null)
                     m_tabletSelectionData.SelectionMeshObject.SetActive(false);
             }
 
@@ -1200,29 +1238,28 @@ namespace Sereno
             //Create the Dataset
             VTKDataset dataset = new VTKDataset(msg.DataID, msg.Path, parser, ptValues, cellValues);
             dataset.DatasetProperties = m_appProperties.DatasetPropertiesArray.FirstOrDefault(prop => dataset.Name == prop.Name);
-
-            lock(this)
+            
+            //Load the values in an asynchronous way
+            dataset.LoadValues().ContinueWith((status) =>
             {
-                m_vtkDatasetsLoaded.Enqueue(dataset);
-                m_datasets.Add(dataset.ID, dataset);
-
-                //Load the values in an asynchronous way
-                dataset.LoadValues().ContinueWith((status) =>
+                lock (this)
                 {
-                    lock(this)
+                    //Update the transfer functions (again, asynchronously)
+                    foreach (SubDataset sd in dataset.SubDatasets)
                     {
-                        //Update the transfer functions (again, asynchronously)
-                        foreach(SubDataset sd in dataset.SubDatasets)
-                        {
-                            Debug.Log("Updating SD after loading dataset");
-                            lock(sd)
-                                sd.TransferFunction = sd.TransferFunction;
-                        }
+                        Debug.Log("Updating SD after loading dataset");
+                        lock (sd)
+                            sd.TransferFunction = sd.TransferFunction;
                     }
-                });
+                }
+            });
 
+            lock (this)
+            {
+                m_datasets.Add(dataset.ID, dataset);
+                
                 //Create the associate visualization
-                //if(parser.GetDatasetType() == VTKDatasetType.VTK_STRUCTURED_GRID)
+                if(parser.GetDatasetType() == VTKDatasetType.VTK_STRUCTURED_POINTS)
                 {
                     unsafe
                     {
@@ -1232,6 +1269,35 @@ namespace Sereno
                 }
                 foreach(SubDataset sd in dataset.SubDatasets)
                     m_vtkSubDatasetToLoad.Enqueue(sd);
+            }
+        }
+
+        public void OnAddCloudPointDataset(MessageBuffer messageBuffer, AddCloudDatasetMessage msg)
+        {
+            CloudPointDataset dataset = new CloudPointDataset(msg.DataID, msg.Path, msg.Path);
+            dataset.DatasetProperties = m_appProperties.DatasetPropertiesArray.FirstOrDefault(prop => dataset.Path == prop.Name);
+
+            //Load the values in an asynchronous way
+            dataset.LoadValues().ContinueWith((status) =>
+            {
+                lock(this)
+                {
+                    //Update the transfer functions (again, asynchronously)
+                    foreach(SubDataset sd in dataset.SubDatasets)
+                    {
+                        Debug.Log("Updating SD after loading dataset");
+                        lock (sd)
+                            sd.TransferFunction = sd.TransferFunction;
+                    }
+                }
+            });
+
+            //Store the dataset
+            lock(this)
+            {
+                m_datasets.Add(dataset.ID, dataset);
+                foreach(SubDataset sd in dataset.SubDatasets)
+                    m_cloudPointSubDatasetToLoad.Enqueue(sd);
             }
         }
 
@@ -1496,6 +1562,34 @@ namespace Sereno
                     m_vtkSubDatasetToLoad.Enqueue(sd);
                 }
             }
+
+            else if(dataset.GetType() == typeof(CloudPointDataset))
+            {
+                CloudPointDataset cp = dataset as CloudPointDataset;
+
+                //Create a new SubDataset
+                lock (this)
+                {
+                    SubDataset sd = new SubDataset(cp, msg.OwnerID, msg.Name);
+                    lock(sd)
+                    {
+                        sd.ID = msg.SubDatasetID;
+
+                        //GTF transfer function by default
+                        float[] scale = new float[sd.Parent.PointFieldDescs.Count];
+                        float[] center = new float[sd.Parent.PointFieldDescs.Count];
+                        for (int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
+                        {
+                            center[i] = 0.5f;
+                            scale[i] = 0.5f;
+                        }
+                        sd.TransferFunction = new GTF(center, scale);
+
+                        cp.AddSubDataset(sd, false);
+                    }
+                    m_cloudPointSubDatasetToLoad.Enqueue(sd);
+                }
+            }
         }
 
         public void OnRemoveSubDataset(MessageBuffer messageBuffer, RemoveSubDatasetMessage msg)
@@ -1536,7 +1630,6 @@ namespace Sereno
                     m_tabletSelectionData.PositionList.Add(m_tabletSelectionData.Position);
                     m_tabletSelectionData.RotationList.Add(m_tabletSelectionData.Rotation);
                 }
-                
             }
         }
 
@@ -1747,8 +1840,8 @@ namespace Sereno
                     //Datasets
                     m_vtkSubDatasetToLoad.Clear();
 
-                    foreach(Dataset d in m_vtkDatasetsLoaded)
-                        m_datasetToRemove.Enqueue(d);
+                    foreach(var d in m_datasets)
+                        m_datasetToRemove.Enqueue(d.Value);
 
                     txt = "";
                 }
@@ -1834,6 +1927,7 @@ namespace Sereno
 
             m_anchorImportSegments.Clear();
         }
+
         #endregion
     }
 }

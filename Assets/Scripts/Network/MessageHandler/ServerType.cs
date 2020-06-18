@@ -26,5 +26,6 @@ namespace Sereno.Network.MessageHandler
         GET_TABLET_SCALE      = 20, /*!< Get the tablet's scale*/
         GET_LASSO             = 21, /*!< Get the tablet's virtual location*/
         GET_CONFIRM_SELECTION = 22, /*!< Confirm a selection*/
+        GET_ADD_CLOUD_POINT_DATASET = 23, /*!< Add cloud point dataset message*/
     }
 }

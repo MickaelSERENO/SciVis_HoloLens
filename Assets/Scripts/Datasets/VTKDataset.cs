@@ -39,8 +39,8 @@ namespace Sereno.Datasets
         /// <param name="cellFieldValues">Array of cell field values to take account of</param>
         public VTKDataset(int id, String name, VTKParser parser, VTKFieldValue[] ptFieldValues, VTKFieldValue[] cellFieldValues) : base(id, name)
         {
-            m_parser = parser;
-            m_ptFieldValues = new List<VTKFieldValue>(ptFieldValues);
+            m_parser          = parser;
+            m_ptFieldValues   = new List<VTKFieldValue>(ptFieldValues);
             m_cellFieldValues = new List<VTKFieldValue>(cellFieldValues);
 
             //Add all the field values to load
@@ -69,6 +69,7 @@ namespace Sereno.Datasets
                         break;
                     }
                 }
+
                 for (int i = 0; i < m_ptFieldDescs.Count; i++)
                 {
                     //Get our working variables

@@ -167,14 +167,17 @@ namespace Sereno.SciVis
             m_outlineColor = m_dataProvider.GetHeadsetColor(-1);
 
             //Load the map beneath this game object
-            Properties.DatasetMapProperties mapProp = m_sd.Parent.DatasetProperties.MapProperties;
-            if(mapProp != null)
-            {
-                Texture2D tex = Resources.Load<Texture2D>($"Textures/{mapProp.TexturePath}");
-                m_mapTextureGO = Instantiate(MapTextureGameObject, this.transform);
-                m_mapTextureGO.transform.localPosition = new Vector3(0.0f, 0.0f, -0.5f);
-                m_mapTextureGO.transform.localRotation = Quaternion.identity;
-                m_mapTextureGO.ApplyTexture(tex, new Vector2(mapProp.Tiling[0], mapProp.Tiling[1]), new Vector2(mapProp.Offset[0], mapProp.Offset[1]));
+            if(m_sd.Parent.DatasetProperties != null)
+            { 
+                Properties.DatasetMapProperties mapProp = m_sd.Parent.DatasetProperties.MapProperties;
+                if(mapProp != null)
+                {
+                    Texture2D tex = Resources.Load<Texture2D>($"Textures/{mapProp.TexturePath}");
+                    m_mapTextureGO = Instantiate(MapTextureGameObject, this.transform);
+                    m_mapTextureGO.transform.localPosition = new Vector3(0.0f, 0.0f, -0.5f);
+                    m_mapTextureGO.transform.localRotation = Quaternion.identity;
+                    m_mapTextureGO.ApplyTexture(tex, new Vector2(mapProp.Tiling[0], mapProp.Tiling[1]), new Vector2(mapProp.Offset[0], mapProp.Offset[1]));
+                }
             }
         }
 
@@ -213,7 +216,7 @@ namespace Sereno.SciVis
             }
         }
 
-        public void OnOwnerIDChange(SubDataset dataset, int ownerID)
+        public virtual void OnOwnerIDChange(SubDataset dataset, int ownerID)
         {}
         
         public void OnPositionChange(SubDataset dataset, float[] position)
@@ -257,7 +260,7 @@ namespace Sereno.SciVis
             }
         }
 
-        public void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)
+        public virtual void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)
         {
         }
 

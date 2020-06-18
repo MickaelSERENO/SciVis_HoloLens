@@ -237,7 +237,7 @@ namespace Sereno.Datasets
                 float[] quat = new float[4];
                 
                 //Apply -90° angle X rotation
-                if (Parent.DatasetProperties.RotateX)
+                if(Parent.DatasetProperties != null && Parent.DatasetProperties.RotateX)
                 {
                     float qW = (float)Math.Cos(-Math.PI / 4.0);
                     float qX = (float)Math.Sin(-Math.PI / 4.0);
@@ -297,7 +297,7 @@ namespace Sereno.Datasets
                 float[] scale = (float[]) m_scale.Clone();
 
                 //Apply -90° angle X rotation
-                if (Parent.DatasetProperties.InverseX)
+                if(Parent.DatasetProperties != null && Parent.DatasetProperties.InverseX)
                     scale[0] *= -1;
                 
                 return scale;

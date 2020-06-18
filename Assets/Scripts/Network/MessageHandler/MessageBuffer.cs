@@ -33,6 +33,13 @@ namespace Sereno.Network.MessageHandler
         void OnAddVTKDataset(MessageBuffer messageBuffer, AddVTKDatasetMessage msg);
 
         /// <summary>
+        /// Function called when a Cloud Point Dataset message has been received
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed containing information to parse a Cloud Point Dataset</param>
+        void OnAddCloudPointDataset(MessageBuffer messageBuffer, AddCloudDatasetMessage msg);
+
+        /// <summary>
         /// Function called when a Rotation message has been parsed
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
@@ -369,6 +376,10 @@ namespace Sereno.Network.MessageHandler
                             foreach(var l in m_listeners)
                                 l.OnConfirmSelection(this, (ConfirmSelectionMessage)m_msg);
                             break;
+                        case ServerType.GET_ADD_CLOUD_POINT_DATASET:
+                            foreach (var l in m_listeners)
+                                l.OnAddCloudPointDataset(this, (AddCloudDatasetMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -582,6 +593,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_CONFIRM_SELECTION:
                     m_msg = new ConfirmSelectionMessage(ServerType.GET_CONFIRM_SELECTION);
+                    break;
+                case ServerType.GET_ADD_CLOUD_POINT_DATASET:
+                    m_msg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
                     break;
             }
         }
