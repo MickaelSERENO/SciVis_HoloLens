@@ -245,9 +245,15 @@ namespace Sereno
         /// </summary>
         public UInt64         NbValues;
 
+        /// <summary>
+        /// Should this value be freed at the end of its lifetime?
+        /// </summary>
+        public bool ToBeDisposed = false;
+
         ~VTKValue()
         {
-            VTKInterop.VTKParser_free(Value);
+            if(ToBeDisposed)
+                VTKInterop.VTKParser_free(Value);
         }
 
         /// <summary>
@@ -415,6 +421,7 @@ namespace Sereno
         {
             VTKCells desc = VTKInterop.VTKParser_getUnstructuredGridCellDescriptor(m_parser);
             VTKValue res  = new VTKValue();
+            res.ToBeDisposed = true;
             unsafe
             { 
                 res.Value     = VTKInterop.VTKParser_parseAllUnstructuredGridCellsComposition(m_parser);
@@ -434,6 +441,7 @@ namespace Sereno
         {
             VTKCellTypes desc = VTKInterop.VTKParser_getUnstructuredGridCellTypesDescriptor(m_parser);
             VTKValue     res  = new VTKValue();
+            res.ToBeDisposed = true;
 
             res.Format   = VTKValueFormat.VTK_INT;
             unsafe
@@ -475,6 +483,7 @@ namespace Sereno
         public VTKValue ParseAllFieldValues(VTKFieldValue fieldVal)
         {
             VTKValue val = new VTKValue();
+            val.ToBeDisposed = true;
             val.NbValues = fieldVal.NbTuples * fieldVal.NbValuesPerTuple;
             val.Value    = VTKInterop.VTKParser_parseAllFieldValues(m_parser, fieldVal.NativePtr);
             val.Format   = fieldVal.Format;
@@ -492,6 +501,7 @@ namespace Sereno
             VTKValue          val = new VTKValue();
             VTKPointPositions pos = VTKInterop.VTKParser_getUnstructuredGridPointDescriptor(m_parser);
 
+            val.ToBeDisposed = true;
             val.Value    = VTKInterop.VTKParser_parseAllUnstructuredGridPoints(m_parser);
             val.NbValues = pos.NbPoints*3;
             return val;

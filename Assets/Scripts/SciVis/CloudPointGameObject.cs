@@ -95,9 +95,10 @@ namespace Sereno.SciVis
 
                     Debug.Log("Updating TF...");
 
+                    float[] colors = ComputeTFColor(tf);
                     lock (this)
                     {
-                        m_colors = ComputeTFColor(tf);
+                        m_colors = colors;
                     }
                 }
             });
@@ -159,8 +160,6 @@ namespace Sereno.SciVis
             {
                 if(m_colors != null)
                 {
-                    Debug.Log("Updating the mesh...");
-
                     //Set position
                     if (!m_isPositionInit)
                     { 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -14,12 +15,13 @@ namespace Sereno.Datasets
         private UInt32  m_nbPoints  = 0;
         private float[] m_positions = null;
         private float[] m_data      = null;
+        private GCHandle m_dataHandle;
 
         public CloudPointDataset(int id, String name, String path) : base(id, name)
         {
             m_path = path;
 
-            using(FileStream file = File.Open($"{Application.streamingAssetsPath}/{name}", FileMode.Open))
+            using(FileStream file = File.Open($"{Application.streamingAssetsPath}/{name}", FileMode.Open, FileAccess.Read))
             {
                 if (file == null)
                 {
@@ -44,12 +46,18 @@ namespace Sereno.Datasets
                 m_ptFieldDescs.Add(desc);
             }
         }
+        
+        ~CloudPointDataset()
+        {
+            if(m_data != null)
+                m_dataHandle.Free();
+        }
 
         public override Task<int> LoadValues()
         {
             return Task.Run(() =>
             {
-                using(FileStream file = File.Open($"{Application.streamingAssetsPath}/{m_path}", FileMode.Open))
+                using(FileStream file = File.Open($"{Application.streamingAssetsPath}/{m_path}", FileMode.Open, FileAccess.Read))
                 {
                     //Test the file
                     if(file == null)
@@ -69,7 +77,7 @@ namespace Sereno.Datasets
                     }
 
                     //A multi-purpose buffer to store data read
-                    byte[] buffer = new byte[4096];
+                    byte[] buffer = new byte[2048];
 
                     //Read all the positions
                     file.Seek(4, SeekOrigin.Begin);
@@ -93,6 +101,8 @@ namespace Sereno.Datasets
 
                     //Read all the data
                     m_data = new float[m_nbPoints];
+                    m_dataHandle = GCHandle.Alloc(m_data, GCHandleType.Pinned);
+
                     i = (int)m_nbPoints-1;
 
                     float minVal = float.MaxValue;
@@ -113,20 +123,14 @@ namespace Sereno.Datasets
                         }
                     }
 
-                    unsafe
+                    m_ptFieldDescs[0].Value = new VTKValue()
                     {
-                        fixed (float* p = m_data)
-                        {
-                            m_ptFieldDescs[0].Value = new VTKValue()
-                            {
-                                Value = (IntPtr)p,
-                                Format = VTKValueFormat.VTK_FLOAT,
-                                NbValues = m_nbPoints
-                            };
-                            m_ptFieldDescs[0].MaxVal = maxVal;
-                            m_ptFieldDescs[0].MinVal = minVal;
-                        }
-                    }
+                        Value = (IntPtr)m_dataHandle.AddrOfPinnedObject(),
+                        Format = VTKValueFormat.VTK_FLOAT,
+                        NbValues = m_nbPoints
+                    };
+                    m_ptFieldDescs[0].MaxVal = maxVal;
+                    m_ptFieldDescs[0].MinVal = minVal;
                     m_isLoaded = true;
                     return 1;
                 }
