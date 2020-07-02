@@ -56,8 +56,11 @@ namespace Sereno.SciVis
 
             for(uint i = 0; i < GetDimension()-1; i++)
             {
-                float r1 = r0*(values[i] - m_center[i])/m_scale[i];
-                r1Mag += r1*r1;
+                if(m_scale[i] != 0)
+                {
+                    float r1 = r0 * (values[i] - m_center[i]) / m_scale[i];
+                    r1Mag += r1 * r1;
+                }
             }
 
             float val = (float)(m_alphaMax * Math.Exp(-r1Mag));
