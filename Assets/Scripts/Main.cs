@@ -95,9 +95,9 @@ namespace Sereno
         public List<Quaternion> RotationList = new List<Quaternion>();
 
         /// <summary>
-        /// how many steps of the selecton have been handled
+        /// how many steps of the selecton have been handled. -1 means that nothing is initialized yet (0 means that the lasso is initialized but we are awaiting for new position/rotation)
         /// </summary>
-        public int SelectionProgress = 0;
+        public int SelectionProgress = -1;
 
         /// <summary>
         /// The list of the lasso points. First and Last points are stitched together
@@ -531,7 +531,6 @@ namespace Sereno
             m_tabletSelectionData.SelectionMeshObject = Instantiate(SelectionMeshPrefab);
             m_tabletSelectionData.SelectionMeshObject.transform.parent = this.transform;
             m_tabletSelectionData.SelectionMeshFilter = m_tabletSelectionData.SelectionMeshObject.GetComponent<MeshFilter>();
-            m_tabletSelectionData.SelectionMeshFilter.mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             m_tabletSelectionData.SelectionMeshObject.SetActive(false);
 
             CurrentPointingIT = PointingIT.NONE;
@@ -1013,6 +1012,7 @@ namespace Sereno
                 //Show only the tablet
                 m_tabletSelectionData.GraphicalObject.SetActive(true);
                 m_tabletSelectionData.SelectionMeshObject.SetActive(false);
+                m_tabletSelectionData.GraphicalLasso.positionCount = 0; //Remove the "old lasso"
             }
 
             else if(m_currentAction == HeadsetCurrentAction.SELECTING)
@@ -1022,26 +1022,28 @@ namespace Sereno
 
                 if(m_tabletSelectionData.LassoPoints.Count > 1)
                 {
-                    if(m_tabletSelectionData.SelectionProgress == 0)
+                    if(m_tabletSelectionData.SelectionProgress == -1) //Nothing is initialized yet. Reinit all our graphical objects
                     { 
                         //Set the lasso
                         Vector3[] lasso = new Vector3[m_tabletSelectionData.LassoPoints.Count+1];
                         for(int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
                             lasso[i] = new Vector3(m_tabletSelectionData.LassoPoints[i].x, 0.0f, m_tabletSelectionData.LassoPoints[i].y);
                         lasso[lasso.Length-1] = lasso[0]; //Cycle
+
                         m_tabletSelectionData.GraphicalLasso.positionCount = lasso.Length;
                         m_tabletSelectionData.GraphicalLasso.SetPositions(lasso);
                     
                         // reset selection mesh
                         m_tabletSelectionData.SelectionMesh = new Mesh();
+                        m_tabletSelectionData.SelectionMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
                         m_tabletSelectionData.SelectionMeshFilter.mesh = m_tabletSelectionData.SelectionMesh;
-                        m_tabletSelectionData.selectionVertices.Clear();
-                        m_tabletSelectionData.selectionTriangles.Clear();
+                        
+                        m_tabletSelectionData.SelectionProgress = 0;
                     }
 
                     //Push the point of the first lasso, without creating triangles
-                    if(m_tabletSelectionData.SelectionProgress == 0 && m_tabletSelectionData.PositionList.Count > 0)
-                    {
+                    if (m_tabletSelectionData.SelectionProgress == 0 && m_tabletSelectionData.PositionList.Count > 0)
+                    {                     
                         for(int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
                         {
                             m_tabletSelectionData.selectionVertices.Add(m_tabletSelectionData.PositionList[0] + m_tabletSelectionData.RotationList[0] * new Vector3(m_tabletSelectionData.LassoPoints[i].x * m_tabletSelectionData.Scaling.x, 0.0f, m_tabletSelectionData.LassoPoints[i].y * m_tabletSelectionData.Scaling.z));
@@ -1050,7 +1052,7 @@ namespace Sereno
                     }
 
                     //Check if we can add triangles
-                    if(m_tabletSelectionData.SelectionProgress >= 1)
+                    if(m_tabletSelectionData.SelectionProgress > 0)
                     { 
                         for(; m_tabletSelectionData.SelectionProgress < m_tabletSelectionData.PositionList.Count; m_tabletSelectionData.SelectionProgress++)
                         {
@@ -1643,8 +1645,8 @@ namespace Sereno
                 // record the movement
                 if(m_currentAction == HeadsetCurrentAction.SELECTING && m_tabletSelectionData.LassoPoints.Count > 0)
                 {
-                    m_tabletSelectionData.PositionList.Add(new Vector3(msg.position[0], msg.position[1], msg.position[2]));
-                    m_tabletSelectionData.RotationList.Add(new Quaternion(m_tabletSelectionData.Rotation.x, m_tabletSelectionData.Rotation.y, m_tabletSelectionData.Rotation.z, m_tabletSelectionData.Rotation.w));
+                    m_tabletSelectionData.PositionList.Add(m_tabletSelectionData.Position);
+                    m_tabletSelectionData.RotationList.Add(m_tabletSelectionData.Rotation);
                 }
             }
         }
@@ -1667,14 +1669,14 @@ namespace Sereno
                 // store lasso
                 m_tabletSelectionData.LassoPoints.Clear();
                 for(int i = 0; i < msg.size; i+=3)
-                    m_tabletSelectionData.LassoPoints.Add(new Vector2(msg.data.ElementAt(i), msg.data.ElementAt(i+1)));
+                    m_tabletSelectionData.LassoPoints.Add(new Vector2(msg.data[i], msg.data[i+1]));
 
-                // reset selection volume
+                // reset selection volume. Do it here because doing it in the main thread might discard correct values that should not
                 m_tabletSelectionData.PositionList.Clear();
                 m_tabletSelectionData.RotationList.Clear();
                 m_tabletSelectionData.selectionTriangles.Clear();
                 m_tabletSelectionData.selectionVertices.Clear();
-                m_tabletSelectionData.SelectionProgress = 0;
+                m_tabletSelectionData.SelectionProgress = -1;
             }
         }
 
