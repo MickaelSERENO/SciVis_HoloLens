@@ -567,6 +567,7 @@ PlayerSettings:
     14: DOTNETWINRT_PRESENT
   platformArchitecture:
     iOS: 1
+    iPhone: 1
   scriptingBackend: {}
   il2cppCompilerConfiguration: {}
   managedStrippingLevel: {}

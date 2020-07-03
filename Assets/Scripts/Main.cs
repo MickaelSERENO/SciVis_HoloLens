@@ -1684,6 +1684,12 @@ namespace Sereno
         {
             Debug.Log("Selection confirmed");
         }
+
+        public void OnAddNewSelectionInput(MessageBuffer messageBuffer, AddNewSelectionInputMessage msg)
+        {
+            Debug.Log("Start new selection");
+        }
+
         #endregion
 
         public Color GetHeadsetColor(int headsetID)

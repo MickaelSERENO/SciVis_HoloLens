@@ -136,30 +136,41 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnCurrentAction(MessageBuffer messageBuffer, CurrentActionMessage msg);
+
         /// <summary>
         /// Function called when the tablet's location changes
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnLocation(MessageBuffer messageBuffer, LocationMessage msg);
+
         /// <summary>
         /// Function called when the tablet scale is received
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnTabletScale(MessageBuffer messageBuffer, TabletScaleMessage msg);
+
         /// <summary>
         /// Function called when a lasso is received
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnLasso(MessageBuffer messageBuffer, LassoMessage msg);
+
         /// <summary>
         /// Function called when the tablet confirms the selection
         /// </summary>
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnConfirmSelection(MessageBuffer messageBuffer, ConfirmSelectionMessage msg);
+
+        /// <summary>
+        /// Function called when a new selection input has to be performed
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnAddNewSelectionInput(MessageBuffer messageBuffer, AddNewSelectionInputMessage msg);
     }
 
     /// <summary>
@@ -377,8 +388,12 @@ namespace Sereno.Network.MessageHandler
                                 l.OnConfirmSelection(this, (ConfirmSelectionMessage)m_msg);
                             break;
                         case ServerType.GET_ADD_CLOUD_POINT_DATASET:
-                            foreach (var l in m_listeners)
+                            foreach(var l in m_listeners)
                                 l.OnAddCloudPointDataset(this, (AddCloudDatasetMessage)m_msg);
+                            break;
+                        case ServerType.GET_ADD_NEW_SELECTION_INPUT:
+                            foreach(var l in m_listeners)
+                                l.OnAddNewSelectionInput(this, (AddNewSelectionInputMessage)m_msg);
                             break;
                         default:
                             break;
@@ -596,6 +611,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_ADD_CLOUD_POINT_DATASET:
                     m_msg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
+                    break;
+                case ServerType.GET_ADD_NEW_SELECTION_INPUT:
+                    m_msg = new AddNewSelectionInputMessage(ServerType.GET_ADD_NEW_SELECTION_INPUT);
                     break;
             }
         }

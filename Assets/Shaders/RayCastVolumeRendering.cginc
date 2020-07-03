@@ -203,7 +203,7 @@ fixed4  frag(v2f input) : COLOR
 		//If enough contribution
 		if (fragColor.a > 0.975)
 		{
-			fragColor.a = 1.0;
+			fragColor.a = 1;
 			return fragColor;
 		}
 	}
