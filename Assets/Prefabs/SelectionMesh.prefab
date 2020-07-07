@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4446784393966462765}
   - component: {fileID: 4446784393966462760}
   - component: {fileID: 4446784393966462767}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: SelectionMesh
   m_TagString: Untagged
   m_Icon: {fileID: 0}

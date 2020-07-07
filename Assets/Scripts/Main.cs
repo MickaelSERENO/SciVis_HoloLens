@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -25,6 +25,27 @@ using UnityEngine.XR;
 
 namespace Sereno
 {
+    /// <summary>
+    /// The different viewtype this application handles
+    /// </summary>
+    public enum ViewType
+    {
+        /// <summary>
+        /// AR View
+        /// </summary>
+        AR = 0,
+        
+        /// <summary>
+        /// 2D projection place on space
+        /// </summary>
+        TWO_DIMENSION = 1,
+
+        /// <summary>
+        /// Both rendering mode
+        /// </summary>
+        BOTH = 2,
+    }
+
     public class IPTextValue
     {
         /// <summary>
@@ -412,6 +433,16 @@ namespace Sereno
         /// The Tablet selection internal data (matrix, in selection, etc.)
         /// </summary>
         private TabletSelectionData m_tabletSelectionData = new TabletSelectionData();
+
+        /// <summary>
+        /// The current view type 
+        /// </summary>
+        private ViewType m_viewType = ViewType.AR;
+
+        /// <summary>
+        /// Is the current view type updated? (useful for asynchronous messages)
+        /// </summary>
+        private bool m_viewTypeUpdated = true;
         #endregion
 
         /* Public attributes*/
@@ -510,6 +541,21 @@ namespace Sereno
         /// The selection mesh prefab
         /// </summary>
         public GameObject SelectionMeshPrefab;
+
+        /// <summary>
+        /// The tablet virtual camera to use
+        /// </summary>
+        public Camera TabletVirtualCamera;
+
+        /// <summary>
+        /// A bird view camera of the scene in the camera mode
+        /// </summary>
+        public Camera TabletBirdViewCamera;
+
+        /// <summary>
+        /// The tablet virtual plane that display, in space, what the tablet sees
+        /// </summary>
+        public GameObject TabletVirtualPlane;
         #endregion
 
         void Start()
@@ -548,7 +594,11 @@ namespace Sereno
             m_tabletSelectionData.GraphicalLasso = m_tabletSelectionData.GraphicalObject.GetComponent<LineRenderer>();
             m_tabletSelectionData.GraphicalLasso.startWidth = m_tabletSelectionData.GraphicalLasso.endWidth = 0.001f; //width == 5mm
             m_tabletSelectionData.GraphicalObject.SetActive(false);
-            
+
+            //Initialize the bird view camera
+            TabletBirdViewCamera.transform.localPosition = new Vector3(5, 5, -5);
+            TabletBirdViewCamera.transform.localRotation = Quaternion.LookRotation(-TabletBirdViewCamera.transform.localPosition);    
+        
             CurrentPointingIT = PointingIT.NONE;
 
 #if TEST
@@ -559,11 +609,26 @@ namespace Sereno
                 addCloudMsg.DataID = 0;
                 OnAddCloudPointDataset(null, addCloudMsg);
                 
+                /*AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
+                addVTKMsg.DataID = 0;
+                addVTKMsg.NbCellFieldValueIndices = 0;
+                addVTKMsg.NbPtFieldValueIndices = 1;
+                addVTKMsg.Path = "Agulhas_10_resampled.vtk";
+                addVTKMsg.PtFieldValueIndices = new int[] { 3 };
+                OnAddVTKDataset(null, addVTKMsg);*/
+                
                 AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
                 addSDMsg.DatasetID = 0;
                 addSDMsg.SubDatasetID = 0;
                 addSDMsg.Name = "data";
                 OnAddSubDataset(null, addSDMsg);
+
+                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                moveVTKMsg.DataID = 0;
+                moveVTKMsg.SubDataID = 0;
+                moveVTKMsg.Position = new float[3] { 0, 0, 1.0f };
+                moveVTKMsg.HeadsetID = -1;
+                OnMoveDataset(null, moveVTKMsg);
 
                 ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
@@ -572,15 +637,8 @@ namespace Sereno
                 scaleMsg.Scale = new float[3] { 0.5f, 0.5f, 0.5f };
                 OnScaleDataset(null, scaleMsg);
 
-                /*AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
-                addVTKMsg.DataID = 0;
-                addVTKMsg.NbCellFieldValueIndices = 0;
-                addVTKMsg.NbPtFieldValueIndices = 1;
-                addVTKMsg.Path = "Agulhas_10_resampled.vtk";
-                addVTKMsg.PtFieldValueIndices = new int[] { 3 };
-                OnAddVTKDataset(null, addVTKMsg);
 
-                for (int i = 0; i < 1; i++)
+                /*for (int i = 0; i < 1; i++)
                 {
                     AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
                     addSDMsg.DatasetID = 0;
@@ -979,6 +1037,47 @@ namespace Sereno
                 }
             }
         }
+
+        private void HandleTablet2DView()
+        {
+            if(m_viewTypeUpdated)
+            {
+                switch(m_viewType)
+                {
+                    case ViewType.AR:
+                        Camera.main.cullingMask |= ((1 << 8) + (1 << 9)); //Enable VolumeRendering and tablet selection Mask
+                        //Disable 2D camera
+                        TabletVirtualCamera.gameObject.SetActive(false);
+                        TabletBirdViewCamera.gameObject.SetActive(false);
+                        TabletVirtualPlane.gameObject.SetActive(false);
+                        break;
+
+                    case ViewType.TWO_DIMENSION:
+                        Camera.main.cullingMask &= ~((1 << 8) + (1 << 9)); //Disable VolumeRendering and tablet selection Mask
+                        //Enable 2D camera
+                        TabletVirtualCamera.gameObject.SetActive(true);
+                        TabletBirdViewCamera.gameObject.SetActive(true);
+                        TabletVirtualPlane.gameObject.SetActive(true);
+                        break;
+
+                    case ViewType.BOTH:
+                        Camera.main.cullingMask |= ((1 << 8) + (1 << 9)); //Enable VolumeRendering and tablet selection Mask
+                        //Enable 2D camera
+                        TabletVirtualCamera.gameObject.SetActive(true);
+                        TabletBirdViewCamera.gameObject.SetActive(true);
+                        TabletVirtualPlane.gameObject.SetActive(true);
+                        break;
+                }
+                m_viewTypeUpdated = false;
+            }
+
+            if(m_viewType == ViewType.BOTH || m_viewType == ViewType.TWO_DIMENSION)
+            {
+                //Do not change the scaling since we do not know how to translate that for perspective projections
+                TabletVirtualCamera.transform.localPosition = m_tabletSelectionData.Position;
+                TabletVirtualCamera.transform.localRotation = m_tabletSelectionData.Rotation;
+            }
+        }
         
         /// <summary>
         /// Tells the orientation of a triangle
@@ -1242,6 +1341,7 @@ namespace Sereno
                 HandleHeadsetStatusLoaded();
                 HandleHeadsetStatusSending();
                 HandleTabletSelection();
+                HandleTablet2DView();
 
                 m_targetedGameObject = null;
 
