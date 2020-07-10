@@ -7,27 +7,20 @@ using System.Collections.Generic;
 /// </summary>
 public class Triangulator
 {
-    private List<Vector2> m_points = new List<Vector2>();
-
-    public Triangulator(Vector2[] points)
-    {
-        m_points = new List<Vector2>(points);
-    }
-
     /// <summary>
     /// Compute the indice array which defines the triangles to create for the polygon passing in parameter at construction time
     /// </summary>
     /// <returns>indice array of the polygon points</returns>
-    public int[] Triangulate()
+    public static int[] Triangulate(List<Vector2> points)
     {
         List<int> indices = new List<int>();
 
-        int n = m_points.Count;
+        int n = points.Count;
         if (n < 3)
             return indices.ToArray();
 
         int[] V = new int[n];
-        if (Area() > 0)
+        if (Area(points) > 0)
         {
             for (int v = 0; v < n; v++)
                 V[v] = v;
@@ -55,7 +48,7 @@ public class Triangulator
             if (nv <= w)
                 w = 0;
 
-            if (Snip(u, v, w, nv, V))
+            if (Snip(points, u, v, w, nv, V))
             {
                 int a, b, c, s, t;
                 a = V[u];
@@ -75,39 +68,39 @@ public class Triangulator
         return indices.ToArray();
     }
 
-    private float Area()
+    private static float Area(List<Vector2> points)
     {
-        int n = m_points.Count;
+        int n = points.Count;
         float A = 0.0f;
         for (int p = n - 1, q = 0; q < n; p = q++)
         {
-            Vector2 pval = m_points[p];
-            Vector2 qval = m_points[q];
+            Vector2 pval = points[p];
+            Vector2 qval = points[q];
             A += pval.x * qval.y - qval.x * pval.y;
         }
         return (A * 0.5f);
     }
 
-    private bool Snip(int u, int v, int w, int n, int[] V)
+    private static bool Snip(List<Vector2> points, int u, int v, int w, int n, int[] V)
     {
         int p;
-        Vector2 A = m_points[V[u]];
-        Vector2 B = m_points[V[v]];
-        Vector2 C = m_points[V[w]];
+        Vector2 A = points[V[u]];
+        Vector2 B = points[V[v]];
+        Vector2 C = points[V[w]];
         if (Mathf.Epsilon > (((B.x - A.x) * (C.y - A.y)) - ((B.y - A.y) * (C.x - A.x))))
             return false;
         for (p = 0; p < n; p++)
         {
             if ((p == u) || (p == v) || (p == w))
                 continue;
-            Vector2 P = m_points[V[p]];
+            Vector2 P = points[V[p]];
             if (InsideTriangle(A, B, C, P))
                 return false;
         }
         return true;
     }
 
-    private bool InsideTriangle(Vector2 A, Vector2 B, Vector2 C, Vector2 P)
+    private static bool InsideTriangle(Vector2 A, Vector2 B, Vector2 C, Vector2 P)
     {
         float ax, ay, bx, by, cx, cy, apx, apy, bpx, bpy, cpx, cpy;
         float cCROSSap, bCROSScp, aCROSSbp;
