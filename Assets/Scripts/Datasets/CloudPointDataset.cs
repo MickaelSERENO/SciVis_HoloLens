@@ -16,6 +16,8 @@ namespace Sereno.Datasets
         private float[] m_positions = null;
         private float[] m_data      = null;
         private GCHandle m_dataHandle;
+        private float[] m_minPos = new float[3] { 0.0f, 0.0f, 0.0f };
+        private float[] m_maxPos = new float[3] { 1.0f, 1.0f, 1.0f };
 
         public CloudPointDataset(int id, String name, String path) : base(id, name)
         {
@@ -76,6 +78,13 @@ namespace Sereno.Datasets
                         return 0;
                     }
 
+                    //Init the min and max position
+                    for(int k = 0; k < 3; k++)
+                    {
+                        m_minPos[k] = float.MaxValue;
+                        m_maxPos[k] = -m_minPos[k];
+                    }
+
                     //A multi-purpose buffer to store data read
                     byte[] buffer = new byte[2048];
 
@@ -94,6 +103,10 @@ namespace Sereno.Datasets
                             {
                                 intFloatUnion.FillWithByteArray(buffer, sizeof(float)*(3*j+k));
                                 m_positions[3*(m_nbPoints-1-i) + k] = intFloatUnion.FloatField;
+
+                                //Update the bounding box
+                                m_minPos[k] = (m_minPos[k] > intFloatUnion.FloatField ? intFloatUnion.FloatField : m_minPos[k]);
+                                m_maxPos[k] = (m_maxPos[k] < intFloatUnion.FloatField ? intFloatUnion.FloatField : m_maxPos[k]);
                             }
                             i--;
                         }
@@ -152,5 +165,15 @@ namespace Sereno.Datasets
         /// Packs of 3 values represent one position (x, y, z). Positions and data are aligned altogether (positions[0] corresponds to data[0])
         /// </summary>
         public float[] Position { get => m_positions; }
+
+        /// <summary>
+        /// The minimum position of the points (bounding box of the dataset, min pos)
+        /// </summary>
+        public float[] MinPos { get => m_minPos; }
+
+        /// <summary>
+        /// The maximum position of the points (bounding box of the dataset, max pos)
+        /// </summary>
+        public float[] MaxPos { get => m_maxPos; }
     }
 }

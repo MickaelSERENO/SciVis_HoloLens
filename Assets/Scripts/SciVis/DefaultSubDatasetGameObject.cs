@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Sereno.SciVis
 {
-    public class DefaultSubDatasetGameObject : MonoBehaviour, IChangeInternalState, ISubDatasetCallback
+    public class DefaultSubDatasetGameObject : MonoBehaviour, IChangeInternalState, ISubDatasetCallback, ISubvolumeSelection
     {
         /// <summary>
         /// The Outline gameobject
@@ -429,6 +429,9 @@ namespace Sereno.SciVis
                 m_annotationGOs.Add(go);
             }
         }
+
+        public virtual void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)
+        {}
 
         /// <summary>
         /// Is this GameObject targeted?

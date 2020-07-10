@@ -610,7 +610,7 @@ namespace Sereno
                 MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
                 moveVTKMsg.SubDataID = 0;
-                moveVTKMsg.Position = new float[3] { 0, 0, 1.0f };
+                moveVTKMsg.Position = new float[3] { 0, 0, 0.0f };
                 moveVTKMsg.HeadsetID = -1;
                 OnMoveDataset(null, moveVTKMsg);
 
@@ -635,12 +635,12 @@ namespace Sereno
                 OnTabletScale(null, tabletScale);
                 
                 LassoMessage lasso = new LassoMessage(ServerType.GET_LASSO);
-                lasso.size = 32;
+                lasso.size = 6*3;
                 lasso.data = new List<float>();
-                for(int i = 0; i < 32; i++)
+                for(int i = 0; i < 6; i++)
                 {
-                    lasso.data.Add((float)(0.5f*Math.Cos(2.0*i/32.0 * Math.PI)));
-                    lasso.data.Add((float)(0.5f*Math.Sin(2.0*i/32.0 * Math.PI)));
+                    lasso.data.Add((float)(0.5f*Math.Cos(i/3.0 * Math.PI)));
+                    lasso.data.Add((float)(0.5f*Math.Sin(i/3.0 * Math.PI)));
                     lasso.data.Add(0.0f);
                 }
                 OnLasso(null, lasso);
@@ -674,6 +674,10 @@ namespace Sereno
 
                 curAction.CurrentAction = (int)HeadsetCurrentAction.REVIEWING_SELECTION;
                 OnCurrentAction(null, curAction);
+
+                //The dataset needs to be loaded for that
+                Thread.Sleep(1000);
+                OnConfirmSelection(null, null);
             }
             );
             t.Start();
@@ -1848,7 +1852,21 @@ namespace Sereno
             lock(this)
             {
                 CloseTabletCurrentSelectionMesh();
-                ClearSelectionData(); //TODO
+
+                List<NewSelectionMeshData> meshData = new List<NewSelectionMeshData>(m_tabletSelectionData.NewSelectionMeshIDs);
+                foreach (var d in m_datasetGameObjects)
+                {
+                    Task t = new Task(() =>
+                    {
+                        Matrix4x4 meshToLocalDataset = Matrix4x4.identity; //TODO
+                        foreach (var data in meshData)
+                        {
+                            d.OnSelection(data, meshToLocalDataset);
+                        }
+                    });
+                    t.Start();
+                }
+                //ClearSelectionData(); //TODO
             }
         }
 

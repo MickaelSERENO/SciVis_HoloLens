@@ -71,6 +71,10 @@ Shader "Custom/CloudPointRendering"
             {
                 UNITY_SETUP_INSTANCE_ID(input[0]);
 
+                //Discard hidden pixels
+                if(input[0].color.a == 0.0)
+                    return;
+
                 const float f = _PointSize / 2; //half size
                 const float4 vc[8] = { float4(-f, -f, -f, 0.0f),  //0
                                        float4(-f, -f, +f, 0.0f),  //1
