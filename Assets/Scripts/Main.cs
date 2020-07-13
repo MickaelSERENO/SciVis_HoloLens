@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -159,6 +159,11 @@ namespace Sereno
         /// What is the capture ID of the current selection? Each time m_currentCaptureID == 0, we capture the position to create the mesh
         /// </summary>
         public int CurrentCaptureID = 0;
+
+        /// <summary>
+        /// Should we validate the selection?
+        /// </summary>
+        public bool InValidSelection = false;
     }
 
     /// <summary>
@@ -220,6 +225,11 @@ namespace Sereno
         /// The application properties
         /// </summary>
         private Properties m_appProperties = null;
+
+        /// <summary>
+        /// The matrix localToWorld of this GameObject
+        /// </summary>
+        private Matrix4x4 m_localToWorldMatrix = Matrix4x4.identity;
 
         /// <summary>
         /// The Dataset currently parsed. The key represents the datase ID
@@ -610,7 +620,7 @@ namespace Sereno
                 MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
                 moveVTKMsg.SubDataID = 0;
-                moveVTKMsg.Position = new float[3] { 0, 0, 0.0f };
+                moveVTKMsg.Position = new float[3] { 0.2f, 0.2f, 0.2f };
                 moveVTKMsg.HeadsetID = -1;
                 OnMoveDataset(null, moveVTKMsg);
 
@@ -627,7 +637,7 @@ namespace Sereno
                 OnCurrentAction(null, curAction);
 
                 TabletScaleMessage tabletScale = new TabletScaleMessage(ServerType.GET_TABLET_SCALE);
-                tabletScale.height = 1080;
+                tabletScale.height = 1920;
                 tabletScale.width  = 1920;
                 tabletScale.posx   = 0;
                 tabletScale.posy   = 0;
@@ -639,8 +649,8 @@ namespace Sereno
                 lasso.data = new List<float>();
                 for(int i = 0; i < 6; i++)
                 {
-                    lasso.data.Add((float)(0.5f*Math.Cos(i/3.0 * Math.PI)));
-                    lasso.data.Add((float)(0.5f*Math.Sin(i/3.0 * Math.PI)));
+                    lasso.data.Add((float)(Math.Cos(i/3.0 * Math.PI)));
+                    lasso.data.Add((float)(Math.Sin(i/3.0 * Math.PI)));
                     lasso.data.Add(0.0f);
                 }
                 OnLasso(null, lasso);
@@ -659,19 +669,19 @@ namespace Sereno
                 loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
                 OnLocation(null, loc);
 
+                Thread.Sleep(100);
+                loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
                 loc.position = new float[3] { 0.2f, 0.2f, 0.2f };
-                OnLocation(null, loc);
-
-                //Second entry
-                OnAddNewSelectionInput(null, addNewSelection);
-
-                loc.position = new float[3] { 1.0f, 0.0f, 0.0f };
                 loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
                 OnLocation(null, loc);
-
-                loc.position = new float[3] { 1.2f, 0.2f, 0.2f };
+                
+                Thread.Sleep(100);
+                loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
+                loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
+                loc.position = new float[3] { 0.42f, -0.1f, 0.45f };
                 OnLocation(null, loc);
 
+                Thread.Sleep(500);
                 curAction.CurrentAction = (int)HeadsetCurrentAction.REVIEWING_SELECTION;
                 OnCurrentAction(null, curAction);
 
@@ -1122,6 +1132,9 @@ namespace Sereno
             m_tabletSelectionData.GraphicalObject.transform.localScale    = m_tabletSelectionData.Scaling;
             m_tabletSelectionData.GraphicalObject.transform.localRotation = m_tabletSelectionData.Rotation;
 
+            if(m_tabletSelectionData.InValidSelection)
+            {}
+
             if(m_currentAction == HeadsetCurrentAction.LASSO)
             {
                 //Show only the tablet
@@ -1342,6 +1355,7 @@ namespace Sereno
 
             lock(this)
             {
+                m_localToWorldMatrix = transform.localToWorldMatrix;
                 HandleDatasetsToRemove();
                 HandleDatasetsLoaded();
                 HandlePointingID();
@@ -1851,6 +1865,7 @@ namespace Sereno
             Debug.Log("Selection confirmed");
             lock(this)
             {
+                m_tabletSelectionData.InValidSelection = true;
                 CloseTabletCurrentSelectionMesh();
 
                 List<NewSelectionMeshData> meshData = new List<NewSelectionMeshData>(m_tabletSelectionData.NewSelectionMeshIDs);
@@ -1858,15 +1873,15 @@ namespace Sereno
                 {
                     Task t = new Task(() =>
                     {
-                        Matrix4x4 meshToLocalDataset = Matrix4x4.identity; //TODO
+                        Matrix4x4 meshToLocalDataset = Matrix4x4.Inverse(d.LocalToWorldMatrix) * m_localToWorldMatrix; //TODO
                         foreach (var data in meshData)
-                        {
                             d.OnSelection(data, meshToLocalDataset);
-                        }
+
+                        lock(this)
+                            m_tabletSelectionData.InValidSelection = false;
                     });
                     t.Start();
                 }
-                //ClearSelectionData(); //TODO
             }
         }
 

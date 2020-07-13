@@ -31,8 +31,7 @@ namespace Sereno.Datasets
         {
             t = 0;
 
-
-            const float EPSILON = 0.0000001f;
+            const float EPSILON = 0.000001f;
 
             Vector3 edge1 = triangle[1] - triangle[0];
             Vector3 edge2 = triangle[2] - triangle[0];

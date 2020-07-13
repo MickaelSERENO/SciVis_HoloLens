@@ -180,7 +180,8 @@ namespace Sereno.SciVis
                         for (int i = 0; i < m_dataset.NbPoints; i++)
                             indices[i] = i;
                         m_mesh.SetIndices(indices, MeshTopology.Points, 0);
-                        m_mesh.bounds = new Bounds(new Vector3(0, 0, 0), new Vector3(1, 1, 1));
+                        m_mesh.bounds = new Bounds(new Vector3(0.0f, 0.0f, 0.0f), 
+                                                   new Vector3(1.0f, 1.0f, 1.0f));
                     }
 
                     //Set color
@@ -221,88 +222,99 @@ namespace Sereno.SciVis
             }
 
             //First, transform every point using the provided matrix
-            List<Vector3> points = new List<Vector3>(meshData.Points);
-            for(int i = 0; i < points.Count; i++)
-                points[i] = MeshToLocalMatrix.MultiplyPoint(points[i]);
+            List<Vector3> points = new List<Vector3>();
+            //points.Capacity = meshData.Points.Count;
+            for(int i = 0; i < meshData.Points.Count; i++)
+                points.Add(MeshToLocalMatrix.MultiplyPoint(meshData.Points[i]));
 
-            //Second, initialize our raster our space. Each cell contains the list of triangles it contains. Indice(x, y, z) = z*CUBE_SIZE_X*CUBE_SIZE_Y + y*CUBE_SIZE_X + x
+            //Second, initialize our raster 3D space. Each cell contains the list of triangles it contains. Indice(x, y, z) = z*CUBE_SIZE_X*CUBE_SIZE_Y + y*CUBE_SIZE_X + x
             List<List<int>> rasteredSpace = new List<List<int>>();
-            rasteredSpace.Capacity = CUBE_SIZE_X * CUBE_SIZE_Y * CUBE_SIZE_Z; //Set the capacity of this list
-            for(int k = 0; k < 16; k++)
-                for(int j = 0; j < 16; j++)
-                    for(int i = 0; i < 16; i++)
-                        rasteredSpace.Add(new List<int>());
+            //rasteredSpace.Capacity = CUBE_SIZE_X * CUBE_SIZE_Y * CUBE_SIZE_Z; //Set the capacity of this list
+            for(int i = 0; i <  CUBE_SIZE_X * CUBE_SIZE_Y * CUBE_SIZE_Z; i++)
+                rasteredSpace.Add(new List<int>());
 
+            Debug.Log("Structure our triangle data");
             //Go through all the triangles. For each triangle, determine in which cells it is
-            for(int i = 0; i < meshData.Triangles.Count; i+=3)
+            for(int i = 0; i < meshData.Triangles.Count/3; i++)
             {
                 //Get the bounding box of the triangle
                 float[] minPos = new float[3];
                 float[] maxPos = new float[3];
                 for(int j = 0; j < 3; j++)
                 {
-                    minPos[j] = Math.Min(points[meshData.Triangles[i]][j], Math.Min(points[meshData.Triangles[i + 1]][j], points[meshData.Triangles[i + 2]][j]));
-                    maxPos[j] = Math.Max(points[meshData.Triangles[i]][j], Math.Max(points[meshData.Triangles[i + 1]][j], points[meshData.Triangles[i + 2]][j]));
+                    minPos[j] = Math.Min(points[meshData.Triangles[3*i+0]][j], Math.Min(points[meshData.Triangles[3*i+1]][j], points[meshData.Triangles[3*i+2]][j]));
+                    maxPos[j] = Math.Max(points[meshData.Triangles[3*i+0]][j], Math.Max(points[meshData.Triangles[3*i+1]][j], points[meshData.Triangles[3*i+2]][j]));
 
                     //Set them as indices in our 3D restered space
-                    minPos[j] = Math.Min(15, CUBE_SIZE[j] * ((minPos[j] - m_dataset.MinPos[j]) / (m_dataset.MaxPos[j] - m_dataset.MinPos[j])));
-                    maxPos[j] = Math.Min(15, CUBE_SIZE[j] * ((maxPos[j] - m_dataset.MinPos[j]) / (m_dataset.MaxPos[j] - m_dataset.MinPos[j])));
+                    minPos[j] = CUBE_SIZE[j] * ((minPos[j] - m_dataset.MinPos[j]) / (m_dataset.MaxPos[j] - m_dataset.MinPos[j]));
+                    maxPos[j] = CUBE_SIZE[j] * ((maxPos[j] - m_dataset.MinPos[j]) / (m_dataset.MaxPos[j] - m_dataset.MinPos[j]));
+
+                    minPos[j] = Math.Max(0.0f,  minPos[j]);
+                    maxPos[j] = Math.Max(-1.0f, maxPos[j]);
                 }
 
                 //Cross the bounding box and our 3D rastered space
-                for(int kk = (int)minPos[2]; kk <= (int)maxPos[2]; kk++)
-                    for(int jj = (int)minPos[1]; jj <= (int)maxPos[1]; jj++)
-                        for(int ii = (int)minPos[0]; ii <= (int)maxPos[0]; ii++)
-                            rasteredSpace[ii + CUBE_SIZE_X * jj + CUBE_SIZE_Y* CUBE_SIZE_X* kk].Add(i);
+                for(int kk = (int)minPos[2]; kk <= (int)maxPos[2] && kk < CUBE_SIZE_Z; kk++)
+                    for(int jj = (int)minPos[1]; jj <= (int)maxPos[1] && jj < CUBE_SIZE_Y; jj++)
+                        for(int ii = (int)minPos[0]; ii <= (int)maxPos[0] && ii < CUBE_SIZE_X; ii++)
+                            rasteredSpace[ii + CUBE_SIZE_X*jj + CUBE_SIZE_Y*CUBE_SIZE_X*kk].Add(i);
             }
 
+            Debug.Log("Start parallel FOR");
             //Go through all the points of the dataset and check if it is inside or outside the Mesh
             Parallel.For(0, m_dataset.NbPoints,
-                (k, loopState) =>
+            k =>
+            {
+                Vector3 pos    = new Vector3(m_dataset.Position[3*k + 0], m_dataset.Position[3*k + 1], m_dataset.Position[3*k + 2]);
+                Vector3 rayDir = new Vector3(1.0f, 0.0f, 0.0f);
+                int nbIntersection = 0;
+                List<int> triangleIDAlready = new List<int>();
+
+                //The particule X position in the rastered space
+                int particuleX = (int)Math.Min(CUBE_SIZE_X-1, CUBE_SIZE_X * ((pos[0] - m_dataset.MinPos[0]) / (m_dataset.MaxPos[0] - m_dataset.MinPos[0])));
+                int particuleY = (int)Math.Min(CUBE_SIZE_Y-1, CUBE_SIZE_Y * ((pos[1] - m_dataset.MinPos[1]) / (m_dataset.MaxPos[1] - m_dataset.MinPos[1])));
+                int particuleZ = (int)Math.Min(CUBE_SIZE_Z-1, CUBE_SIZE_Z * ((pos[2] - m_dataset.MinPos[2]) / (m_dataset.MaxPos[2] - m_dataset.MinPos[2])));
+
+                particuleX = Math.Max(particuleX, 0);
+                particuleY = Math.Max(particuleY, 0);
+                particuleZ = Math.Max(particuleZ, 0);
+
+                //Go through all the cubes
+                Vector3[] triangle = new Vector3[3];
+
+                for(int j = particuleX; j < CUBE_SIZE_X; j++)
                 {
-                    List<float> tComputed = new List<float>(); //All the valid t already computed. Useful for not checking multiple times the same triangles
+                    List<int> cube = rasteredSpace[j + particuleY*CUBE_SIZE_X + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y];
 
-                    //The particule X position in the rastered space
-                    int particuleX = (int)Math.Min(15, CUBE_SIZE_X * (m_dataset.Position[3*k + 0] - m_dataset.MinPos[0]) / (m_dataset.MaxPos[0] - m_dataset.MinPos[0]));
-                    int particuleY = (int)Math.Min(15, CUBE_SIZE_Y * (m_dataset.Position[3*k + 1] - m_dataset.MinPos[1]) / (m_dataset.MaxPos[1] - m_dataset.MinPos[1]));
-                    int particuleZ = (int)Math.Min(15, CUBE_SIZE_Z * (m_dataset.Position[3*k + 2] - m_dataset.MinPos[2]) / (m_dataset.MaxPos[2] - m_dataset.MinPos[2]));
-
-                    //Go through all the cubes
-                    Vector3[] triangle = new Vector3[3];
-
-                    for(int j = particuleX; j < CUBE_SIZE_X; j++)
+                    foreach(int triangleID in cube)
                     {
-                        List<int> cube = rasteredSpace[j + particuleY* CUBE_SIZE_X + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y];
+                        //Do not check multiple times the same triangle
+                        if(triangleIDAlready.Contains(triangleID))
+                            continue;
 
-                        foreach(int triangleID in cube)
+                        for(int i = 0; i < 3; i++)
+                            triangle[i] = points[meshData.Triangles[3*triangleID + i]];
+
+                        //Ray -- triangle intersection along the positive x axis
+                        float t;
+                        if(RayIntersection.RayTriangleIntersection(pos, rayDir, triangle, out t))
                         {
-                            for(int i = 0; i < 3; i++)
-                                triangle[i] = points[meshData.Triangles[3*triangleID + i]];
-
-                            //Ray -- triangle intersection along the positive x axis
-                            float t;
-                            if(RayIntersection.RayTriangleIntersection(new Vector3(m_dataset.Position[3*k + 0], m_dataset.Position[3*k + 1], m_dataset.Position[3*k + 2]),
-                                                                       new Vector3(1.0f, 0.0f, 0.0f), triangle, out t))
-                            {
-                                //Discard this t
-                                if (tComputed.Contains(t))
-                                    continue;
-                                tComputed.Add(t);
-                            }
+                            nbIntersection++;
+                            triangleIDAlready.Add(triangleID);
                         }
                     }
+                }
 
-                    if(tComputed.Count%2 == 1)
-                    {
-                        Debug.Log("Particule inside the mesh!!!");
-                        m_mask[k] = true;
-                    }
-                    else
-                    {
-                        Debug.Log("Particule outside the mesh!!!");
-                        m_mask[k] = false;
-                    }
-                });
+                if(nbIntersection%2 == 1)
+                {
+                    m_mask[k] = true;
+                }
+                else
+                {
+                    m_mask[k] = false;
+                }
+            });
+            Debug.Log("End parallel FOR");
 
             //Update the transfer function at the end
             UpdateTF();

@@ -131,6 +131,11 @@ namespace Sereno.SciVis
         protected List<AnnotationGameObject> m_annotationGOs = new List<AnnotationGameObject>();
 
         /// <summary>
+        /// The matrix local to World of this GameObject
+        /// </summary>
+        private Matrix4x4 m_localToWorldMatrix = Matrix4x4.identity;
+
+        /// <summary>
         /// List of annotation where a GameObject is needed to be created
         /// </summary>
         private List<Annotation> m_annotationGOsInRemoving = new List<Annotation>();
@@ -306,6 +311,7 @@ namespace Sereno.SciVis
             //Update the 3D transform of this game object
             lock(this)
             {
+                m_localToWorldMatrix = transform.localToWorldMatrix;
                 if (m_dataProvider != null && m_dataProvider.GetTargetedGameObject() == this)
                 {
                     if (!m_isTargeted)
@@ -448,6 +454,14 @@ namespace Sereno.SciVis
         {
             get { return m_sd; }
             set { SetSubDatasetState(value); }
+        }
+
+        /// <summary>
+        /// The local to world matrix saved for parallel purposes.
+        /// </summary>
+        public Matrix4x4 LocalToWorldMatrix
+        {
+            get {return m_localToWorldMatrix;}
         }
     }
 }
