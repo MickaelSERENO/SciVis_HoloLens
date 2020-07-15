@@ -32,5 +32,15 @@ namespace Sereno
         /// The list of points associated to this mesh
         /// </summary>
         public List<Vector3> Points = new List<Vector3>();
+
+        /// <summary>
+        /// The associated graphical Mesh
+        /// </summary>
+        public Mesh Mesh = null;
+
+        /// <summary>
+        /// Should this graphical object be updated?
+        /// </summary>
+        public bool ShouldUpdate = false;
     }
 }
