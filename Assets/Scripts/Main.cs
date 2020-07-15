@@ -1059,7 +1059,7 @@ namespace Sereno
         private void CloseTabletCurrentSelectionMesh()
         {
             //Nothing to do here
-            if(m_tabletSelectionData.CurrentNewSelectionMeshIDs == null || m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Count == 0)
+            if(m_tabletSelectionData.CurrentNewSelectionMeshIDs == null || m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Count == 0 || m_tabletSelectionData.CurrentNewSelectionMeshIDs.IsClosed)
                 return;
 
             //Triangulate our shape
@@ -1073,7 +1073,8 @@ namespace Sereno
             foreach (int i in tri)
                 m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(i+m_tabletSelectionData.CurrentNewSelectionMeshIDs.Points.Count-m_tabletSelectionData.LassoPoints.Count);
 
-            m_tabletSelectionData.CurrentNewSelectionMeshIDs.IsClosed = true;
+            m_tabletSelectionData.CurrentNewSelectionMeshIDs.IsClosed     = true;
+            m_tabletSelectionData.CurrentNewSelectionMeshIDs.ShouldUpdate = true;
         }
         
         /// <summary>
@@ -1094,22 +1095,24 @@ namespace Sereno
         }
 
         /// <summary>
-        /// Add a new triangle to the current tablet selection mesh
+        /// Add a new triangle to the current tablet selection mesh. Does not change "ShouldUpdate" as this can be called multiple times for ONE computation
         /// </summary>
         /// <param name="tri">The triangle to add</param>
         private void AddTriangleTabletSelectionMesh(int[] tri)
         {
             //Commented because we do not look at the orientation anymore
-            //if (Orientation(m_tabletSelectionData.selectionVertices[tri[0]], m_tabletSelectionData.selectionVertices[tri[1]], m_tabletSelectionData.selectionVertices[tri[2]]) < 0)
-            //{
-            //    int temp = tri[1];
-            //    tri[1] = tri[2];
-            //    tri[2] = temp;
-            //}
-                        
-            m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(tri[0]);
-            m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(tri[1]);
-            m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(tri[2]);
+            /*if(Orientation(m_tabletSelectionData.CurrentNewSelectionMeshIDs.Points[tri[0]], m_tabletSelectionData.CurrentNewSelectionMeshIDs.Points[tri[1]], m_tabletSelectionData.CurrentNewSelectionMeshIDs.Points[tri[2]]) > 0)
+            {
+                m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(tri[0]);
+                m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(tri[2]);
+                m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(tri[1]);
+            }
+            else*/
+            {
+                m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(tri[0]);
+                m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(tri[1]);
+                m_tabletSelectionData.CurrentNewSelectionMeshIDs.Triangles.Add(tri[2]);
+            }
         }
         
         /// <summary>
@@ -1708,37 +1711,12 @@ namespace Sereno
             }
         }
 
-        public void OnCurrentAction(MessageBuffer messageBuffer, CurrentActionMessage msg)
-        {
-            lock(this)
-            {
-                HeadsetCurrentAction curAction = (HeadsetCurrentAction)msg.CurrentAction;
-                Debug.Log($"Current action: {curAction}");
-
-                if(curAction == HeadsetCurrentAction.REVIEWING_SELECTION)
-                {
-                    //Take into account the last position of the last shape if needed
-                    if(NBTabletPositionIgnored > 0 && m_tabletSelectionData.CurrentCaptureID != 0 && m_tabletSelectionData.LassoPoints.Count > 0)
-                        AddSelectionMeshPosition();
-
-                    CloseTabletCurrentSelectionMesh();
-                }
-
-                //If needed, we clean everything
-                if((m_currentAction == HeadsetCurrentAction.SELECTING || m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION) &&
-                    curAction       != HeadsetCurrentAction.SELECTING && curAction       != HeadsetCurrentAction.REVIEWING_SELECTION)
-                    ClearSelectionData();
-
-                m_currentAction = curAction;
-            }
-        }
-
         private void AddSelectionMeshPosition()
         {
             m_tabletSelectionData.PositionList.Add(m_tabletSelectionData.Position);
             m_tabletSelectionData.RotationList.Add(m_tabletSelectionData.Rotation);
 
-            if(m_tabletSelectionData.CurrentNewSelectionMeshIDs == null)
+            if (m_tabletSelectionData.CurrentNewSelectionMeshIDs == null)
                 return;
 
             if (m_tabletSelectionData.PositionList.Count - m_tabletSelectionData.CurrentNewSelectionMeshIDs.PositionID > 1)
@@ -1785,6 +1763,7 @@ namespace Sereno
 
             else
             {
+                Debug.Log("Enter first lasso");
                 for (int i = 0; i < m_tabletSelectionData.LassoPoints.Count; i++)
                 {
                     m_tabletSelectionData.CurrentNewSelectionMeshIDs.Points.Add(m_tabletSelectionData.Position +
@@ -1792,6 +1771,31 @@ namespace Sereno
                                                                                                                              0.0f,
                                                                                                                              m_tabletSelectionData.LassoPoints[i].y * m_tabletSelectionData.Scaling.z));
                 }
+            }
+        }
+
+        public void OnCurrentAction(MessageBuffer messageBuffer, CurrentActionMessage msg)
+        {
+            lock(this)
+            {
+                HeadsetCurrentAction curAction = (HeadsetCurrentAction)msg.CurrentAction;
+                Debug.Log($"Current action: {curAction}");
+
+                if(curAction == HeadsetCurrentAction.REVIEWING_SELECTION)
+                {
+                    //Take into account the last position of the last shape if needed
+                    if(NBTabletPositionIgnored > 0 && m_tabletSelectionData.CurrentCaptureID != 0 && m_tabletSelectionData.LassoPoints.Count > 0)
+                        AddSelectionMeshPosition();
+
+                    CloseTabletCurrentSelectionMesh();
+                }
+
+                //If needed, we clean everything
+                if((m_currentAction == HeadsetCurrentAction.SELECTING || m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION) &&
+                    curAction       != HeadsetCurrentAction.SELECTING && curAction       != HeadsetCurrentAction.REVIEWING_SELECTION)
+                    ClearSelectionData();
+
+                m_currentAction = curAction;
             }
         }
         
@@ -1849,17 +1853,16 @@ namespace Sereno
 
         public void OnConfirmSelection(MessageBuffer messageBuffer, ConfirmSelectionMessage msg)
         {
-            Debug.Log("Selection confirmed");
             lock(this)
             {
                 CloseTabletCurrentSelectionMesh();
 
                 List<NewSelectionMeshData> meshData = new List<NewSelectionMeshData>(m_tabletSelectionData.NewSelectionMeshIDs);
-                foreach (var d in m_datasetGameObjects)
+                foreach (var d in m_datasetGameObjects) //TODO
                 {
                     Task t = new Task(() =>
                     {
-                        Matrix4x4 meshToLocalDataset = Matrix4x4.Inverse(d.LocalToWorldMatrix) * m_localToWorldMatrix; //TODO
+                        Matrix4x4 meshToLocalDataset = Matrix4x4.Inverse(d.LocalToWorldMatrix) * m_localToWorldMatrix;
                         foreach (var data in meshData)
                             d.OnSelection(data, meshToLocalDataset);
                     });
