@@ -10,6 +10,27 @@ using UnityEngine.Rendering;
 
 namespace Sereno.SciVis
 {
+    /// <summary>
+    /// Class used for the Selection algorithm (based on mesh)
+    /// </summary>
+    class RasteredCube
+    {
+        /// <summary>
+        /// The list of triangle being part of this Cube (in a rastered space)
+        /// </summary>
+        public List<int> TriangleIDs = new List<int>();
+
+        /// <summary>
+        /// The maximum number of triangle a particular being on this cell might need to go through for the whole algorithm
+        /// </summary>
+        public int MaxNbTriangle = 0;
+
+        public int this[int x] 
+        {
+            get { return TriangleIDs[x]; }
+        }
+    }
+
     public class CloudPointGameObject : DefaultSubDatasetGameObject
     {
         /// <summary>
@@ -35,7 +56,7 @@ namespace Sereno.SciVis
         /// <summary>
         /// The array colors computed
         /// </summary>
-        private float[] m_colors = null;
+        private byte[] m_colors = null;
 
         /// <summary>
         /// The mask array we compute during selection
@@ -51,7 +72,13 @@ namespace Sereno.SciVis
         /// Did we initialized the position data in our VBO?
         /// </summary>
         private bool m_isPositionInit = false;
-        
+
+
+        /// <summary>
+        /// Was there an attempt of selection? True == no attemp, false otherwise
+        /// </summary>
+        private bool m_noSelection = true;
+
         /// <summary>
         /// The cloud point material to use
         /// </summary>
@@ -67,13 +94,16 @@ namespace Sereno.SciVis
             var layout = new[]
             {
                 new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3, 0),
-                new VertexAttributeDescriptor(VertexAttribute.Color,    VertexAttributeFormat.Float32, 4, 1),
+                new VertexAttributeDescriptor(VertexAttribute.Color,    VertexAttributeFormat.UNorm8 , 4, 1),
             };
             m_mesh.SetVertexBufferParams((int)dataset.NbPoints, layout);
 
+            if(m_dataset.NbPoints > 0xffff)
+                m_mesh.indexFormat = IndexFormat.UInt32;
+            
             m_mask = new bool[m_dataset.NbPoints];
             for (int i = 0; i < m_dataset.NbPoints; i++)
-                m_mask[i] = false;
+                m_mask[i] = true;
             UpdateTF();
         }
 
@@ -106,7 +136,7 @@ namespace Sereno.SciVis
 
                     Debug.Log("Updating TF...");
 
-                    float[] colors = ComputeTFColor(tf);
+                    byte[] colors = ComputeTFColor(tf);
                     lock (this)
                     {
                         m_colors = colors;
@@ -116,7 +146,7 @@ namespace Sereno.SciVis
         }
 
         [BurstCompile(CompileSynchronously = true)]
-        private float[] ComputeTFColor(TransferFunction tf)
+        private byte[] ComputeTFColor(TransferFunction tf)
         {
             if (m_dataset.IsLoaded == false || tf == null || tf.GetDimension() > m_dataset.PointFieldDescs.Count + 1 ||
                (m_sd.OwnerID != -1 && m_sd.OwnerID != m_dataProvider.GetHeadsetID())) //Not a public subdataset
@@ -126,14 +156,14 @@ namespace Sereno.SciVis
             {
                 unsafe
                 {
-                    float[] colors = new float[4*m_dataset.NbPoints]; //RGBA colors;
+                    byte[] colors = new byte[4*m_dataset.NbPoints]; //RGBA colors;
 
                     List<PointFieldDescriptor> ptDescs = m_dataset.PointFieldDescs;
                     Parallel.For(0, m_dataset.NbPoints,
                         i =>
                         {
                             float[] partialRes = new float[ptDescs.Count + 1];
-                            fixed (float* pcolors = colors)
+                            fixed (byte* pcolors = colors)
                             {
                                 //Determine transfer function coordinates
                                 for (int l = 0; l < ptDescs.Count; l++)
@@ -152,10 +182,10 @@ namespace Sereno.SciVis
                                 float t = tf.ComputeColor(partialRes);
 
                                 Color c = SciVisColor.GenColor(tf.ColorMode, t);
-                                pcolors[4*i + 0] = c.r;
-                                pcolors[4*i + 1] = c.g;
-                                pcolors[4*i + 2] = c.b;
-                                pcolors[4*i + 3] = (m_mask[i] ? 1.0f : 0.0f);
+                                pcolors[4*i + 0] = (byte)(c.r*255);
+                                pcolors[4*i + 1] = (byte)(c.g*255);
+                                pcolors[4*i + 2] = (byte)(c.b*255);
+                                pcolors[4*i + 3] = (byte)(m_mask[i] ? 255 : 0);
                             }
                         });
                     return colors;
@@ -179,6 +209,7 @@ namespace Sereno.SciVis
                         int[] indices = new int[m_dataset.NbPoints];
                         for (int i = 0; i < m_dataset.NbPoints; i++)
                             indices[i] = i;
+
                         m_mesh.SetIndices(indices, MeshTopology.Points, 0);
                         m_mesh.bounds = new Bounds(new Vector3(0.0f, 0.0f, 0.0f), 
                                                    new Vector3(1.0f, 1.0f, 1.0f));
@@ -206,9 +237,10 @@ namespace Sereno.SciVis
             UpdateTF();
         }
 
-
+        [BurstCompile(CompileSynchronously = true)]
         public override void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)
         {
+            Debug.Log($"Nb points for selection: {m_dataset.NbPoints}");
             const int CUBE_SIZE_X = 16;
             const int CUBE_SIZE_Y = 16;
             const int CUBE_SIZE_Z = 16;
@@ -221,19 +253,32 @@ namespace Sereno.SciVis
                 return;
             }
 
+            if(m_noSelection)
+            {
+                m_noSelection = false;
+
+                //Remove every point
+                Parallel.For(0, m_dataset.NbPoints,
+                k =>
+                {
+                    m_mask[k] = false;
+                });
+            }
+            
             //First, transform every point using the provided matrix
-            List<Vector3> points = new List<Vector3>();
-            //points.Capacity = meshData.Points.Count;
-            for(int i = 0; i < meshData.Points.Count; i++)
-                points.Add(MeshToLocalMatrix.MultiplyPoint(meshData.Points[i]));
+            Vector3[] points = new Vector3[meshData.Points.Count];
+            Parallel.For(0, meshData.Points.Count,
+            i =>
+            {
+                points[i] = MeshToLocalMatrix.MultiplyPoint(meshData.Points[i]);
+            });
 
             //Second, initialize our raster 3D space. Each cell contains the list of triangles it contains. Indice(x, y, z) = z*CUBE_SIZE_X*CUBE_SIZE_Y + y*CUBE_SIZE_X + x
-            List<List<int>> rasteredSpace = new List<List<int>>();
+            RasteredCube[] rasteredSpace = new RasteredCube[CUBE_SIZE_X*CUBE_SIZE_Y*CUBE_SIZE_Z];
             //rasteredSpace.Capacity = CUBE_SIZE_X * CUBE_SIZE_Y * CUBE_SIZE_Z; //Set the capacity of this list
             for(int i = 0; i <  CUBE_SIZE_X * CUBE_SIZE_Y * CUBE_SIZE_Z; i++)
-                rasteredSpace.Add(new List<int>());
+                rasteredSpace[i] = new RasteredCube();
 
-            Debug.Log("Structure our triangle data");
             //Go through all the triangles. For each triangle, determine in which cells it is
             for(int i = 0; i < meshData.Triangles.Count/3; i++)
             {
@@ -257,10 +302,23 @@ namespace Sereno.SciVis
                 for(int kk = (int)minPos[2]; kk <= (int)maxPos[2] && kk < CUBE_SIZE_Z; kk++)
                     for(int jj = (int)minPos[1]; jj <= (int)maxPos[1] && jj < CUBE_SIZE_Y; jj++)
                         for(int ii = (int)minPos[0]; ii <= (int)maxPos[0] && ii < CUBE_SIZE_X; ii++)
-                            rasteredSpace[ii + CUBE_SIZE_X*jj + CUBE_SIZE_Y*CUBE_SIZE_X*kk].Add(i);
+                            rasteredSpace[ii + CUBE_SIZE_X*jj + CUBE_SIZE_Y*CUBE_SIZE_X*kk].TriangleIDs.Add(i);
             }
 
-            Debug.Log("Start parallel FOR");
+            //Update the variable "MaxNbTriangles", useful to know the most efficient way to cast a ray
+            for(int k = 0; k < CUBE_SIZE_Z; k++)
+            {
+                for(int j = 0; j < CUBE_SIZE_Y; j++)
+                {
+                    int nbTriangles = 0;
+                    for(int i = 0; i < CUBE_SIZE_X; i++)
+                    {
+                        nbTriangles += rasteredSpace[i + CUBE_SIZE_X*j + CUBE_SIZE_Y*CUBE_SIZE_X*k].TriangleIDs.Count;
+                        rasteredSpace[i + CUBE_SIZE_X*j + CUBE_SIZE_Y*CUBE_SIZE_X*k].MaxNbTriangle = nbTriangles;
+                    }
+                }
+            }
+
             //Go through all the points of the dataset and check if it is inside or outside the Mesh
             Parallel.For(0, m_dataset.NbPoints,
             k =>
@@ -282,39 +340,48 @@ namespace Sereno.SciVis
                 //Go through all the cubes
                 Vector3[] triangle = new Vector3[3];
 
-                for(int j = particuleX; j < CUBE_SIZE_X; j++)
+                Action<int> rayCastAction = 
+                (j) => 
                 {
-                    List<int> cube = rasteredSpace[j + particuleY*CUBE_SIZE_X + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y];
+                    RasteredCube cube = rasteredSpace[j + particuleY*CUBE_SIZE_X + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y];
 
-                    foreach(int triangleID in cube)
+                    foreach(int triangleID in cube.TriangleIDs)
                     {
-                        //Do not check multiple times the same triangle
-                        if(triangleIDAlready.Contains(triangleID))
-                            continue;
-
-                        for(int i = 0; i < 3; i++)
+                        for (int i = 0; i < 3; i++)
                             triangle[i] = points[meshData.Triangles[3*triangleID + i]];
 
                         //Ray -- triangle intersection along the positive x axis
                         float t;
-                        if(RayIntersection.RayTriangleIntersection(pos, rayDir, triangle, out t))
+                        if (RayIntersection.RayTriangleIntersection(pos, rayDir, triangle, out t))
                         {
+                            //Do not check multiple times the same triangle
+                            if (triangleIDAlready.Contains(triangleID))
+                                continue;
                             nbIntersection++;
                             triangleIDAlready.Add(triangleID);
                         }
                     }
-                }
+                };
 
-                if(nbIntersection%2 == 1)
-                {
-                    m_mask[k] = true;
+                //Select the most efficient way
+                if(2*rasteredSpace[particuleX    + particuleY*CUBE_SIZE_Y + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y].MaxNbTriangle - 
+                     rasteredSpace[CUBE_SIZE_X-1 + particuleY*CUBE_SIZE_Y + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y].MaxNbTriangle > 0)
+                { 
+                    for(int j = particuleX; j < CUBE_SIZE_X; j++)
+                        rayCastAction(j);
                 }
                 else
                 {
-                    m_mask[k] = false;
+                    rayDir = new Vector3(-1.0f, 0.0f, 0.0f);
+                    for (int j = particuleX; j >= 0; j--)
+                        rayCastAction(j);
+                }
+
+                if (nbIntersection%2 == 1)
+                {
+                    m_mask[k] = true;
                 }
             });
-            Debug.Log("End parallel FOR");
 
             //Update the transfer function at the end
             UpdateTF();

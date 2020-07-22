@@ -1,4 +1,5 @@
 ﻿using System;
+using Unity.Burst;
 using UnityEngine;
 
 namespace Sereno.Datasets
@@ -18,6 +19,7 @@ namespace Sereno.Datasets
 
     public class RayIntersection
     {
+
         /// <summary>
         /// Ray -- Triangle intersection function. See Möller–Trumbore intersection algorithm https://en.wikipedia.org/wiki/Möller–Trumbore_intersection_algorithm
         /// </summary>
@@ -26,12 +28,13 @@ namespace Sereno.Datasets
         /// <param name="triangle">The triangle. Each cell of the array defines a point in the triangle (point0, point1, and point2)</param>
         /// <param name="t">The output t to apply to get the intersection point. intersectionPoint = rayOrigin + t*rayDir</param>
         /// <returns>true if there is an intersection, false otherwise</returns>
+        [BurstCompile(CompileSynchronously = true)]
         static public bool RayTriangleIntersection(Vector3 rayOrigin, Vector3 rayDir, 
                                                    Vector3[] triangle, out float t)
         {
             t = 0;
 
-            const float EPSILON = 0.000001f;
+            const float EPSILON = 0.0000001f;
 
             Vector3 edge1 = triangle[1] - triangle[0];
             Vector3 edge2 = triangle[2] - triangle[0];

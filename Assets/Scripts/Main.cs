@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -575,6 +575,8 @@ namespace Sereno
             //Initialize the tablet selection representation
             m_tabletSelectionData.GraphicalObject = Instantiate(TabletPrefab);
             m_tabletSelectionData.GraphicalObject.transform.parent = this.transform;
+            m_tabletSelectionData.GraphicalObject.transform.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
+            m_tabletSelectionData.GraphicalObject.transform.localRotation = Quaternion.identity;
             m_tabletSelectionData.GraphicalLasso = m_tabletSelectionData.GraphicalObject.GetComponent<LineRenderer>();
             m_tabletSelectionData.GraphicalLasso.startWidth = m_tabletSelectionData.GraphicalLasso.endWidth = 0.001f; //width == 5mm
             m_tabletSelectionData.GraphicalObject.SetActive(false);
@@ -589,7 +591,7 @@ namespace Sereno
             Task t = new Task( () =>
             {
                 AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
-                addCloudMsg.Path   = "temp.cp";
+                addCloudMsg.Path   = "4.cp";
                 addCloudMsg.DataID = 0;
                 OnAddCloudPointDataset(null, addCloudMsg);
                 
@@ -622,7 +624,7 @@ namespace Sereno
                 OnScaleDataset(null, scaleMsg);
 
                 //Simulate a lasso input
-                CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
+                /*CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
                 curAction.CurrentAction = (int)HeadsetCurrentAction.LASSO;
                 OnCurrentAction(null, curAction);
 
@@ -635,12 +637,12 @@ namespace Sereno
                 OnTabletScale(null, tabletScale);
                 
                 LassoMessage lasso = new LassoMessage(ServerType.GET_LASSO);
-                lasso.size = 6*3;
+                lasso.size = 4096*3;
                 lasso.data = new List<float>();
-                for(int i = 0; i < 6; i++)
+                for(int i = 0; i < 4096; i++)
                 {
-                    lasso.data.Add((float)(Math.Cos(i/3.0 * Math.PI)));
-                    lasso.data.Add((float)(Math.Sin(i/3.0 * Math.PI)));
+                    lasso.data.Add((float)(0.5*Math.Cos(i/2048.0 * Math.PI)));
+                    lasso.data.Add((float)(0.5*Math.Sin(i/2048.0 * Math.PI)));
                     lasso.data.Add(0.0f);
                 }
                 OnLasso(null, lasso);
@@ -668,7 +670,7 @@ namespace Sereno
                 Thread.Sleep(100);
                 loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
                 loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
-                loc.position = new float[3] { 0.42f, -0.1f, 0.45f };
+                loc.position = new float[3] { 0.3f, -0.1f, 0.3f };
                 OnLocation(null, loc);
 
                 Thread.Sleep(500);
@@ -676,8 +678,7 @@ namespace Sereno
                 OnCurrentAction(null, curAction);
 
                 //The dataset needs to be loaded for that
-                Thread.Sleep(1000);
-                OnConfirmSelection(null, null);
+                OnConfirmSelection(null, null);*/
             }
             );
             t.Start();
@@ -1167,6 +1168,8 @@ namespace Sereno
                             GameObject go = Instantiate(SelectionMeshPrefab);
                             go.SetActive(true);
                             go.transform.parent = this.transform;
+                            go.transform.localPosition = new Vector3(0.0f, 0.0f, 0.0f);
+                            go.transform.localRotation = Quaternion.identity;
 
                             // reset selection mesh
                             meshData.Mesh = new Mesh();
@@ -1188,6 +1191,7 @@ namespace Sereno
                     }
                 }
             }
+
             else
             {
                 m_tabletSelectionData.GraphicalObject.SetActive(false);
@@ -1791,8 +1795,8 @@ namespace Sereno
                 }
 
                 //If needed, we clean everything
-                if((m_currentAction == HeadsetCurrentAction.SELECTING || m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION) &&
-                    curAction       != HeadsetCurrentAction.SELECTING && curAction       != HeadsetCurrentAction.REVIEWING_SELECTION)
+                if((m_currentAction == HeadsetCurrentAction.SELECTING || m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION || m_currentAction == HeadsetCurrentAction.LASSO) &&
+                    curAction       != HeadsetCurrentAction.SELECTING && curAction       != HeadsetCurrentAction.REVIEWING_SELECTION && curAction       != HeadsetCurrentAction.LASSO)
                     ClearSelectionData();
 
                 m_currentAction = curAction;
@@ -1840,12 +1844,11 @@ namespace Sereno
         {
             lock(this)
             {
-                if(m_currentAction == HeadsetCurrentAction.LASSO)
+                if(m_currentAction == HeadsetCurrentAction.LASSO || m_currentAction == HeadsetCurrentAction.SELECTING)
                 {
-                    // store lasso
+                    m_tabletSelectionData.LassoPoints.Clear();
                     for (int i = 0; i < msg.size; i += 3)
                         m_tabletSelectionData.LassoPoints.Add(new Vector2(msg.data[i], msg.data[i + 1]));
-
                     m_tabletSelectionData.UpdateLasso = true;
                 }
             }
@@ -1864,7 +1867,11 @@ namespace Sereno
                     {
                         Matrix4x4 meshToLocalDataset = Matrix4x4.Inverse(d.LocalToWorldMatrix) * m_localToWorldMatrix;
                         foreach (var data in meshData)
+                        {
+                            Debug.Log($"Selecting in a Mesh of {data.Triangles.Count / 3} triangles. Start: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
                             d.OnSelection(data, meshToLocalDataset);
+                            Debug.Log($"End Computation. End: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
+                        }
                     });
                     t.Start();
                 }

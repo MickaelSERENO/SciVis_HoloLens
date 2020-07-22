@@ -840,6 +840,7 @@ MonoBehaviour:
   TabletVirtualCamera: {fileID: 1135518673}
   TabletBirdViewCamera: {fileID: 1999081293}
   TabletVirtualPlane: {fileID: 339444025}
+  NBTabletPositionIgnored: 0
 --- !u!4 &1481252857
 Transform:
   m_ObjectHideFlags: 0

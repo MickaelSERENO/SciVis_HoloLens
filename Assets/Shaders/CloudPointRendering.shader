@@ -14,7 +14,6 @@ Shader "Custom/CloudPointRendering"
         LOD 200
 
         Lighting Off
-        Cull Off
 
         Pass
         {
