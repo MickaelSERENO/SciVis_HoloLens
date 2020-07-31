@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -1866,19 +1866,9 @@ namespace Sereno
                     Task t = new Task(() =>
                     {
                         Matrix4x4 meshToLocalDataset = Matrix4x4.identity;
+                        lock(d.SubDatasetState)
+                            meshToLocalDataset = d.SubDatasetState.GraphicalMatrix.inverse;
 
-                        //Ensure that the graphical object is not being updated, transformation wise
-                        while (true)
-                        {
-                            lock (d)
-                            {
-                                if(!d.UpdateTransform)
-                                {
-                                    meshToLocalDataset = Matrix4x4.Inverse(d.LocalToWorldMatrix) * m_localToWorldMatrix;
-                                    break;
-                                }
-                            }
-                        }
                         foreach (var data in meshData)
                         {
                             Debug.Log($"Selecting in a Mesh of {data.Triangles.Count / 3} triangles. Start: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");

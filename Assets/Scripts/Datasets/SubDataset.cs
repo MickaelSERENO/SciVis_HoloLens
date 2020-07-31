@@ -362,5 +362,25 @@ namespace Sereno.Datasets
             get => m_ID;
             set => m_ID = value;
         }
+
+        public Matrix4x4 GraphicalMatrix
+        {
+            get
+            {
+                float[] graphicalScale = GraphicalScaling;
+                Vector3 pos = new Vector3();
+                Vector3 scale = new Vector3();
+                for (int i = 0; i < 3; i++)
+                { 
+                    pos[i] = Position[i];
+                    if (graphicalScale[i] != 0.0f)
+                        scale[i] = 1.0f / graphicalScale[i];
+                    else
+                        scale[i] = 0.0f;
+                }
+                float[] graphicalRotation = GraphicalRotation;
+                return Matrix4x4.TRS(pos, new Quaternion(graphicalRotation[1], graphicalRotation[2], graphicalRotation[3], graphicalRotation[0]).normalized, scale);
+            }
+        }
     }
 }
