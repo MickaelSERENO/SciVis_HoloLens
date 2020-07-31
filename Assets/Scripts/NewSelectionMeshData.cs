@@ -4,6 +4,17 @@ using UnityEngine;
 namespace Sereno
 {
     /// <summary>
+    /// The different Boolean Operation a Selection Mesh can perform
+    /// </summary>
+    public enum BooleanSelectionOperation
+    {
+        NONE  = -1, //No operation
+        UNION = 0,  //Perform a  Union
+        MINUS = 1,  //Perform a  difference
+        INTER = 2   //Perform an intersection
+    }
+
+    /// <summary>
     /// Class regrouping data received when new selection mesh needs to be created
     /// </summary>
     public class NewSelectionMeshData
@@ -16,7 +27,7 @@ namespace Sereno
         /// <summary>
         /// The boolean operation to use
         /// </summary>
-        public int BooleanOP = 0;
+        public BooleanSelectionOperation BooleanOP = 0;
 
         /// <summary>
         /// Is this mesh closed?

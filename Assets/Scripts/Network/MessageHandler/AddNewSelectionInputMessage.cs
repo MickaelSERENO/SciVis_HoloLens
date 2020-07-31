@@ -21,8 +21,7 @@ namespace Sereno.Network.MessageHandler
                 return (byte)'I';
             return 0;
         }
-
-
+        
         public override Int32 GetMaxCursor()
         {
             return 0;

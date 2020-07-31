@@ -114,7 +114,7 @@ namespace Sereno.SciVis
         /// The RenderTexture to use for the volumetric rendering. One per camera
         /// </summary>
         private Dictionary<Camera, RenderTextureData> m_renderTextures = new Dictionary<Camera, RenderTextureData>();
-        
+
         /// <summary>
         /// Initialize the visualization
         /// </summary>
@@ -170,7 +170,7 @@ namespace Sereno.SciVis
             transform.localScale = new Vector3((m_sm.DescPts.Size[0]/m_sm.Dimensions.x)/maxRatio,
                                                (m_sm.DescPts.Size[1]/m_sm.Dimensions.y)/maxRatio,
                                                (m_sm.DescPts.Size[2]/m_sm.Dimensions.z)/maxRatio);
-
+            
             LinkToSM();
 
             m_outlineColor = m_dataProvider.GetHeadsetColor(-1);
@@ -436,6 +436,11 @@ namespace Sereno.SciVis
                 //m_screenTextureMesh.vertices = meshPos;
                 //m_screenTextureMesh.UploadMeshData(false);
             }
+        }
+
+        public override void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)
+        {
+            m_sm.OnSelection(meshData, MeshToLocalMatrix);
         }
 
         /// <summary>

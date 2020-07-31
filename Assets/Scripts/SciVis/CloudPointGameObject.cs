@@ -237,6 +237,17 @@ namespace Sereno.SciVis
             UpdateTF();
         }
 
+        /// <summary>
+        /// Get the number of selected points
+        /// </summary>
+        /// <returns>The number of points selected</returns>
+        public int GetNbSelectedPoints()
+        {
+            if(m_noSelection)
+                return 0;
+            return m_mask.Count(x => x == true);
+        }
+
         [BurstCompile(CompileSynchronously = true)]
         public override void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)
         {
@@ -363,7 +374,7 @@ namespace Sereno.SciVis
                     }
                 };
 
-                //Select the most efficient way
+                //Select the most efficient direction (i.e., less test)
                 if(2*rasteredSpace[particuleX    + particuleY*CUBE_SIZE_Y + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y].MaxNbTriangle - 
                      rasteredSpace[CUBE_SIZE_X-1 + particuleY*CUBE_SIZE_Y + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y].MaxNbTriangle > 0)
                 { 
@@ -377,14 +388,42 @@ namespace Sereno.SciVis
                         rayCastAction(j);
                 }
 
-                if (nbIntersection%2 == 1)
+                //Apply the boolean operation
+                switch (meshData.BooleanOP)
                 {
-                    m_mask[k] = true;
+                    case BooleanSelectionOperation.UNION:
+                        m_mask[k] = m_mask[k] || (nbIntersection % 2 == 1);
+                        break;
+                    case BooleanSelectionOperation.INTER:
+                        m_mask[k] = m_mask[k] && (nbIntersection % 2 == 1);
+                        break;
+                    case BooleanSelectionOperation.MINUS:
+                        m_mask[k] = m_mask[k] && !(nbIntersection % 2 == 1);
+                        break;
+                    default:
+                        break;
                 }
             });
 
             //Update the transfer function at the end
             UpdateTF();
+        }
+
+        /// <summary>
+        /// The Mask array used to say wether or not a point is selected.
+        /// The array follows the same order as the values contained in the associated dataset (CloudPointDataset.ptDesc).
+        /// </summary>
+        public bool[] SelectionMask
+        {
+            get => m_mask;
+        }
+
+        /// <summary>
+        /// As a selection been performed yet?
+        /// </summary>
+        public bool AsASelection
+        {
+            get => m_noSelection;
         }
     }
 }

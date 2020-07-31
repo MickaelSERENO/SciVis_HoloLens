@@ -311,7 +311,6 @@ namespace Sereno.SciVis
             //Update the 3D transform of this game object
             lock(this)
             {
-                m_localToWorldMatrix = transform.localToWorldMatrix;
                 if (m_dataProvider != null && m_dataProvider.GetTargetedGameObject() == this)
                 {
                     if (!m_isTargeted)
@@ -395,6 +394,8 @@ namespace Sereno.SciVis
                         m_annotationGOsInRemoving.Clear();
                     }
                 }
+
+                m_localToWorldMatrix = transform.localToWorldMatrix;
             }
         }
 
@@ -462,6 +463,14 @@ namespace Sereno.SciVis
         public Matrix4x4 LocalToWorldMatrix
         {
             get {return m_localToWorldMatrix;}
+        }
+
+        /// <summary>
+        /// Should the transform be updated?
+        /// </summary>
+        public bool UpdateTransform
+        {
+            get => m_updateP || m_updateQ || m_updateS;
         }
     }
 }

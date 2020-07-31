@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -590,18 +590,18 @@ namespace Sereno
 #if TEST
             Task t = new Task( () =>
             {
-                AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
+                /*AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
                 addCloudMsg.Path   = "4.cp";
                 addCloudMsg.DataID = 0;
-                OnAddCloudPointDataset(null, addCloudMsg);
+                OnAddCloudPointDataset(null, addCloudMsg);*/
                 
-                /*AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
+                AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
                 addVTKMsg.Path = "Agulhas_10_resampled.vtk";
                 addVTKMsg.PtFieldValueIndices = new int[] { 3 };
-                OnAddVTKDataset(null, addVTKMsg);*/
+                OnAddVTKDataset(null, addVTKMsg);
                 
                 AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
                 addSDMsg.DatasetID = 0;
@@ -609,22 +609,22 @@ namespace Sereno
                 addSDMsg.Name = "data";
                 OnAddSubDataset(null, addSDMsg);
 
-                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                /*MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
                 moveVTKMsg.SubDataID = 0;
                 moveVTKMsg.Position = new float[3] { 0.2f, 0.2f, 0.2f };
                 moveVTKMsg.HeadsetID = -1;
-                OnMoveDataset(null, moveVTKMsg);
+                OnMoveDataset(null, moveVTKMsg);*/
 
                 ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
                 scaleMsg.SubDataID = 0;
                 scaleMsg.HeadsetID = -1;
-                scaleMsg.Scale = new float[3] { 0.5f, 0.5f, 0.5f };
+                scaleMsg.Scale = new float[3] { 1.0f, 1.0f, 1.0f };
                 OnScaleDataset(null, scaleMsg);
 
                 //Simulate a lasso input
-                /*CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
+                CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
                 curAction.CurrentAction = (int)HeadsetCurrentAction.LASSO;
                 OnCurrentAction(null, curAction);
 
@@ -637,12 +637,12 @@ namespace Sereno
                 OnTabletScale(null, tabletScale);
                 
                 LassoMessage lasso = new LassoMessage(ServerType.GET_LASSO);
-                lasso.size = 4096*3;
+                lasso.size = 128*3;
                 lasso.data = new List<float>();
-                for(int i = 0; i < 4096; i++)
+                for(int i = 0; i < 128; i++)
                 {
-                    lasso.data.Add((float)(0.5*Math.Cos(i/2048.0 * Math.PI)));
-                    lasso.data.Add((float)(0.5*Math.Sin(i/2048.0 * Math.PI)));
+                    lasso.data.Add((float)(0.5*Math.Cos(i/64.0f * Math.PI)));
+                    lasso.data.Add((float)(0.5*Math.Sin(i/64.0f * Math.PI)));
                     lasso.data.Add(0.0f);
                 }
                 OnLasso(null, lasso);
@@ -653,24 +653,24 @@ namespace Sereno
 
                 //First entry
                 AddNewSelectionInputMessage addNewSelection = new AddNewSelectionInputMessage(ServerType.GET_ADD_NEW_SELECTION_INPUT);
-                addNewSelection.BooleanOperation = 1;
+                addNewSelection.BooleanOperation = 0;
                 OnAddNewSelectionInput(null, addNewSelection);
 
                 LocationMessage loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
-                loc.position = new float[3] { 0.0f, 0.0f, 0.0f };
+                loc.position = new float[3] { 0.0f, 0.3f, 0.0f };
                 loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
                 OnLocation(null, loc);
 
                 Thread.Sleep(100);
                 loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
-                loc.position = new float[3] { 0.2f, 0.2f, 0.2f };
+                loc.position = new float[3] { 0.2f, 0.5f, 0.2f };
                 loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
                 OnLocation(null, loc);
                 
                 Thread.Sleep(100);
                 loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
                 loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
-                loc.position = new float[3] { 0.3f, -0.1f, 0.3f };
+                loc.position = new float[3] { 0.3f, -0.4f, 0.3f };
                 OnLocation(null, loc);
 
                 Thread.Sleep(500);
@@ -678,7 +678,7 @@ namespace Sereno
                 OnCurrentAction(null, curAction);
 
                 //The dataset needs to be loaded for that
-                OnConfirmSelection(null, null);*/
+                OnConfirmSelection(null, null);
             }
             );
             t.Start();
@@ -1670,7 +1670,7 @@ namespace Sereno
                             center[i] = 0.5f;
                             scale[i]  = 0.5f;
                         }
-                        sd.TransferFunction = new TriangularGTF(center, scale);
+                        sd.TransferFunction = new GTF(center, scale);
 
                         vtk.AddSubDataset(sd, false);
                     }
@@ -1865,7 +1865,20 @@ namespace Sereno
                 {
                     Task t = new Task(() =>
                     {
-                        Matrix4x4 meshToLocalDataset = Matrix4x4.Inverse(d.LocalToWorldMatrix) * m_localToWorldMatrix;
+                        Matrix4x4 meshToLocalDataset = Matrix4x4.identity;
+
+                        //Ensure that the graphical object is not being updated, transformation wise
+                        while (true)
+                        {
+                            lock (d)
+                            {
+                                if(!d.UpdateTransform)
+                                {
+                                    meshToLocalDataset = Matrix4x4.Inverse(d.LocalToWorldMatrix) * m_localToWorldMatrix;
+                                    break;
+                                }
+                            }
+                        }
                         foreach (var data in meshData)
                         {
                             Debug.Log($"Selecting in a Mesh of {data.Triangles.Count / 3} triangles. Start: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
@@ -1890,7 +1903,7 @@ namespace Sereno
                 //Close the current selection mesh, useful for the computation
                 CloseTabletCurrentSelectionMesh();
                 
-                m_tabletSelectionData.CurrentNewSelectionMeshIDs = new NewSelectionMeshData() { PositionID = m_tabletSelectionData.PositionList.Count, BooleanOP = msg.BooleanOperation, ShouldUpdate = true };
+                m_tabletSelectionData.CurrentNewSelectionMeshIDs = new NewSelectionMeshData() { PositionID = m_tabletSelectionData.PositionList.Count, BooleanOP = (BooleanSelectionOperation)msg.BooleanOperation, ShouldUpdate = true };
                 m_tabletSelectionData.NewSelectionMeshIDs.Add(m_tabletSelectionData.CurrentNewSelectionMeshIDs);
             }
         }

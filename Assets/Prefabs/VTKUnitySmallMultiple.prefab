@@ -89,7 +89,7 @@ MonoBehaviour:
   ColorMaterial: {fileID: 2100000, guid: 41d71bb2eb7b887429c3daf009b12d6b, type: 2}
   ColorMaterialDownScale: {fileID: 2100000, guid: 799b58375a6b43b47a64014b933c014a,
     type: 2}
-  CopyTextureMaterial: {fileID: 2100000, guid: 45d3a087a687c5348878b3c6e35ede44, type: 2}
+  CopyTextureMaterial: {fileID: 2100000, guid: 44a8e6d19bcef89419ea57e173ddf101, type: 2}
   VTKMiniaturePrefab: {fileID: 4757634199374474188}
   ResolutionScaling: 0.66
   UnloadModel: {fileID: 100000, guid: 525e1f884bd21294893183a160750c53, type: 3}
