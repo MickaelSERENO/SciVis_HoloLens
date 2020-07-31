@@ -7,13 +7,13 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: CopyTextureMaterial
-  m_Shader: {fileID: 4800000, guid: bcf398a5c46551648a4a62d833022386, type: 3}
+  m_Name: CopyStereoTextureMaterial
+  m_Shader: {fileID: 4800000, guid: 0761a8c6c34d8424f96831cbdc99f427, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
+  m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
   m_SavedProperties:
