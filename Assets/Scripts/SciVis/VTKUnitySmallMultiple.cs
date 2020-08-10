@@ -429,7 +429,7 @@ namespace Sereno.SciVis
         /// The 3D Texure RGBA4444 byte array computed via the given transfer function.
         /// </summary>
         /// <returns></returns>
-        public short[] TextureColor {get => m_textureColor; set => m_textureColor = value;}
+        public short[] TextureColor {get => m_textureColor; set { lock (this) { m_textureColor = value; } } }
 
         /// <summary>
         /// The SubDataset representing this Small Multiple

@@ -814,7 +814,7 @@ MonoBehaviour:
     type: 3}
   CloudPointGameObjectPrefab: {fileID: 7209715734672685840, guid: 1207a39a1bf477e4b9b2ce657dd3d758,
     type: 3}
-  DesiredVTKDensity: 256
+  DesiredVTKDensity: 0
   IPHeaderText: {fileID: 952487348}
   IPValueText: {fileID: 1032050059}
   RandomText: {fileID: 997432055}

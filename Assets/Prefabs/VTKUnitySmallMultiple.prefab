@@ -91,7 +91,7 @@ MonoBehaviour:
     type: 2}
   CopyTextureMaterial: {fileID: 2100000, guid: 44a8e6d19bcef89419ea57e173ddf101, type: 2}
   VTKMiniaturePrefab: {fileID: 4757634199374474188}
-  ResolutionScaling: 0.66
+  ResolutionScaling: 0.5
   UnloadModel: {fileID: 100000, guid: 525e1f884bd21294893183a160750c53, type: 3}
 --- !u!1 &7902294680546945863
 GameObject:

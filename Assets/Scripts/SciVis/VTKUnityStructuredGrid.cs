@@ -142,6 +142,10 @@ namespace Sereno.SciVis
         public UInt32 GetFieldSizeDiviser()
         {
             VTKStructuredPoints m_ptsDesc = m_dataset.Parser.GetStructuredPointsDescriptor();
+
+            if (DesiredDensity == 0)
+                return 1;
+
             UInt32 x = (m_ptsDesc.Size[0] + DesiredDensity - 1) / DesiredDensity;
             UInt32 y = (m_ptsDesc.Size[1] + DesiredDensity - 1) / DesiredDensity;
             UInt32 z = (m_ptsDesc.Size[2] + DesiredDensity - 1) / DesiredDensity;

@@ -181,37 +181,44 @@ namespace Sereno.SciVis
         {
             if (!m_isMiniature)
             {
-                //lock(m_sm) //I guess this is not necessary because the smallmultiple only apply a reference, i.e., atomic operation
+                short[] textureColor = null;
+                lock (m_sm)
                 {
-                    if (m_sd.OwnerID != -1 && m_sd.OwnerID != m_dataProvider.GetHeadsetID()) //Check owner
+                    textureColor = m_sm.TextureColor;
+                }
+
+                if (m_sd.OwnerID != -1 && m_sd.OwnerID != m_dataProvider.GetHeadsetID()) //Check owner
+                {
+                    m_unloadModel.SetActive(true);
+                    m_unloadModel.GetComponent<MeshRenderer>().material.color = m_dataProvider.GetHeadsetColor(m_sd.OwnerID);
+                    m_texture3D = null;
+                }
+
+                else if (textureColor != null) //New data?
+                {
+                    m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGBA4444, false);
+                    m_texture3D.wrapModeU  = TextureWrapMode.Clamp;
+                    m_texture3D.wrapModeV  = TextureWrapMode.Clamp;
+                    m_texture3D.wrapModeW  = TextureWrapMode.Clamp;
+                    m_texture3D.filterMode = FilterMode.Bilinear; 
+                    m_texture3D.SetPixelData<short>(textureColor, 0);
+                    m_texture3D.Apply();
+                    m_unloadModel.SetActive(false);
+                    lock(m_sm.TextureColor)
                     {
-                        m_unloadModel.SetActive(true);
-                        m_unloadModel.GetComponent<MeshRenderer>().material.color = m_dataProvider.GetHeadsetColor(m_sd.OwnerID);
-                        m_texture3D = null;
+                        if (m_sm.TextureColor == textureColor)
+                            m_sm.TextureColor = null;
                     }
 
-                    else if (m_sm.TextureColor != null) //New data?
-                    {
-                        m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGBA4444, false);
-                        m_texture3D.wrapModeU  = TextureWrapMode.Clamp;
-                        m_texture3D.wrapModeV  = TextureWrapMode.Clamp;
-                        m_texture3D.wrapModeW  = TextureWrapMode.Clamp;
-                        m_texture3D.filterMode = FilterMode.Bilinear; 
-                        m_texture3D.SetPixelData<short>(m_sm.TextureColor, 0);
-                        m_texture3D.Apply();
-                        m_unloadModel.SetActive(false);
-                        m_sm.TextureColor = null;
+                    m_materialNormalScale.SetTexture("_TextureData", m_texture3D);
+                    m_materialDownScale.SetTexture("_TextureData", m_texture3D);
 
-                        m_materialNormalScale.SetTexture("_TextureData", m_texture3D);
-                        m_materialDownScale.SetTexture("_TextureData", m_texture3D);
+                    UpdateMaterial();
+                }
 
-                        UpdateMaterial();
-                    }
-
-                    else if(m_texture3D == null) //Default color
-                    {
-                        m_unloadModel.GetComponent<MeshRenderer>().material.color = new Color(0.5f, 0.5f, 0.5f);
-                    }
+                else if(m_texture3D == null) //Default color
+                {
+                    m_unloadModel.GetComponent<MeshRenderer>().material.color = new Color(0.5f, 0.5f, 0.5f);
                 }
             }
         }
