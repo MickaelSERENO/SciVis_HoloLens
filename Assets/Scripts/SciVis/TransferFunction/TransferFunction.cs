@@ -1,5 +1,5 @@
 ﻿using System;
-
+using UnityEngine;
 
 namespace Sereno.SciVis
 {
@@ -38,8 +38,8 @@ namespace Sereno.SciVis
         /// Compute the Color t parameter
         /// </summary>
         /// <param name="values">The values to compute the color. Must be between 0.0f and 1.0f. Length: at minimum the length of GetDimension()</param>
-        /// <returns>The color t parameter. Negative values when errors occure (e.g array too large)</returns>
-        public abstract float ComputeColor(float[] values);
+        /// <returns>The resulting color</returns>
+        public abstract Color ComputeColor(float[] values);
 
         /// <summary>
         /// Compute the alpha t parameter

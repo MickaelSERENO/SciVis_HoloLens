@@ -246,12 +246,12 @@ namespace Sereno.Network.MessageHandler
 
         public override void Push(float value)
         {
-            if (Cursor >= 6)
+            switch (TFID)
             {
-                switch (TFID)
+                case TFType.TF_GTF:
+                case TFType.TF_TRIANGULAR_GTF:
                 {
-                    case TFType.TF_GTF:
-                    case TFType.TF_TRIANGULAR_GTF:
+                    if (Cursor >= 6)
                     {
                         int propID = (Cursor - 6) / 3;
                         int offset = (Cursor - 6) % 3;
@@ -267,25 +267,25 @@ namespace Sereno.Network.MessageHandler
                                     break;
                             }
                         }
-                        break;
                     }
-
-                    case TFType.TF_MERGE:
-                    {
-                        if (Cursor == 5)
-                            MergeTFData.t = value;
-                        else
-                        {
-                            if (MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
-                                MergeTFData.tf1.Push(value);
-                            else if (MergeTFData.tf2.Cursor <= MergeTFData.tf2.GetMaxCursor())
-                                MergeTFData.tf2.Push(value);
-                        }
-                        break;
-                    }
-                    default:
-                        break;
+                    break;
                 }
+
+                case TFType.TF_MERGE:
+                {
+                    if (Cursor == 5)
+                        MergeTFData.t = value;
+                    else
+                    {
+                        if (MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
+                            MergeTFData.tf1.Push(value);
+                        else if (MergeTFData.tf2.Cursor <= MergeTFData.tf2.GetMaxCursor())
+                            MergeTFData.tf2.Push(value);
+                    }
+                    break;
+                }
+                default:
+                    break;
             }
             base.Push(value);
         }

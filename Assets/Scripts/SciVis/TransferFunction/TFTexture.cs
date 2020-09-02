@@ -51,7 +51,7 @@ namespace Sereno.SciVis
             for(int i = 0; i < m_colors.Length/4; i++)
             {
                 Array.Copy(values, padding*i, v, 0, padding);
-                Color iCol = SciVisColor.GenColor(m_tf.ColorMode, m_tf.ComputeColor(v));
+                Color iCol = m_tf.ComputeColor(v);
                 m_colors[4*i]   = (byte)(iCol.r*255);
                 m_colors[4*i+1] = (byte)(iCol.g*255);
                 m_colors[4*i+2] = (byte)(iCol.b*255);

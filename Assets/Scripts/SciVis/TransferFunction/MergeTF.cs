@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Sereno.SciVis
 {
@@ -81,11 +82,11 @@ namespace Sereno.SciVis
         /// Compute the Color t parameter using (1.0-t)*m_tf1 + t*m_tf2
         /// </summary>
         /// <param name="values">The values to compute the color. Must be between 0.0f and 1.0f. Length: at minimum the length of GetDimension()</param>
-        /// <returns>The color t parameter. Negative values when errors occure (e.g array too large)</returns>
-        public override float ComputeColor(float[] values)
+        /// <returns>The color</returns>
+        public override Color ComputeColor(float[] values)
         {
-            float tf1Val;
-            float tf2Val;
+            Color tf1Val;
+            Color tf2Val;
 
             uint dim = GetDimension();
 

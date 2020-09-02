@@ -192,9 +192,8 @@ namespace Sereno.SciVis
                                         partialRes[partialRes.Length-1] = 0.0f;
                                 }
 
-                                float t = tf.ComputeColor(partialRes);
+                                Color c = tf.ComputeColor(partialRes);
 
-                                Color c = SciVisColor.GenColor(tf.ColorMode, t);
                                 pcolors[4*i + 0] = (byte)(c.r*255);
                                 pcolors[4*i + 1] = (byte)(c.g*255);
                                 pcolors[4*i + 2] = (byte)(c.b*255);

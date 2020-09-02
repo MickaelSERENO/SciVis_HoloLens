@@ -73,18 +73,18 @@ namespace Sereno.SciVis
         /// Compute the t parameter used for Colors
         /// </summary>
         /// <param name="values">The values to take account of</param>
-        /// <returns>length(values)/(values.length) with values a vector where gradient is discarded (i.e, we take into account indices from 0 to values.length - 2) </returns>
+        /// <returns>The color corresponding to the color mode and length(values)/(values.length) with values a vector where gradient is discarded (i.e, we take into account indices from 0 to values.length - 2) </returns>
         [BurstCompile(CompileSynchronously = true)]
-        public override float ComputeColor(float[] values)
+        public override Color ComputeColor(float[] values)
         {
             if(values.Length == 1)
-                return values[0];
+                return new Color(0,0,0,0);
 
             float mag = 0;
             for(int i = 0; i < m_scale.Length; i++)
                 mag += values[i]*values[i];
-            mag = (float)(Math.Sqrt(mag/m_scale.Length));
-            return mag;
+            mag = (float)(Math.Sqrt(mag)/m_scale.Length);
+            return SciVisColor.GenColor(ColorMode, mag);
         }
 
         public override TransferFunction Clone()

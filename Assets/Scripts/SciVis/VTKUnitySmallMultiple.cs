@@ -212,10 +212,9 @@ namespace Sereno.SciVis
                                                     partialRes[partialRes.Length - 1] = 0.0f;
                                             }
 
-                                            float t = tf.ComputeColor(partialRes);
+                                            Color c = tf.ComputeColor(partialRes);
                                             float a = tf.ComputeAlpha(partialRes);
                                             
-                                            Color c = SciVisColor.GenColor(tf.ColorMode, t);
                                             short r = (short)(16 * c.r);
                                             if (r > 15)
                                                 r = 15;
