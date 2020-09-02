@@ -187,7 +187,18 @@ namespace Sereno
         public ARCollabPointingIT ARPointingGO;
     }
 
-    public class Main:MonoBehaviour, IMessageBufferCallback, IDataProvider
+    /// <summary>
+    /// The stored HeadsetData. TODO implement the way to handle multiple "in-selection" tablets
+    /// </summary>
+    public class HeadsetData
+    {
+        /// <summary>
+        /// The data associated to this headset
+        /// </summary>
+        public HeadsetStatus Status;
+    }
+
+    public class Main : MonoBehaviour, IMessageBufferCallback, IDataProvider
     {
         /// <summary>
         /// Default text displayed for the IP address
@@ -324,7 +335,7 @@ namespace Sereno
         /// <summary>
         /// List of the other headset status
         /// </summary>
-        private List<HeadsetStatus> m_headsetStatus = new List<HeadsetStatus>();
+        private List<HeadsetData> m_headsetStatus = new List<HeadsetData>();
 
         /// <summary>
         /// List of GameObject representing the headset colors
@@ -954,29 +965,29 @@ namespace Sereno
             {
                 //Update the glyph position / rotation
                 //First update the general headset transform gameobject
-                m_headsetGameObjects[i].Headset.transform.localRotation = new Quaternion(m_headsetStatus[i].Rotation[1],
-                                                                                         m_headsetStatus[i].Rotation[2],
-                                                                                         m_headsetStatus[i].Rotation[3],
-                                                                                         m_headsetStatus[i].Rotation[0]);
+                m_headsetGameObjects[i].Headset.transform.localRotation = new Quaternion(m_headsetStatus[i].Status.Rotation[1],
+                                                                                         m_headsetStatus[i].Status.Rotation[2],
+                                                                                         m_headsetStatus[i].Status.Rotation[3],
+                                                                                         m_headsetStatus[i].Status.Rotation[0]);
 
-                m_headsetGameObjects[i].Headset.transform.localPosition = new Vector3(m_headsetStatus[i].Position[0],
-                                                                                      m_headsetStatus[i].Position[1],
-                                                                                      m_headsetStatus[i].Position[2]);
+                m_headsetGameObjects[i].Headset.transform.localPosition = new Vector3(m_headsetStatus[i].Status.Position[0],
+                                                                                      m_headsetStatus[i].Status.Position[1],
+                                                                                      m_headsetStatus[i].Status.Position[2]);
 
                 //Handle the special case of the glyph
                 m_headsetGameObjects[i].Glyph.transform.localPosition  = Vector3.forward*(-HEADSET_SIZE/2.0f) + //Middle of the head
                                                                          Vector3.up     *(HEADSET_TOP);        //Top of the head
 
                 //Update the glyph color
-                m_headsetGameObjects[i].Glyph.GetComponent<MeshRenderer>().material.color = new Color(((byte)(m_headsetStatus[i].Color >> 16) & 0xff)/255.0f,
-                                                                                                      ((byte)(m_headsetStatus[i].Color >> 8)  & 0xff)/255.0f,
-                                                                                                      ((byte)(m_headsetStatus[i].Color >> 0)  & 0xff)/255.0f);
+                m_headsetGameObjects[i].Glyph.GetComponent<MeshRenderer>().material.color = new Color(((byte)(m_headsetStatus[i].Status.Color >> 16) & 0xff)/255.0f,
+                                                                                                      ((byte)(m_headsetStatus[i].Status.Color >> 8)  & 0xff)/255.0f,
+                                                                                                      ((byte)(m_headsetStatus[i].Status.Color >> 0)  & 0xff)/255.0f);
 
                 m_headsetGameObjects[i].Glyph.SetActive(true);
 
                 //Update the glyph shape
                 MeshFilter mf = m_headsetGameObjects[i].Glyph.GetComponent<MeshFilter>();
-                switch(m_headsetStatus[i].CurrentAction)
+                switch(m_headsetStatus[i].Status.CurrentAction)
                 {
                     case HeadsetCurrentAction.MOVING:
                         mf.mesh = TranslateGlyph;
@@ -992,20 +1003,20 @@ namespace Sereno
                         break;
                 }
 
-                if(m_headsetStatus[i].ID != m_headsetID)
+                if(m_headsetStatus[i].Status.ID != m_headsetID)
                 {
                     //Update the pointing interaction technique
-                    m_headsetGameObjects[i].ARPointingGO.PointingIT           = m_headsetStatus[i].PointingIT;
-                    m_headsetGameObjects[i].ARPointingGO.SubDatasetGameObject = GetSDGameObject(GetSubDataset(m_headsetStatus[i].PointingDatasetID, m_headsetStatus[i].PointingSubDatasetID));
-                    m_headsetGameObjects[i].ARPointingGO.TargetPosition       = new Vector3(m_headsetStatus[i].PointingLocalSDPosition[0], m_headsetStatus[i].PointingLocalSDPosition[1], m_headsetStatus[i].PointingLocalSDPosition[2]);
+                    m_headsetGameObjects[i].ARPointingGO.PointingIT           = m_headsetStatus[i].Status.PointingIT;
+                    m_headsetGameObjects[i].ARPointingGO.SubDatasetGameObject = GetSDGameObject(GetSubDataset(m_headsetStatus[i].Status.PointingDatasetID, m_headsetStatus[i].Status.PointingSubDatasetID));
+                    m_headsetGameObjects[i].ARPointingGO.TargetPosition       = new Vector3(m_headsetStatus[i].Status.PointingLocalSDPosition[0], m_headsetStatus[i].Status.PointingLocalSDPosition[1], m_headsetStatus[i].Status.PointingLocalSDPosition[2]);
 
-                    Vector3 pointingHeadsetStartPosition = new Vector3(m_headsetStatus[i].PointingHeadsetStartPosition[0], m_headsetStatus[i].PointingHeadsetStartPosition[1], m_headsetStatus[i].PointingHeadsetStartPosition[2]);
+                    Vector3 pointingHeadsetStartPosition = new Vector3(m_headsetStatus[i].Status.PointingHeadsetStartPosition[0], m_headsetStatus[i].Status.PointingHeadsetStartPosition[1], m_headsetStatus[i].Status.PointingHeadsetStartPosition[2]);
                     pointingHeadsetStartPosition = this.transform.localToWorldMatrix.MultiplyPoint(pointingHeadsetStartPosition);
 
-                    Quaternion headsetOrientation = new Quaternion(m_headsetStatus[i].PointingHeadsetStartOrientation[1],
-                                                                   m_headsetStatus[i].PointingHeadsetStartOrientation[2],
-                                                                   m_headsetStatus[i].PointingHeadsetStartOrientation[3],
-                                                                   m_headsetStatus[i].PointingHeadsetStartOrientation[0]);
+                    Quaternion headsetOrientation = new Quaternion(m_headsetStatus[i].Status.PointingHeadsetStartOrientation[1],
+                                                                   m_headsetStatus[i].Status.PointingHeadsetStartOrientation[2],
+                                                                   m_headsetStatus[i].Status.PointingHeadsetStartOrientation[3],
+                                                                   m_headsetStatus[i].Status.PointingHeadsetStartOrientation[0]);
                     headsetOrientation = headsetOrientation * this.transform.rotation; //Convert the headset orientation in world space.
                     m_headsetGameObjects[i].ARPointingGO.HeadsetStartPosition    = pointingHeadsetStartPosition;
                     m_headsetGameObjects[i].ARPointingGO.HeadsetStartOrientation = headsetOrientation;
@@ -1572,8 +1583,26 @@ namespace Sereno
         {
             lock(this)
             {
-                m_headsetStatus.Clear();
-                m_headsetStatus.AddRange(msg.HeadsetsStatus);
+                //Remove useless headsetStatus
+                int i = 0;
+                while(i < m_headsetStatus.Count)
+                {
+                    //Remove this headset status if it does not exist anymore
+                    if (!Array.Exists(msg.HeadsetsStatus, x => x.ID == m_headsetStatus[i].Status.ID))
+                        m_headsetStatus.RemoveAt(i);
+                    else
+                        i++;
+                }
+
+                //Add the remaining headset status
+                foreach(HeadsetStatus hs in msg.HeadsetsStatus)
+                {
+                    HeadsetData data = m_headsetStatus.Find(x => x.Status.ID == hs.ID);
+                    if (data == null)
+                        m_headsetStatus.Add(new HeadsetData() { Status = hs });
+                    else
+                        data.Status = hs;
+                }
             }
         }
 
@@ -1926,19 +1955,24 @@ namespace Sereno
         {
             lock(this)
             {
-                if(headsetID == -1)
-                    return new Color(0.0f, 0.0f, 1.0f);
-                else
-                {
-                    foreach(HeadsetStatus status in m_headsetStatus)
-                        if(status.ID == headsetID)
-                            return new Color(((byte)(status.Color >> 16) & 0xff)/255.0f,
-                                             ((byte)(status.Color >> 8)  & 0xff)/255.0f,
-                                             ((byte)(status.Color >> 0)  & 0xff)/255.0f);
+                HeadsetData status = GetHeadsetData(headsetID);
+                if(status != null)
+                    return new Color(((byte)(status.Status.Color >> 16) & 0xff) / 255.0f,
+                                     ((byte)(status.Status.Color >> 8) & 0xff) / 255.0f,
+                                     ((byte)(status.Status.Color >> 0) & 0xff) / 255.0f);
 
-                    return new Color(0.0f, 0.0f, 1.0f);
-                }
+                return new Color(0.0f, 0.0f, 1.0f);
             }
+        }
+
+        /// <summary>
+        /// Get the headset data associated to the headset ID
+        /// </summary>
+        /// <param name="headsetID">the headset ID to look for</param>
+        /// <returns>The headset data associated to the headset ID</returns>
+        public HeadsetData GetHeadsetData(int headsetID)
+        {
+            return m_headsetStatus.Find(x => x.Status.ID == headsetID);
         }
 
         public int GetHeadsetID()
