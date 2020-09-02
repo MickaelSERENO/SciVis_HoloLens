@@ -591,7 +591,7 @@ namespace Sereno
             Task t = new Task( () =>
             {
                 /*AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
-                addCloudMsg.Path   = "4.cp";
+                addCloudMsg.Path   = "1.cp";
                 addCloudMsg.DataID = 0;
                 OnAddCloudPointDataset(null, addCloudMsg);*/
                 
@@ -624,7 +624,7 @@ namespace Sereno
                 OnScaleDataset(null, scaleMsg);
 
                 //Simulate a lasso input
-                CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
+                /*CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
                 curAction.CurrentAction = (int)HeadsetCurrentAction.LASSO;
                 OnCurrentAction(null, curAction);
 
@@ -678,7 +678,7 @@ namespace Sereno
                 OnCurrentAction(null, curAction);
 
                 //The dataset needs to be loaded for that
-                OnConfirmSelection(null, null);
+                OnConfirmSelection(null, new ConfirmSelectionMessage(ServerType.GET_CONFIRM_SELECTION) {DataID = 0, SubDataID = 0} );*/
             }
             );
             t.Start();
@@ -1467,6 +1467,51 @@ namespace Sereno
             }
         }
 
+        private TransferFunction TFMessageToTF(SubDataset sd, TFSubDatasetMessage msg)
+        {
+            TransferFunction tf = null;
+
+            //Parse the transfer function
+            switch (msg.TFID)
+            {
+                case TFType.TF_GTF:
+                case TFType.TF_TRIANGULAR_GTF:
+                {
+                    //Fill centers and scales
+                    float[] centers = new float[msg.GTFData.Props.Length];
+                    float[] scales = new float[msg.GTFData.Props.Length];
+
+                    foreach (TFSubDatasetMessage.GTFProp prop in msg.GTFData.Props)
+                    {
+                        int ind = sd.Parent.GetTFIndiceFromPropID(prop.PID);
+                        if (ind != -1)
+                        {
+                            centers[ind] = prop.Center;
+                            scales[ind] = prop.Scale;
+                        }
+                    }
+
+                    //Generate the propert transfer function
+                    if (msg.TFID == TFType.TF_GTF)
+                        tf = new GTF(centers, scales);
+                    else
+                        tf = new TriangularGTF(centers, scales);
+
+                    break;
+                }
+                case TFType.TF_MERGE:
+                {
+                    tf = new MergeTF(TFMessageToTF(sd, msg.MergeTFData.tf1), TFMessageToTF(sd, msg.MergeTFData.tf2), msg.MergeTFData.t);
+                    break;
+                }
+            }
+
+            if (tf != null)
+                tf.ColorMode = msg.ColorType;
+
+            return tf;
+        }
+
         public void OnTFDataset(MessageBuffer messageBuffer, TFSubDatasetMessage msg)
         {
             Debug.Log("Received a Transfer Function even");
@@ -1474,43 +1519,10 @@ namespace Sereno
             SubDataset       sd = GetSubDataset(msg.DataID, msg.SubDataID);
             if(sd == null)
                 return;
-            TransferFunction tf = null;
-
-            //Parse the transfer function
-            switch(msg.TFID)
-            {
-                case TFType.TF_GTF:
-                case TFType.TF_TRIANGULAR_GTF:
-                {
-                    //Fill centers and scales
-                    float[] centers = new float[msg.GTFData.Props.Length];
-                    float[] scales  = new float[msg.GTFData.Props.Length];
-
-                    foreach(TFSubDatasetMessage.GTFProp prop in msg.GTFData.Props)
-                    {
-                        int ind = sd.Parent.GetTFIndiceFromPropID(prop.PID);
-                        if(ind != -1)
-                        {
-                            centers[ind] = prop.Center;
-                            scales[ind]  = prop.Scale;
-                        }
-                    }
-
-                    //Generate the propert transfer function
-                    if(msg.TFID == TFType.TF_GTF)
-                        tf = new GTF(centers, scales);
-                    else
-                        tf = new TriangularGTF(centers, scales);
-
-                    break;
-                }
-            }
-
-            if(tf != null)
-                tf.ColorMode = msg.ColorType;
+            TransferFunction tf = TFMessageToTF(sd, msg);
 
             //Update the TF. Numerous thread will be separately launched to update the visual
-            lock(sd)
+            lock (sd)
                 sd.TransferFunction = tf;
         }
 
@@ -1861,23 +1873,22 @@ namespace Sereno
                 CloseTabletCurrentSelectionMesh();
 
                 List<NewSelectionMeshData> meshData = new List<NewSelectionMeshData>(m_tabletSelectionData.NewSelectionMeshIDs);
-                foreach (var d in m_datasetGameObjects) //TODO
+                DefaultSubDatasetGameObject d = GetSDGameObject(GetSubDataset(msg.DataID, msg.SubDataID));
+                
+                Task t = new Task(() =>
                 {
-                    Task t = new Task(() =>
-                    {
-                        Matrix4x4 meshToLocalDataset = Matrix4x4.identity;
-                        lock(d.SubDatasetState)
-                            meshToLocalDataset = d.SubDatasetState.GraphicalMatrix.inverse;
+                    Matrix4x4 meshToLocalDataset = Matrix4x4.identity;
+                    lock(d.SubDatasetState)
+                        meshToLocalDataset = d.SubDatasetState.GraphicalMatrix.inverse;
 
-                        foreach (var data in meshData)
-                        {
-                            Debug.Log($"Selecting in a Mesh of {data.Triangles.Count / 3} triangles. Start: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
-                            d.OnSelection(data, meshToLocalDataset);
-                            Debug.Log($"End Computation. End: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
-                        }
-                    });
-                    t.Start();
-                }
+                    foreach (var data in meshData)
+                    {
+                        Debug.Log($"Selecting in a Mesh of {data.Triangles.Count / 3} triangles. Start: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
+                        d.OnSelection(data, meshToLocalDataset);
+                        Debug.Log($"End Computation. End: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
+                    }
+                });
+                t.Start();
             }
         }
 
@@ -1897,6 +1908,17 @@ namespace Sereno
                 m_tabletSelectionData.NewSelectionMeshIDs.Add(m_tabletSelectionData.CurrentNewSelectionMeshIDs);
             }
         }
+        
+        public void OnToggleMapVisibility(MessageBuffer messageBuffer, ToggleMapVisibilityMessage msg)
+        {
+            lock(this)
+            {
+                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+                if(sd != null)
+                    sd.IsMapVisible = msg.IsVisible;
+            }
+        }
+
 
         #endregion
 

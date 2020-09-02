@@ -176,7 +176,6 @@ namespace Sereno.Datasets
                     }
                 }
 
-                ComputeMultiDGradient();
                 m_isLoaded = true;
                 return (succeed ? 1 : 0);
             });
@@ -186,14 +185,14 @@ namespace Sereno.Datasets
         /// Compute the multi dimensionnal gradient of this dataset
         /// </summary>
         [BurstCompile(CompileSynchronously = true)]
-        private void ComputeMultiDGradient()
+        protected override Gradient ComputeGradient(int[] indices)
         {
-            if (m_ptFieldDescs.Count == 0)
-                return;
+            if (indices.Count() == 0)
+                return null;
 
             VTKStructuredPoints ptsDesc = m_parser.GetStructuredPointsDescriptor();
-            m_grads   = new float[ptsDesc.Size[0] * ptsDesc.Size[1] * ptsDesc.Size[2]];
-            m_maxGrad = 0;
+            float[] grad  = new float[ptsDesc.Size[0] * ptsDesc.Size[1] * ptsDesc.Size[2]];
+            float   maxVal = float.MinValue;
 
             object lockObject = new object();
 
@@ -203,10 +202,10 @@ namespace Sereno.Datasets
 
             //Multi dimensionnal gradient computation, based on 
             //Joe Kniss, Gordon Kindlmann, and Charles Hansen. 2002. Multidimensional Transfer Functions for Interactive Volume Rendering. IEEE Transactions on Visualization and Computer Graphics 8, 3 (July 2002), 270-285. DOI: https://doi.org/10.1109/TVCG.2002.1021579 
-            if (m_ptFieldDescs.Count > 1)
+            if (indices.Count() > 1)
             { 
                 Parallel.For(1, ptsDesc.Size[2] - 1,
-                    () => new {maxGrad = new float[1] { float.MinValue }, df = new float[3*m_ptFieldDescs.Count], localGrad = new float[3], g = new float[9]},
+                    () => new {maxGrad = new float[1] { float.MinValue }, df = new float[3*indices.Count()], localGrad = new float[3], g = new float[9]},
                     (k, loopState, partialRes) =>
                     {
                         for (UInt32 j = 1; j < ptsDesc.Size[1] - 1; j++)
@@ -221,7 +220,7 @@ namespace Sereno.Datasets
                                 {
                                     if (m_mask != null && ((byte*)m_mask.Value)[ind] == 0)
                                     {
-                                        m_grads[ind] = 0;
+                                        grad[ind] = 0;
                                         continue;
                                     }
                                 }
@@ -234,32 +233,33 @@ namespace Sereno.Datasets
                                 UInt64 indZ2 = ind + (UInt64)(ptsDesc.Size[1] * ptsDesc.Size[0]);
 
                                 //Start computing the Df matrix.
-                                for (int l = 0; l < m_ptFieldDescs.Count; l++)
+                                for (int l = 0; l < indices.Count(); l++)
                                 {
-                                    if (m_ptFieldDescs[l].NbValuesPerTuple == 1)
+                                    int ids = indices[l];
+                                    if (m_ptFieldDescs[ids].NbValuesPerTuple == 1)
                                     {
-                                        partialRes.localGrad[0] = (m_ptFieldDescs[l].Value.ReadAsFloat(indX2) - m_ptFieldDescs[l].Value.ReadAsFloat(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
-                                        partialRes.localGrad[1] = (m_ptFieldDescs[l].Value.ReadAsFloat(indY2) - m_ptFieldDescs[l].Value.ReadAsFloat(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
-                                        partialRes.localGrad[2] = (m_ptFieldDescs[l].Value.ReadAsFloat(indZ2) - m_ptFieldDescs[l].Value.ReadAsFloat(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                                        partialRes.localGrad[0] = (m_ptFieldDescs[ids].Value.ReadAsFloat(indX2) - m_ptFieldDescs[ids].Value.ReadAsFloat(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
+                                        partialRes.localGrad[1] = (m_ptFieldDescs[ids].Value.ReadAsFloat(indY2) - m_ptFieldDescs[ids].Value.ReadAsFloat(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
+                                        partialRes.localGrad[2] = (m_ptFieldDescs[ids].Value.ReadAsFloat(indZ2) - m_ptFieldDescs[ids].Value.ReadAsFloat(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
                                     }
                                     else
                                     {
-                                        partialRes.localGrad[0] = (m_ptFieldDescs[l].ReadMagnitude(indX2) - m_ptFieldDescs[l].ReadMagnitude(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
-                                        partialRes.localGrad[1] = (m_ptFieldDescs[l].ReadMagnitude(indY2) - m_ptFieldDescs[l].ReadMagnitude(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
-                                        partialRes.localGrad[2] = (m_ptFieldDescs[l].ReadMagnitude(indZ2) - m_ptFieldDescs[l].ReadMagnitude(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                                        partialRes.localGrad[0] = (m_ptFieldDescs[ids].ReadMagnitude(indX2) - m_ptFieldDescs[ids].ReadMagnitude(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
+                                        partialRes.localGrad[1] = (m_ptFieldDescs[ids].ReadMagnitude(indY2) - m_ptFieldDescs[ids].ReadMagnitude(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
+                                        partialRes.localGrad[2] = (m_ptFieldDescs[ids].ReadMagnitude(indZ2) - m_ptFieldDescs[ids].ReadMagnitude(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
                                     }
 
                                     //Fill df
                                     for (int ii = 0; ii < 3; ii++)
                                     {
-                                        partialRes.df[3*l+ii] = partialRes.localGrad[ii] / (m_ptFieldDescs[l].MaxVal - m_ptFieldDescs[l].MinVal); 
+                                        partialRes.df[3*l+ii] = partialRes.localGrad[ii] / (m_ptFieldDescs[ids].MaxVal - m_ptFieldDescs[ids].MinVal); 
                                     }
                                 }
 
                                 //Compute g = Df^T * Df
                                 for (UInt32 l = 0; l < 9; l++)
                                     partialRes.g[l] = 0;
-                                for(UInt32 n = 0; n < m_ptFieldDescs.Count; n++)
+                                for(UInt32 n = 0; n < indices.Count(); n++)
                                     for(UInt32 l = 0; l < 3; l++)
                                         for(UInt32 m = 0; m < 3; m++)
                                             partialRes.g[3*l+m] += partialRes.df[3*n+l]*partialRes.df[3*n+m];
@@ -271,7 +271,7 @@ namespace Sereno.Datasets
                                     gradMag += partialRes.g[l]*partialRes.g[l];
 
                                 gradMag = (float)Math.Sqrt(gradMag);
-                                m_grads[ind] = gradMag;
+                                grad[ind] = gradMag;
                                 partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
                             }
                         }
@@ -281,14 +281,15 @@ namespace Sereno.Datasets
                     {
                         lock (lockObject)
                         {
-                            m_maxGrad = Math.Max(m_maxGrad, partialRes.maxGrad[0]);
+                            maxVal = Math.Max(maxVal, partialRes.maxGrad[0]);
                         }
                     });
             }
 
             //1D gradient computation
-            else if(m_ptFieldDescs[0].NbValuesPerTuple == 1)
+            else if(m_ptFieldDescs[indices[0]].NbValuesPerTuple == 1)
             {
+                int ids = indices[0];
                 Parallel.For(1, ptsDesc.Size[2] - 1,
                     () => new { maxGrad = new float[1] { float.MinValue }, localGrad = new float[3] },
                     (k, loopState, partialRes) =>
@@ -305,7 +306,7 @@ namespace Sereno.Datasets
                                 {
                                     if (m_mask != null && ((byte*)m_mask.Value)[ind] == 0)
                                     {
-                                        m_grads[ind] = 0;
+                                        grad[ind] = 0;
                                         continue;
                                     }
                                 }
@@ -317,18 +318,18 @@ namespace Sereno.Datasets
                                 UInt64 indZ1 = ind - (UInt64)(ptsDesc.Size[1] * ptsDesc.Size[0]);
                                 UInt64 indZ2 = ind + (UInt64)(ptsDesc.Size[1] * ptsDesc.Size[0]);
 
-                                partialRes.localGrad[0] = (m_ptFieldDescs[0].Value.ReadAsFloat(indX2) - m_ptFieldDescs[0].Value.ReadAsFloat(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
-                                partialRes.localGrad[1] = (m_ptFieldDescs[0].Value.ReadAsFloat(indY2) - m_ptFieldDescs[0].Value.ReadAsFloat(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
-                                partialRes.localGrad[2] = (m_ptFieldDescs[0].Value.ReadAsFloat(indZ2) - m_ptFieldDescs[0].Value.ReadAsFloat(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                                partialRes.localGrad[0] = (m_ptFieldDescs[ids].Value.ReadAsFloat(indX2) - m_ptFieldDescs[ids].Value.ReadAsFloat(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
+                                partialRes.localGrad[1] = (m_ptFieldDescs[ids].Value.ReadAsFloat(indY2) - m_ptFieldDescs[ids].Value.ReadAsFloat(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
+                                partialRes.localGrad[2] = (m_ptFieldDescs[ids].Value.ReadAsFloat(indZ2) - m_ptFieldDescs[ids].Value.ReadAsFloat(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
                                   
                                 float gradMag = 0;
                                 for (UInt32 l = 0; l < 3; l++)
                                 {
-                                    partialRes.localGrad[l] /= (m_ptFieldDescs[0].MaxVal - m_ptFieldDescs[0].MinVal);
+                                    partialRes.localGrad[l] /= (m_ptFieldDescs[ids].MaxVal - m_ptFieldDescs[ids].MinVal);
                                     gradMag += partialRes.localGrad[l] * partialRes.localGrad[l];
                                 }
                                 gradMag = (float)Math.Sqrt(gradMag);
-                                m_grads[ind] = gradMag;
+                                grad[ind] = gradMag;
                                 partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
                             }
                         }
@@ -338,13 +339,15 @@ namespace Sereno.Datasets
                     {
                         lock (lockObject)
                         {
-                            m_maxGrad = Math.Max(m_maxGrad, partialRes.maxGrad[0]);
+                            maxVal = Math.Max(maxVal, partialRes.maxGrad[0]);
                         }
                     });
             }
 
             else
             {
+                int ids = indices[0];
+
                 Parallel.For(1, ptsDesc.Size[2] - 1,
                     () => new { maxGrad = new float[1] { float.MinValue }, localGrad = new float[3] },
                 (k, loopState, partialRes) =>
@@ -361,7 +364,7 @@ namespace Sereno.Datasets
                             {
                                 if (m_mask != null && ((byte*)m_mask.Value)[ind] == 0)
                                 {
-                                    m_grads[ind] = 0;
+                                    grad[ind] = 0;
                                     continue;
                                 }
                             }
@@ -373,19 +376,19 @@ namespace Sereno.Datasets
                             UInt64 indZ1 = ind - (UInt64)(ptsDesc.Size[1] * ptsDesc.Size[0]);
                             UInt64 indZ2 = ind + (UInt64)(ptsDesc.Size[1] * ptsDesc.Size[0]);
                             
-                            partialRes.localGrad[0] = (m_ptFieldDescs[0].ReadMagnitude(indX2) - m_ptFieldDescs[0].ReadMagnitude(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
-                            partialRes.localGrad[1] = (m_ptFieldDescs[0].ReadMagnitude(indY2) - m_ptFieldDescs[0].ReadMagnitude(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
-                            partialRes.localGrad[2] = (m_ptFieldDescs[0].ReadMagnitude(indZ2) - m_ptFieldDescs[0].ReadMagnitude(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                            partialRes.localGrad[0] = (m_ptFieldDescs[ids].ReadMagnitude(indX2) - m_ptFieldDescs[ids].ReadMagnitude(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
+                            partialRes.localGrad[1] = (m_ptFieldDescs[ids].ReadMagnitude(indY2) - m_ptFieldDescs[ids].ReadMagnitude(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
+                            partialRes.localGrad[2] = (m_ptFieldDescs[ids].ReadMagnitude(indZ2) - m_ptFieldDescs[ids].ReadMagnitude(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
 
                             float gradMag = 0;
                             for (UInt32 l = 0; l < 3; l++)
                             {
-                                partialRes.localGrad[l] /= (m_ptFieldDescs[0].MaxVal - m_ptFieldDescs[0].MinVal);
+                                partialRes.localGrad[l] /= (m_ptFieldDescs[ids].MaxVal - m_ptFieldDescs[ids].MinVal);
                                 gradMag += partialRes.localGrad[l] * partialRes.localGrad[l];
                             }
 
                             gradMag = (float)Math.Sqrt(gradMag);
-                            m_grads[ind] = gradMag;
+                            grad[ind] = gradMag;
                             partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
                         }
                     }
@@ -395,7 +398,7 @@ namespace Sereno.Datasets
                 {
                     lock (lockObject)
                     {
-                        m_maxGrad = Math.Max(m_maxGrad, partialRes.maxGrad[0]);
+                        maxVal = Math.Max(maxVal, partialRes.maxGrad[0]);
                     }
                 });
             }
@@ -410,7 +413,7 @@ namespace Sereno.Datasets
                 {
                     UInt64 colorValueOff1 = (UInt64)(i + ptsDesc.Size[0] * j);
                     UInt64 colorValueOff2 = (UInt64)(i + ptsDesc.Size[0] * j + ptsDesc.Size[0] * ptsDesc.Size[1] * (ptsDesc.Size[2] - 1));
-                    m_grads[colorValueOff1] = m_grads[colorValueOff2] = 0.0f;
+                    grad[colorValueOff1] = grad[colorValueOff2] = 0.0f;
                 }
             });
             Parallel.For(0, ptsDesc.Size[2], k =>
@@ -420,7 +423,7 @@ namespace Sereno.Datasets
 
                     UInt64 colorValueOff1 = (UInt64)(i + ptsDesc.Size[0] * ptsDesc.Size[1] * k);
                     UInt64 colorValueOff2 = (UInt64)(i + ptsDesc.Size[0] * (ptsDesc.Size[1] - 1) + ptsDesc.Size[0] * ptsDesc.Size[1] * k);
-                    m_grads[colorValueOff1] = m_grads[colorValueOff2] = 0.0f;
+                    grad[colorValueOff1]  = grad[colorValueOff2] = 0.0f;
                 }
             });
             Parallel.For(0, ptsDesc.Size[2], k =>
@@ -430,9 +433,11 @@ namespace Sereno.Datasets
 
                     UInt64 colorValueOff1 = (UInt64)(ptsDesc.Size[0] * j + ptsDesc.Size[0] * ptsDesc.Size[1] * k);
                     UInt64 colorValueOff2 = (UInt64)(ptsDesc.Size[0] - 1 + ptsDesc.Size[0] * j + ptsDesc.Size[0] * ptsDesc.Size[1] * k);
-                    m_grads[colorValueOff1] = m_grads[colorValueOff2] = 0.0f;
+                    grad[colorValueOff1]  = grad[colorValueOff2] = 0.0f;
                 }
             });
+
+            return new Gradient(indices, grad, maxVal);
         }
 
         /// <summary>

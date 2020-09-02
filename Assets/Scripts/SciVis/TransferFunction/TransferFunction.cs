@@ -23,6 +23,12 @@ namespace Sereno.SciVis
         }
 
         /// <summary>
+        /// Is this transfer function using the gradient as the latest dimension?
+        /// </summary>
+        /// <returns>true if yes, false otherwise</returns>
+        public virtual bool HasGradient() { return false; }
+
+        /// <summary>
         /// Get the dimension of this Transfer function
         /// </summary>
         /// <returns>The dimension of the TF</returns>
@@ -47,7 +53,7 @@ namespace Sereno.SciVis
         /// </summary>
         /// <returns></returns>
         public abstract TransferFunction Clone();
-
+        
         /// <summary>
         /// The ColorMode bound to this Transfer Function
         /// </summary>

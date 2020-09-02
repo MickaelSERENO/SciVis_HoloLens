@@ -38,6 +38,37 @@ namespace Sereno.Network.MessageHandler
         }
 
         /// <summary>
+        /// The structure containing all the data for Merge Transfer Function
+        /// </summary>
+        public class MergeTF
+        {
+            /// <summary>
+            /// The linear t parameter
+            /// </summary>
+            public float t = 0.0f;
+
+            /// <summary>
+            /// The first transfer function message to interpolate
+            /// </summary>
+            public TFSubDatasetMessage tf1;
+
+            /// <summary>
+            /// The second transfer function message to interpolate
+            /// </summary>
+            public TFSubDatasetMessage tf2;
+
+            public MergeTF()
+            {
+                tf1 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
+                tf2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
+
+                //Skip useless IDs
+                tf1.Cursor = 3; 
+                tf2.Cursor = 3; 
+            }
+        }
+
+        /// <summary>
         /// The DataID bound to this message
         /// </summary>
         public Int32 DataID;
@@ -63,9 +94,9 @@ namespace Sereno.Network.MessageHandler
         public ColorMode ColorType;
 
         /// <summary>
-        /// The GTFData object usable only if TFID == TF_GTF or TF_TRIANGULAR_GTF
+        /// The TFData object being used
         /// </summary>
-        public GTF GTFData = null;
+        private Object m_tfData = null;
 
         public TFSubDatasetMessage(ServerType type) : base(type)
         { }
@@ -99,6 +130,22 @@ namespace Sereno.Network.MessageHandler
                     }
                     break;
                 }
+
+                case TFType.TF_MERGE:
+                {
+                    if (Cursor == 5)
+                        return (byte)'f';
+
+                    if(MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
+                        return MergeTFData.tf1.GetCurrentType();
+                    else if (MergeTFData.tf2.Cursor <= MergeTFData.tf2.GetMaxCursor())
+                        return MergeTFData.tf2.GetCurrentType();
+
+                    break;
+                }
+
+                default:
+                    break;
             }
             return 0;
         }
@@ -129,6 +176,19 @@ namespace Sereno.Network.MessageHandler
                         }
                         break;
                     }
+                    case TFType.TF_MERGE:
+                    {
+                        if (Cursor > 5)
+                        {
+                            if (MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
+                                MergeTFData.tf1.Push(value);
+                            else if (MergeTFData.tf2.Cursor <= MergeTFData.tf2.GetMaxCursor())
+                                MergeTFData.tf2.Push(value);
+                        }
+                        break;
+                    }
+                    default:
+                        break;
                 }
             }
             base.Push(value);
@@ -144,14 +204,42 @@ namespace Sereno.Network.MessageHandler
                     case TFType.TF_GTF:
                     case TFType.TF_TRIANGULAR_GTF:
                     {
-                        GTFData = new GTF();
+                        m_tfData = new GTF();
                         break;
                     }
+
+                    case TFType.TF_MERGE:
+                    {
+                        m_tfData = new MergeTF();
+                        break;
+                    }
+                    default:
+                        break;
                 }
             }
 
             else if(Cursor == 4) //ColorType
                 ColorType = (ColorMode)value;
+
+            else
+            {
+                switch (TFID)
+                {
+                    case TFType.TF_MERGE:
+                    {
+                        if(Cursor > 5)
+                        {
+                            if(MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
+                                MergeTFData.tf1.Push(value);
+                            else if(MergeTFData.tf2.Cursor <= MergeTFData.tf2.GetMaxCursor())
+                                MergeTFData.tf2.Push(value);
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }
 
             base.Push(value);
         }
@@ -181,6 +269,22 @@ namespace Sereno.Network.MessageHandler
                         }
                         break;
                     }
+
+                    case TFType.TF_MERGE:
+                    {
+                        if (Cursor == 5)
+                            MergeTFData.t = value;
+                        else
+                        {
+                            if (MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
+                                MergeTFData.tf1.Push(value);
+                            else if (MergeTFData.tf2.Cursor <= MergeTFData.tf2.GetMaxCursor())
+                                MergeTFData.tf2.Push(value);
+                        }
+                        break;
+                    }
+                    default:
+                        break;
                 }
             }
             base.Push(value);
@@ -196,8 +300,24 @@ namespace Sereno.Network.MessageHandler
                 case TFType.TF_TRIANGULAR_GTF:
                     maxCursor += 1 + 3 * GTFData.Props.Length;
                     break;
+                case TFType.TF_MERGE:
+                    maxCursor += 1 + MergeTFData.tf1.GetMaxCursor() + MergeTFData.tf2.GetMaxCursor() - 4; //-4 == datasetID + subDatasetID + headsetID for BOTH transfer functions (we ignore them).
+                                                                                                          // We remind that the current cursor is included (hence -4 and not -6)
+                    break;
+                default:
+                    break;
             }
             return maxCursor;
         }
+
+        /// <summary>
+        /// The Gaussian Transfer Function Data usable only if TFID == TF_GTF or TFID == TF_TRIANGULAR_GTF
+        /// </summary>
+        public GTF GTFData { get => (GTF)m_tfData; }
+
+        /// <summary>
+        /// The Merge Transfer Function Data usable only if TFID == TF_MERGE
+        /// </summary>
+        public MergeTF MergeTFData { get => (MergeTF)m_tfData; }
     }
 }

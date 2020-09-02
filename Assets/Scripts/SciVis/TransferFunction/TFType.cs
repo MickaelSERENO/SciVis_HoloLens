@@ -7,6 +7,7 @@
     {
         TF_NOTHING        = 0,
         TF_GTF            = 1,
-        TF_TRIANGULAR_GTF = 2
+        TF_TRIANGULAR_GTF = 2,
+        TF_MERGE          = 3,
     }
 }

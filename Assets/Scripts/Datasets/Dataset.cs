@@ -13,6 +13,46 @@ namespace Sereno.Datasets
     /// <param name="status">The loading status</param>
     public delegate void LoadDatasetCallback(Dataset d, int status);
 
+    public class Gradient
+    {
+        /// <summary>
+        /// The gradient values
+        /// </summary>
+        private float[] m_values;
+
+        /// <summary>
+        /// The property indices matching this Gradient (multi dimensional or one-dimensional)
+        /// </summary>
+        private int[] m_indices;
+
+        /// <summary>
+        /// The maximum gradient computed
+        /// </summary>
+        private float m_maxGrad;
+
+        public Gradient(int[] indices, float[] values, float maxGrad)
+        {
+            m_indices = indices;
+            m_values  = values;
+            m_maxGrad = maxGrad;
+        }
+
+        /// <summary>
+        /// Get the multi dimensionnal gradient raw values. 
+        /// </summary>
+        public float[] Values { get => m_values; }
+
+        /// <summary>
+        /// Get the maximum gradient magnitude computed.
+        /// </summary>
+        public float MaxGrad { get => m_maxGrad; }
+
+        /// <summary>
+        /// Get the indices matching this gradient
+        /// </summary>
+        public int[] Indices { get => m_indices; }
+    }
+
     public abstract class Dataset
     {
         /// <summary>
@@ -38,7 +78,7 @@ namespace Sereno.Datasets
         /// <summary>
         /// The Gradient loaded.
         /// </summary>
-        protected float[] m_grads = null;
+        protected List<Gradient> m_grads = new List<Gradient>();
 
         /// <summary>
         /// The maximum gradient magnitude computed
@@ -114,6 +154,36 @@ namespace Sereno.Datasets
         }
 
         /// <summary>
+        /// Compute the gradient from indices "ids"
+        /// </summary>
+        /// <returns>A new Gradient Object</returns>
+        protected virtual Gradient ComputeGradient(int[] ids)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Get the Gradient values associated to a particular indices
+        /// </summary>
+        /// <param name="indices">The dataset's property indices to get the gradient from. 
+        /// If not found, the gradient is computed from the beginning</param>
+        /// <returns>The multi-dimensional Gradient associated to the indices "indices"</returns>
+        public Gradient GetGradient(int[] indices)
+        {
+            int[] ids = (int[])indices.Clone();
+            Array.Sort(ids);
+
+            Gradient grad = m_grads.Find(x => x.Indices.SequenceEqual(ids));
+            if(grad == null)
+            {
+                grad = ComputeGradient(ids);
+                if (grad != null)
+                    m_grads.Add(grad);
+            }
+            return grad;
+        }
+
+        /// <summary>
         /// Load the Dataset internal values. This is done asynchronously
         /// </summary>
         /// <return>The asynchronous task being executed. TResult: the status of the loading</return>
@@ -128,17 +198,6 @@ namespace Sereno.Datasets
         /// List of loaded PointFieldDescriptor. If IsLoaded == false, this array is not yet finished to be computed
         /// </summary>
         public List<PointFieldDescriptor> PointFieldDescs { get => m_ptFieldDescs; }
-
-        /// <summary>
-        /// Get the multi dimensionnal gradient raw values. 
-        /// If IsLoaded == false, this property returns null;
-        /// </summary>
-        public float[] Gradient { get => m_grads; }
-
-        /// <summary>
-        /// Get the maximum gradient magnitude computed. If IsLoaded == false, this property returns float.MaxValue;
-        /// </summary>
-        public float MaxGrad { get => m_maxGrad; }
 
         /// <summary>
         /// Is the Dataset Loaded?

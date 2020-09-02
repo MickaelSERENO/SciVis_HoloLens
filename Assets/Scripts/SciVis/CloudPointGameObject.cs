@@ -148,7 +148,9 @@ namespace Sereno.SciVis
         [BurstCompile(CompileSynchronously = true)]
         private byte[] ComputeTFColor(TransferFunction tf)
         {
-            if (m_dataset.IsLoaded == false || tf == null || tf.GetDimension() > m_dataset.PointFieldDescs.Count + 1 ||
+            int hasGradient = (tf.HasGradient() ? 1 : 0);
+
+            if (m_dataset.IsLoaded == false || tf == null || tf.GetDimension() - hasGradient > m_dataset.PointFieldDescs.Count ||
                (m_sd.OwnerID != -1 && m_sd.OwnerID != m_dataProvider.GetHeadsetID())) //Not a public subdataset
                 return null;
 
@@ -156,28 +158,39 @@ namespace Sereno.SciVis
             {
                 unsafe
                 {
+                    int[] indices = new int[m_dataset.PointFieldDescs.Count];
+                    for (int i = 0; i < indices.Length; i++)
+                        indices[i] = i;
+
+                    Datasets.Gradient gradient = m_dataset.GetGradient(indices);
+
                     byte[] colors = new byte[4*m_dataset.NbPoints]; //RGBA colors;
 
                     List<PointFieldDescriptor> ptDescs = m_dataset.PointFieldDescs;
+
                     Parallel.For(0, m_dataset.NbPoints,
                         i =>
                         {
-                            float[] partialRes = new float[ptDescs.Count + 1];
+                            float[] partialRes = new float[indices.Length + hasGradient];
                             fixed (byte* pcolors = colors)
                             {
                                 //Determine transfer function coordinates
                                 for (int l = 0; l < ptDescs.Count; l++)
                                 {
-                                    if (ptDescs[l].NbValuesPerTuple == 1)
-                                        partialRes[l] = (ptDescs[l].Value.ReadAsFloat((ulong)i) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
+                                    int ids = indices[l];
+                                    if (ptDescs[ids].NbValuesPerTuple == 1)
+                                        partialRes[ids] = (ptDescs[ids].Value.ReadAsFloat((ulong)i) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
                                     else
-                                        partialRes[l] = (ptDescs[l].ReadMagnitude((ulong)i) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
+                                        partialRes[ids] = (ptDescs[ids].ReadMagnitude((ulong)i) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
                                 }
 
-                                if (m_dataset.Gradient != null)
-                                    partialRes[partialRes.Length - 1] = m_dataset.Gradient[(ulong)i]; //In case we need the gradient
-                                else
-                                    partialRes[partialRes.Length - 1] = 0.0f;
+                                if(tf.HasGradient())
+                                {
+                                    if(gradient != null)
+                                        partialRes[partialRes.Length-1] = gradient.Values[(ulong)i]; //In case we need the gradient
+                                    else
+                                        partialRes[partialRes.Length-1] = 0.0f;
+                                }
 
                                 float t = tf.ComputeColor(partialRes);
 

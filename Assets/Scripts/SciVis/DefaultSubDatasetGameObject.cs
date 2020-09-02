@@ -323,6 +323,9 @@ namespace Sereno.SciVis
                 }
                 else
                     m_isTargeted = false;
+
+                if(m_mapTextureGO != null)
+                    m_mapTextureGO.gameObject.SetActive(m_sd.IsMapVisible);
                 
                 if (!m_isMiniature)
                 {
@@ -438,6 +441,9 @@ namespace Sereno.SciVis
         }
 
         public virtual void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)
+        {}
+
+        public void OnToggleMapVisibility(SubDataset dataset, bool visibility)
         {}
 
         /// <summary>

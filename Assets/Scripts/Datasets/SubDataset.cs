@@ -72,6 +72,13 @@ namespace Sereno.Datasets
         /// </summary>
         /// <param name="dataset">The SubDataset being modified</param>
         void OnClearAnnotations(SubDataset dataset);
+
+        /// <summary>
+        /// Called when the map visibility for this situated subdataset has been changed
+        /// </summary>
+        /// <param name="dataset">The dataset being modified</param>
+        /// <param name="visibility">The new visibility</param>
+        void OnToggleMapVisibility(SubDataset dataset, bool visibility);
     }
 
     public class SubDataset
@@ -131,6 +138,11 @@ namespace Sereno.Datasets
         /// The ID of this SubDataset
         /// </summary>
         protected int m_ID;
+
+        /// <summary>
+        /// Is the map visible?
+        /// </summary>
+        protected bool m_mapVisibility = true;
 
         /// <summary>
         /// Constructor
@@ -380,6 +392,17 @@ namespace Sereno.Datasets
                 }
                 float[] graphicalRotation = GraphicalRotation;
                 return Matrix4x4.TRS(pos, new Quaternion(graphicalRotation[1], graphicalRotation[2], graphicalRotation[3], graphicalRotation[0]).normalized, scale);
+            }
+        }
+
+        public bool IsMapVisible
+        {
+            get => m_mapVisibility;
+            set 
+            {
+                m_mapVisibility = value;
+                foreach (var l in m_listeners)
+                    l.OnToggleMapVisibility(this, value);
             }
         }
     }

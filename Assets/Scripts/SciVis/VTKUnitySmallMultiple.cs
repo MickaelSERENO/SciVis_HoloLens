@@ -153,8 +153,9 @@ namespace Sereno.SciVis
         private short[] ComputeTFColor(TransferFunction tf)
         {
             VTKDataset vtk = (VTKDataset)m_subDataset.Parent;
+            int hasGradient = (tf.HasGradient() ? 1 : 0);
 
-            if (vtk.IsLoaded == false || tf == null || tf.GetDimension() > vtk.PointFieldDescs.Count + 1 ||
+            if (vtk.IsLoaded == false || tf == null || tf.GetDimension()- hasGradient > vtk.PointFieldDescs.Count ||
                (m_subDataset.OwnerID != -1 && m_subDataset.OwnerID != m_dataProvider.GetHeadsetID())) //Not a public subdataset
                 return null;
 
@@ -162,13 +163,19 @@ namespace Sereno.SciVis
             {
                 unsafe
                 {
+                    int[] indices = new int[vtk.PointFieldDescs.Count];
+                    for (int i = 0; i < indices.Length; i++)
+                        indices[i] = i;
+
+                    Datasets.Gradient gradient = vtk.GetGradient(indices);
                     short[] colors = new short[m_dimensions.x * m_dimensions.y * m_dimensions.z]; //short because RGBA4444 == 2 bytes -> short
 
                     List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
                     Parallel.For(0, m_dimensions.z,
                         k =>
                         {
-                            float[] partialRes = new float[ptDescs.Count + 1];
+                            float[] partialRes = new float[indices.Length + hasGradient];
+
                             fixed (short* pcolors = colors)
                             {
                                 UInt64 ind = (UInt64)(k * m_dimensions.x * m_dimensions.y);
@@ -188,18 +195,22 @@ namespace Sereno.SciVis
                                         else
                                         {
                                             //Determine transfer function coordinates
-                                            for(int l = 0; l < ptDescs.Count; l++)
+                                            for(int l = 0; l < indices.Length; l++)
                                             {
-                                                if (ptDescs[l].NbValuesPerTuple == 1)
-                                                    partialRes[l] = (ptDescs[l].Value.ReadAsFloat(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
+                                                int ids = indices[l];
+                                                if (ptDescs[ids].NbValuesPerTuple == 1)
+                                                    partialRes[ids] = (ptDescs[ids].Value.ReadAsFloat(readInd) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
                                                 else
-                                                    partialRes[l] = (ptDescs[l].ReadMagnitude(readInd) - ptDescs[l].MinVal) / (ptDescs[l].MaxVal - ptDescs[l].MinVal);
+                                                    partialRes[ids] = (ptDescs[ids].ReadMagnitude(readInd) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
                                             }
 
-                                            if(m_subDataset.Parent.Gradient != null)
-                                                partialRes[partialRes.Length - 1] = m_subDataset.Parent.Gradient[readInd]; //In case we need the gradient
-                                            else
-                                                partialRes[partialRes.Length - 1] = 0.0f;
+                                            if(tf.HasGradient())
+                                            {
+                                                if (gradient != null)
+                                                    partialRes[partialRes.Length - 1] = gradient.Values[readInd]; //In case we need the gradient
+                                                else
+                                                    partialRes[partialRes.Length - 1] = 0.0f;
+                                            }
 
                                             float t = tf.ComputeColor(partialRes);
                                             float a = tf.ComputeAlpha(partialRes);
@@ -424,6 +435,9 @@ namespace Sereno.SciVis
             //Update the transfer function at the end
             UpdateTF();
         }
+
+        public void OnToggleMapVisibility(SubDataset dataset, bool visibility)
+        {}
 
         /// <summary>
         /// The 3D Texure RGBA4444 byte array computed via the given transfer function.

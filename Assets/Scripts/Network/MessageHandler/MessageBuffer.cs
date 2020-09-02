@@ -171,6 +171,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnAddNewSelectionInput(MessageBuffer messageBuffer, AddNewSelectionInputMessage msg);
+
+        /// <summary>
+        /// Function called to toggle a map visibility
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnToggleMapVisibility(MessageBuffer messageBuffer, ToggleMapVisibilityMessage msg);
     }
 
     /// <summary>
@@ -395,6 +402,10 @@ namespace Sereno.Network.MessageHandler
                             foreach(var l in m_listeners)
                                 l.OnAddNewSelectionInput(this, (AddNewSelectionInputMessage)m_msg);
                             break;
+                        case ServerType.GET_TOGGLE_MAP_VISIBILITY:
+                            foreach (var l in m_listeners)
+                                l.OnToggleMapVisibility(this, (ToggleMapVisibilityMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -614,6 +625,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_ADD_NEW_SELECTION_INPUT:
                     m_msg = new AddNewSelectionInputMessage(ServerType.GET_ADD_NEW_SELECTION_INPUT);
+                    break;
+                case ServerType.GET_TOGGLE_MAP_VISIBILITY:
+                    m_msg = new ToggleMapVisibilityMessage(ServerType.GET_TOGGLE_MAP_VISIBILITY);
                     break;
             }
         }
