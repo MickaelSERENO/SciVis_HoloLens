@@ -22,6 +22,7 @@ UNITY_DECLARE_SCREENSPACE_TEXTURE(_LastCameraDepthTexture);
 
 /** The volume data*/
 sampler3D _TextureData;
+
 /** The volume dimension along all axis*/
 fixed3 _Dimensions = fixed3(128,128,128);
 
@@ -32,7 +33,7 @@ v2f vert(appdata v)
 	//UNITY_INITIALIZE_OUTPUT(v2f, o);
 	UNITY_TRANSFER_INSTANCE_ID(v, o);
 	UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
+	
 	o.vertex   = v.vertex;
 	o.vertex.z = UNITY_NEAR_CLIP_VALUE;
 
@@ -175,7 +176,7 @@ fixed4  frag(v2f input) : COLOR
 	
 	//Determine max displacement (the displacement the ray can perform) regarding the depth. Done here for optimization process
 	fixed depthPos = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_LastCameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uvDepth)));
-
+	
 	//Reverse Z
 #if defined(UNITY_REVERSED_Z)
 	depthPos = 1.0 - depthPos;
@@ -187,13 +188,13 @@ fixed4  frag(v2f input) : COLOR
 
 	fixed4 endRayDepth = mul(input.invMVP, fixed4(uvDepth, depthPos, 1.0));
 	endRayDepth /= endRayDepth.w;
-
+	
 	fixed maxDepthDisplacement = dot(rayNormal, endRayDepth.xyz - rayPos);
 	rayPos += 0.5;
-
+	
 	//Ray marching algorithm
 	const int count = int(min(maxDepthDisplacement, maxT - minT) / rayStep);
-
+	
 	for(int j = 0; j < count; j+=1)
 	{
 		fixed4 texPos  = fixed4(clamp(j * rayStepNormal + rayPos.xyz, fixed3(0, 0, 0), fixed3(1, 1, 1)), 0.0);

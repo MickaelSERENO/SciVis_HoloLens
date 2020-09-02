@@ -127,7 +127,7 @@ namespace Sereno.SciVis
             m_unloadModel.SetActive(!m_isMiniature);
             m_materialNormalScale = new Material(ColorMaterial);
             m_materialDownScale   = new Material(ColorMaterialDownScale);
-
+            
             m_sm = sm;
 
             //Compute the Mesh. A regular rectangle where ray casting will be applied
@@ -175,6 +175,8 @@ namespace Sereno.SciVis
 
             m_outlineColor = m_dataProvider.GetHeadsetColor(-1);
             Check3DTexture();
+
+            UpdateMaterial();
         }
 
         public void Check3DTexture()
@@ -276,7 +278,9 @@ namespace Sereno.SciVis
                     if (dictPair.Key == null)
                     {
                         //Initialize a RenderTexture to render on it
-                        renderTexture = new RenderTextureData { RenderTexture = CreateRenderTexture(), Material = new Material(CopyTextureMaterial) };
+                        renderTexture = new RenderTextureData { RenderTexture = CreateRenderTexture(cam), Material = new Material(CopyTextureMaterial) };
+
+                        Debug.Log($"Creating new RenderTexture for Camera {cam.name}");
 
                         //Initialize the material
                         renderTexture.Material.SetTexture("_MainTex", renderTexture.RenderTexture);
@@ -296,15 +300,18 @@ namespace Sereno.SciVis
                     {
                         //Initialize a RenderTexture to render on it
                         renderTexture.RenderTexture.Release();
-                        renderTexture.RenderTexture = CreateRenderTexture();
+                        renderTexture.RenderTexture = CreateRenderTexture(cam);
                         renderTexture.Material.SetTexture("_MainTex", renderTexture.RenderTexture);
                     }
-                    
+                                        
                     //Update the command buffer
                     renderTexture.CommandBuffer.Clear();
                     renderTexture.CommandBuffer.SetRenderTarget(renderTexture.RenderTexture, 0, CubemapFace.Unknown, -1); //-1 == all the color buffers (I guess, this is undocumented)
-                    renderTexture.CommandBuffer.ClearRenderTarget(false, true, new Color(0, 0, 0, 0));
-                    renderTexture.CommandBuffer.SetSinglePassStereo((SinglePassStereoMode)XRSettings.stereoRenderingMode);
+                    renderTexture.CommandBuffer.ClearRenderTarget(false, true, new Color(0, 1.0f, 0, 0));
+                    if(cam.stereoEnabled)
+                        renderTexture.CommandBuffer.SetSinglePassStereo((SinglePassStereoMode)XRSettings.stereoRenderingMode);
+                    else
+                        renderTexture.CommandBuffer.SetSinglePassStereo(SinglePassStereoMode.None);
                     renderTexture.CommandBuffer.DrawMesh(m_mesh, transform.localToWorldMatrix, m_materialDownScale, 0, -1, null);
 
                     //Draw the texture on screen. Because we are using the event "CameraEvent.AfterForwardOpaque", the command buffer is ran BEFORE the following DrawMesh that happen in Transparency pipeline
@@ -317,15 +324,23 @@ namespace Sereno.SciVis
         /// Get the render eye texture descriptor used for this object given a resolution scaling to apply
         /// </summary>
         /// <returns>The RenderTextureDescriptor to use</returns>
-        private RenderTextureDescriptor GetRenderTextureDescriptor()
+        private RenderTextureDescriptor GetRenderTextureDescriptor(Camera cam)
         {
             RenderTextureDescriptor eyeDesc = XRSettings.eyeTextureDesc;
             eyeDesc.useMipMap = false;
             eyeDesc.colorFormat = RenderTextureFormat.ARGB4444;
             eyeDesc.depthBufferBits = 0; //No need of depth buffer
-            eyeDesc.width  = (int)(eyeDesc.width  * ResolutionScaling); //Apply the resolution scaling
-            eyeDesc.height = (int)(eyeDesc.height * ResolutionScaling);
 
+            if (cam.targetTexture != null)
+            {
+                eyeDesc.width  = (int)(cam.targetTexture.width * ResolutionScaling); //Apply the resolution scaling
+                eyeDesc.height = (int)(cam.targetTexture.height * ResolutionScaling);
+            }
+            else
+            {
+                eyeDesc.width  = (int)(eyeDesc.width  * ResolutionScaling); //Apply the resolution scaling
+                eyeDesc.height = (int)(eyeDesc.height * ResolutionScaling);
+            }
             return eyeDesc;
         }
 
@@ -333,9 +348,14 @@ namespace Sereno.SciVis
         /// Create a RenderTexture to draw the volumetric dataset
         /// </summary>
         /// <returns></returns>
-        private RenderTexture CreateRenderTexture()
+        private RenderTexture CreateRenderTexture(Camera cam)
         {
-            RenderTexture renderTexture   = new RenderTexture(GetRenderTextureDescriptor());
+            RenderTexture renderTexture   = new RenderTexture(GetRenderTextureDescriptor(cam));
+            if(!cam.stereoEnabled)
+            {
+                renderTexture.vrUsage = VRTextureUsage.None;
+                renderTexture.dimension = TextureDimension.Tex2D;
+            }
             renderTexture.filterMode      = FilterMode.Point;
             renderTexture.wrapMode        = TextureWrapMode.Clamp;
             renderTexture.useDynamicScale = true;

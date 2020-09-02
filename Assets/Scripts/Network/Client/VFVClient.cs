@@ -16,7 +16,8 @@ namespace Sereno.Network
         SEND_UPDATE_HEADSET = 5,
         SEND_ANCHORING_DATA_SEGMENT = 7,
         SEND_ANCHORING_DATA_STATUS  = 8,
-        SEND_ANCHOR_ANNOTATION = 15,
+        SEND_ANCHOR_ANNOTATION      = 15,
+        SEND_END_OF_TB_TRIAL        = 29,
     }
 
     /// <summary> 
@@ -169,6 +170,33 @@ namespace Sereno.Network
 
             for (int i = 0; i < 3; i++, offset += sizeof(float))
                 WriteFloat(data, offset, position[i]); 
+
+            Send(data);
+        }
+
+        public void SendTangibleBrushEndOfTrial(int truePos, int falsePos, int trueNeg, int falseNeg)
+        {
+            byte[] data = new byte[2 + 4*4];
+            Int32 offset = 0;
+
+            //Type
+            WriteInt16(data, offset, (Int16)VFVSendCommand.SEND_END_OF_TB_TRIAL);
+            offset += 2;
+
+            //True Positive
+            WriteInt32(data, offset, truePos);
+            offset += 4;
+
+            //False Positive
+            WriteInt32(data, offset, falsePos);
+            offset += 4;
+
+            //True Negative
+            WriteInt32(data, offset, trueNeg);
+            offset += 4;
+
+            //False Negative
+            WriteInt32(data, offset, falseNeg);
 
             Send(data);
         }

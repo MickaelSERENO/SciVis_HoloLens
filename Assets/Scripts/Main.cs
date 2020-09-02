@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -427,7 +427,7 @@ namespace Sereno
         /// <summary>
         /// The current view type 
         /// </summary>
-        private ViewType m_viewType = ViewType.AR;
+        private ViewType m_viewType = ViewType.TWO_DIMENSION;
 
         /// <summary>
         /// Is the current view type updated? (useful for asynchronous messages)
@@ -611,7 +611,7 @@ namespace Sereno
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
                 addVTKMsg.Path = "Agulhas_10_resampled.vtk";
-                addVTKMsg.PtFieldValueIndices = new int[] { 3 };
+                addVTKMsg.PtFieldValueIndices = new int[] { 2 };
                 OnAddVTKDataset(null, addVTKMsg);
                 
                 AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
