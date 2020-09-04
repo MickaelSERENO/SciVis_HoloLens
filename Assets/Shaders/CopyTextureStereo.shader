@@ -50,12 +50,15 @@
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 				o.vertex = UnityObjectToClipPos(v.vertex); 
-				//o.vertex   = fixed4(v.vertex.x, v.vertex.y*_ProjectionParams.x, v.vertex.zw);
+				//o.vertex = fixed4(v.vertex.x, v.vertex.y*_ProjectionParams.x, v.vertex.zw);
 				//o.vertex.z = UNITY_NEAR_CLIP_VALUE;
 
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-				o.uv.y = 1.0 - o.uv.y;
-
+				
+#if UNITY_UV_STARTS_AT_TOP == 1
+				o.uv.y = 1.0 - v.uv.y;
+#endif
+				
 				return o;
 			}
 

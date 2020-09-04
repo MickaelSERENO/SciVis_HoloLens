@@ -1293,6 +1293,11 @@ namespace Sereno
         // Update is called once per frame
         void LateUpdate()
         {
+            foreach (Camera cam in Camera.allCameras)
+            {
+                if (cam.depthTextureMode == DepthTextureMode.None)
+                    cam.depthTextureMode = DepthTextureMode.Depth;
+            }
             HandleSpatialCoordinateSystem();
 
             lock(this)

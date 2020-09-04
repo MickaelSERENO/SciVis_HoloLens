@@ -18,7 +18,7 @@ struct v2f
 };
 
 /** The Camera depth texture*/
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_LastCameraDepthTexture);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthTexture);
 
 /** The volume data*/
 sampler3D _TextureData;
@@ -175,7 +175,7 @@ fixed4  frag(v2f input) : COLOR
 	const fixed3 rayStepNormal = rayStep*rayNormal;
 	
 	//Determine max displacement (the displacement the ray can perform) regarding the depth. Done here for optimization process
-	fixed depthPos = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_LastCameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uvDepth)));
+	fixed depthPos = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uvDepth)));
 	
 	//Reverse Z
 #if defined(UNITY_REVERSED_Z)

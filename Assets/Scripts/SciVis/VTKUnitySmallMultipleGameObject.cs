@@ -326,7 +326,16 @@ namespace Sereno.SciVis
         /// <returns>The RenderTextureDescriptor to use</returns>
         private RenderTextureDescriptor GetRenderTextureDescriptor(Camera cam)
         {
-            RenderTextureDescriptor eyeDesc = XRSettings.eyeTextureDesc;
+            RenderTextureDescriptor eyeDesc = new RenderTextureDescriptor();
+            if(cam.stereoEnabled)
+                eyeDesc = XRSettings.eyeTextureDesc;
+            else
+            {
+                eyeDesc.dimension = TextureDimension.Tex2D;
+                eyeDesc.msaaSamples = 1;
+                eyeDesc.volumeDepth = 1;
+            }
+
             eyeDesc.useMipMap = false;
             eyeDesc.colorFormat = RenderTextureFormat.ARGB4444;
             eyeDesc.depthBufferBits = 0; //No need of depth buffer
@@ -351,11 +360,7 @@ namespace Sereno.SciVis
         private RenderTexture CreateRenderTexture(Camera cam)
         {
             RenderTexture renderTexture   = new RenderTexture(GetRenderTextureDescriptor(cam));
-            if(!cam.stereoEnabled)
-            {
-                renderTexture.vrUsage = VRTextureUsage.None;
-                renderTexture.dimension = TextureDimension.Tex2D;
-            }
+
             renderTexture.filterMode      = FilterMode.Point;
             renderTexture.wrapMode        = TextureWrapMode.Clamp;
             renderTexture.useDynamicScale = true;
