@@ -15,6 +15,11 @@ namespace Sereno.Datasets
         /// <param name="meshData">The Mesh Data containing the selection data</param>
         /// <param name="MeshToLocalMatrix">The matrix permitting to convert points from the mesh to this object local coordinate system</param>
         void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix);
+
+        /// <summary>
+        /// Function to call to reset the volumetric selection to its default value
+        /// </summary>
+        void ResetSelection();
     }
 
     public class RayIntersection

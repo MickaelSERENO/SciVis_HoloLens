@@ -259,6 +259,18 @@ namespace Sereno.SciVis
                 return 0;
             return m_mask.Count(x => x == true);
         }
+        
+        [BurstCompile(CompileSynchronously = true)]
+        public override void ResetSelection()
+        {
+            for (int i = 0; i < m_dataset.NbPoints; i++)
+                m_mask[i] = true;
+
+            m_noSelection = true;
+                       
+            //Update the transfer function at the end
+            UpdateTF();
+        }
 
         [BurstCompile(CompileSynchronously = true)]
         public override void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)

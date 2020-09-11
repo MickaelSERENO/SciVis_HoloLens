@@ -101,7 +101,7 @@ namespace Sereno.SciVis
                 m_spacing[i] = (float)(descPts.Spacing[i]/maxAxis);
 
             m_mask = new bool[m_dimensions[0] * m_dimensions[1] * m_dimensions[2]];
-            for(int i = 0; i < m_dimensions[0] * m_dimensions[1] * m_dimensions[2]; i++)
+            for(int i = 0; i < m_mask.Length; i++)
                 m_mask[i] = true;
 
             UpdateTF();
@@ -430,6 +430,19 @@ namespace Sereno.SciVis
                     }
                 }
             });
+
+            //Update the transfer function at the end
+            UpdateTF();
+        }
+
+        public void ResetSelection()
+        {
+            int nbPoints = m_dimensions.x * m_dimensions.y * m_dimensions.z;
+
+            for (int i = 0; i < nbPoints; i++)
+                m_mask[i] = true;
+
+            m_noSelection = true;
 
             //Update the transfer function at the end
             UpdateTF();

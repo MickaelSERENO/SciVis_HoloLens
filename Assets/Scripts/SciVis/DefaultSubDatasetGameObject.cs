@@ -443,6 +443,9 @@ namespace Sereno.SciVis
         public virtual void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)
         {}
 
+        public virtual void ResetSelection()
+        {}
+
         public void OnToggleMapVisibility(SubDataset dataset, bool visibility)
         {}
 

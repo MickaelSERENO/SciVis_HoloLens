@@ -1952,7 +1952,17 @@ namespace Sereno
                     sd.IsMapVisible = msg.IsVisible;
             }
         }
+               
+        public void OnResetVolumetricSelection(MessageBuffer messageBuffer, ResetVolumetricSelectionMessage msg)
+        {
+            lock(this)
+            {
+                DefaultSubDatasetGameObject sd = GetSDGameObject(GetSubDataset(msg.DataID, msg.SubDataID));
 
+                if (sd != null)
+                    sd.ResetSelection();
+            }
+        }
 
         #endregion
 
