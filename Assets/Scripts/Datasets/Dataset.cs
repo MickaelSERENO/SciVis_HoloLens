@@ -182,6 +182,15 @@ namespace Sereno.Datasets
             }
             return grad;
         }
+        
+        /// <summary>
+        /// Get the number of spatial values this dataset contains
+        /// </summary>
+        /// <returns>The number of spatial values this dataset contains</returns>
+        public virtual UInt32 GetNbSpatialValues()
+        {
+            return 0;
+        }
 
         /// <summary>
         /// Load the Dataset internal values. This is done asynchronously

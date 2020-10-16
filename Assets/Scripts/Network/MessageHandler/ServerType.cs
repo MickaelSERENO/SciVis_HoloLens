@@ -29,6 +29,7 @@ namespace Sereno.Network.MessageHandler
         GET_ADD_CLOUD_POINT_DATASET = 23, /*!< Add cloud point dataset message*/
         GET_ADD_NEW_SELECTION_INPUT = 24, /*!< Add a new selection entry*/
         GET_TOGGLE_MAP_VISIBILITY   = 25, /*!< Toggle the map visibility*/
-        GET_RESET_VOLUMETRIC_SELECTION = 26, /*!< Reset one volumetric selection performed by a user*/
+        GET_SUBDATASET_VOLUMETRIC_MASK = 26, /*!< Get the volumetric mask binary data*/
+        GET_RESET_VOLUMETRIC_SELECTION = 27, /*!< Reset one volumetric selection performed by a user*/
     }
 }

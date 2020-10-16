@@ -185,6 +185,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnResetVolumetricSelection(MessageBuffer messageBuffer, ResetVolumetricSelectionMessage msg);
+
+        /// <summary>
+        /// Function called to set a volumetric selection
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnSubDatasetVolumetricMask(MessageBuffer messageBuffer, SubDatasetVolumetricMaskMessage msg);
     }
 
     /// <summary>
@@ -417,6 +424,10 @@ namespace Sereno.Network.MessageHandler
                             foreach (var l in m_listeners)
                                 l.OnResetVolumetricSelection(this, (ResetVolumetricSelectionMessage)m_msg);
                             break;
+                        case ServerType.GET_SUBDATASET_VOLUMETRIC_MASK:
+                            foreach (var l in m_listeners)
+                                l.OnSubDatasetVolumetricMask(this, (SubDatasetVolumetricMaskMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -642,6 +653,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_RESET_VOLUMETRIC_SELECTION:
                     m_msg = new ResetVolumetricSelectionMessage(ServerType.GET_RESET_VOLUMETRIC_SELECTION);
+                    break;
+                case ServerType.GET_SUBDATASET_VOLUMETRIC_MASK:
+                    m_msg = new SubDatasetVolumetricMaskMessage(ServerType.GET_SUBDATASET_VOLUMETRIC_MASK);
                     break;
             }
         }

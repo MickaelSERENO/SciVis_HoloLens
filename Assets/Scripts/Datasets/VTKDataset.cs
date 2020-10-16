@@ -440,6 +440,12 @@ namespace Sereno.Datasets
             return new Gradient(indices, grad, maxVal);
         }
 
+        public override uint GetNbSpatialValues()
+        {
+            VTKStructuredPoints p = m_parser.GetStructuredPointsDescriptor();
+            return p.Size[0] * p.Size[1] * p.Size[2];
+        }
+
         /// <summary>
         /// The VTKParser containing all the dataset
         /// </summary>

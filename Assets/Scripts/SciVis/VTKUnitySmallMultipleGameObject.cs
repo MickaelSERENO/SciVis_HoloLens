@@ -470,16 +470,6 @@ namespace Sereno.SciVis
             }
         }
 
-        public override void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)
-        {
-            m_sm.OnSelection(meshData, MeshToLocalMatrix);
-        }
-
-        public override void ResetSelection()
-        {
-            m_sm.ResetSelection();
-        }
-
         /// <summary>
         /// Create a new miniature. Updates on the subdataset states will also change this miniature. However linking to another SubDataset will break the link between these objects!
         /// </summary>
