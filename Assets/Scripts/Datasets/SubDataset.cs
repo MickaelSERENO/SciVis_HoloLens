@@ -444,7 +444,15 @@ namespace Sereno.Datasets
         public bool EnableVolumetricMask
         {
             get => m_enableVolumetricMask;
-            set => m_enableVolumetricMask = value;
+            set
+            {
+                if (m_enableVolumetricMask != value)
+                {
+                    m_enableVolumetricMask = value;
+                    foreach (var l in m_listeners)
+                        l.OnChangeVolumetricMask(this);
+                }
+            }
         }
 
         public Matrix4x4 GraphicalMatrix

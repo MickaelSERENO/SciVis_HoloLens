@@ -161,7 +161,7 @@ namespace Sereno.SciVis
                             {
                                 float[] partialRes = new float[indices.Length + hasGradient];
 
-                                if(m_sd.EnableVolumetricMask && !m_sd.GetVolumetricMaskAt((int)i))
+                                if(!m_sd.GetVolumetricMaskAt((int)i))
                                 {
                                     pcolors[4 * i + 3] = 0;
                                     return;
@@ -239,6 +239,12 @@ namespace Sereno.SciVis
         public override void OnOwnerIDChange(SubDataset dataset, int ownerID)
         {
             base.OnOwnerIDChange(dataset, ownerID);
+            UpdateTF();
+        }
+
+        public override void OnChangeVolumetricMask(SubDataset dataset)
+        {
+            base.OnChangeVolumetricMask(dataset);
             UpdateTF();
         }
     }

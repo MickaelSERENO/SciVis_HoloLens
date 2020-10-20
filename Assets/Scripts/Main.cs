@@ -553,7 +553,7 @@ namespace Sereno
         public int NBTabletPositionIgnored = 2;
         #endregion
 
-        void Start()
+        void Awake()
         {
             m_appProperties = Properties.ParseProperties();
 
@@ -1950,9 +1950,13 @@ namespace Sereno
         {
             lock(this)
             {
+                Debug.Log("Received a volumetric mask message");
                 SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-                if(sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
+                if (sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
+                {
                     sd.VolumetricMask = msg.Mask;
+                    sd.EnableVolumetricMask = msg.IsEnabled;
+                }
             }
         }
 

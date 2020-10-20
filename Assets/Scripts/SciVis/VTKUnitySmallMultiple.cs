@@ -178,7 +178,7 @@ namespace Sereno.SciVis
                                         UInt64 readInd = (UInt64)(i * m_descPts.Size[0] / m_dimensions.x) + readIntJK;
 
                                         if (vtk.MaskValue != null && ((byte*)(vtk.MaskValue.Value))[readInd] == 0 ||
-                                            m_subDataset.EnableVolumetricMask && m_subDataset.GetVolumetricMaskAt((int)readInd) == false)
+                                            (m_subDataset.EnableVolumetricMask && m_subDataset.GetVolumetricMaskAt((int)readInd) == false))
                                             pcolors[ind] = 0;
                                         else
                                         {

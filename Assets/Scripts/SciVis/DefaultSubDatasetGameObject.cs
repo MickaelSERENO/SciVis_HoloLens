@@ -440,10 +440,10 @@ namespace Sereno.SciVis
             }
         }
 
-        public void OnToggleMapVisibility(SubDataset dataset, bool visibility)
+        public virtual void OnToggleMapVisibility(SubDataset dataset, bool visibility)
         {}
 
-        public void OnChangeVolumetricMask(SubDataset dataset)
+        public virtual void OnChangeVolumetricMask(SubDataset dataset)
         {}
 
         /// <summary>
