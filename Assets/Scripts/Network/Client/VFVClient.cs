@@ -46,6 +46,11 @@ namespace Sereno.Network
             m_msgBuf.AddListener(clbk);
         }
 
+        ~VFVClient()
+        {
+
+        }
+
         /// <summary>
         /// Send the hololens ident message to the server
         /// </summary>

@@ -150,6 +150,11 @@ namespace Sereno.Datasets
             });
         }
 
+        public override uint GetNbSpatialValues()
+        {
+            return NbPoints;
+        }
+
         /// <summary>
         /// Get the path containing all the data cloud points
         /// </summary>

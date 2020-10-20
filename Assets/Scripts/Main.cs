@@ -553,7 +553,7 @@ namespace Sereno
         public int NBTabletPositionIgnored = 2;
         #endregion
 
-        void Start()
+        void Awake()
         {
             m_appProperties = Properties.ParseProperties();
 
@@ -1860,10 +1860,10 @@ namespace Sereno
                 m_tabletSelectionData.Position.y = msg.position[1];
                 m_tabletSelectionData.Position.z = msg.position[2];
                 
-                m_tabletSelectionData.Rotation.x = msg.rotation[0];
-                m_tabletSelectionData.Rotation.y = msg.rotation[1];
-                m_tabletSelectionData.Rotation.z = msg.rotation[2];
-                m_tabletSelectionData.Rotation.w = msg.rotation[3];
+                m_tabletSelectionData.Rotation.x = msg.rotation[1];
+                m_tabletSelectionData.Rotation.y = msg.rotation[2];
+                m_tabletSelectionData.Rotation.z = msg.rotation[3];
+                m_tabletSelectionData.Rotation.w = msg.rotation[0];
 
                 // record the movement
                 if(m_currentAction == HeadsetCurrentAction.SELECTING && m_tabletSelectionData.LassoPoints.Count > 0)
@@ -1905,24 +1905,6 @@ namespace Sereno
             lock(this)
             {
                 CloseTabletCurrentSelectionMesh();
-
-                List<NewSelectionMeshData> meshData = new List<NewSelectionMeshData>(m_tabletSelectionData.NewSelectionMeshIDs);
-                DefaultSubDatasetGameObject d = GetSDGameObject(GetSubDataset(msg.DataID, msg.SubDataID));
-                
-                Task t = new Task(() =>
-                {
-                    Matrix4x4 meshToLocalDataset = Matrix4x4.identity;
-                    lock(d.SubDatasetState)
-                        meshToLocalDataset = d.SubDatasetState.GraphicalMatrix.inverse;
-
-                    foreach (var data in meshData)
-                    {
-                        Debug.Log($"Selecting in a Mesh of {data.Triangles.Count / 3} triangles. Start: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
-                        d.OnSelection(data, meshToLocalDataset);
-                        Debug.Log($"End Computation. End: {DateTimeOffset.Now.ToUnixTimeMilliseconds()}");
-                    }
-                });
-                t.Start();
             }
         }
 
@@ -1952,7 +1934,31 @@ namespace Sereno
                     sd.IsMapVisible = msg.IsVisible;
             }
         }
+               
+        public void OnResetVolumetricSelection(MessageBuffer messageBuffer, ResetVolumetricSelectionMessage msg)
+        {
+            lock(this)
+            {
+                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
 
+                if (sd != null)
+                    sd.ResetVolumetricMask(false);
+            }
+        }
+
+        public void OnSubDatasetVolumetricMask(MessageBuffer messageBuffer, SubDatasetVolumetricMaskMessage msg)
+        {
+            lock(this)
+            {
+                Debug.Log("Received a volumetric mask message");
+                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+                if (sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
+                {
+                    sd.VolumetricMask = msg.Mask;
+                    sd.EnableVolumetricMask = msg.IsEnabled;
+                }
+            }
+        }
 
         #endregion
 

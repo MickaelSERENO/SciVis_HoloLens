@@ -57,12 +57,7 @@ namespace Sereno.SciVis
         /// The array colors computed
         /// </summary>
         private byte[] m_colors = null;
-
-        /// <summary>
-        /// The mask array we compute during selection
-        /// </summary>
-        private bool[] m_mask;
-
+        
         /// <summary>
         /// The Mesh corresponding to the data cloud
         /// </summary>
@@ -72,12 +67,6 @@ namespace Sereno.SciVis
         /// Did we initialized the position data in our VBO?
         /// </summary>
         private bool m_isPositionInit = false;
-
-
-        /// <summary>
-        /// Was there an attempt of selection? True == no attemp, false otherwise
-        /// </summary>
-        private bool m_noSelection = true;
 
         /// <summary>
         /// The cloud point material to use
@@ -101,9 +90,6 @@ namespace Sereno.SciVis
             if(m_dataset.NbPoints > 0xffff)
                 m_mesh.indexFormat = IndexFormat.UInt32;
             
-            m_mask = new bool[m_dataset.NbPoints];
-            for (int i = 0; i < m_dataset.NbPoints; i++)
-                m_mask[i] = true;
             UpdateTF();
         }
 
@@ -171,9 +157,16 @@ namespace Sereno.SciVis
                     Parallel.For(0, m_dataset.NbPoints,
                         i =>
                         {
-                            float[] partialRes = new float[indices.Length + hasGradient];
                             fixed (byte* pcolors = colors)
                             {
+                                float[] partialRes = new float[indices.Length + hasGradient];
+
+                                if(!m_sd.GetVolumetricMaskAt((int)i))
+                                {
+                                    pcolors[4 * i + 3] = 0;
+                                    return;
+                                }
+
                                 //Determine transfer function coordinates
                                 for (int l = 0; l < ptDescs.Count; l++)
                                 {
@@ -197,7 +190,7 @@ namespace Sereno.SciVis
                                 pcolors[4*i + 0] = (byte)(c.r*255);
                                 pcolors[4*i + 1] = (byte)(c.g*255);
                                 pcolors[4*i + 2] = (byte)(c.b*255);
-                                pcolors[4*i + 3] = (byte)(m_mask[i] ? 255 : 0);
+                                pcolors[4*i + 3] = (byte)(255);
                             }
                         });
                     return colors;
@@ -249,193 +242,10 @@ namespace Sereno.SciVis
             UpdateTF();
         }
 
-        /// <summary>
-        /// Get the number of selected points
-        /// </summary>
-        /// <returns>The number of points selected</returns>
-        public int GetNbSelectedPoints()
+        public override void OnChangeVolumetricMask(SubDataset dataset)
         {
-            if(m_noSelection)
-                return 0;
-            return m_mask.Count(x => x == true);
-        }
-
-        [BurstCompile(CompileSynchronously = true)]
-        public override void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)
-        {
-            Debug.Log($"Nb points for selection: {m_dataset.NbPoints}");
-            const int CUBE_SIZE_X = 16;
-            const int CUBE_SIZE_Y = 16;
-            const int CUBE_SIZE_Z = 16;
-
-            int[] CUBE_SIZE = new int[3] { CUBE_SIZE_X, CUBE_SIZE_Y, CUBE_SIZE_Z };
-
-            if (meshData.Triangles.Count % 3 != 0)
-            {
-                Debug.LogWarning("The number of triangles is not a multiple of 3. Abort");
-                return;
-            }
-
-            if(m_noSelection)
-            {
-                m_noSelection = false;
-
-                //Remove every point
-                Parallel.For(0, m_dataset.NbPoints,
-                k =>
-                {
-                    m_mask[k] = false;
-                });
-            }
-            
-            //First, transform every point using the provided matrix
-            Vector3[] points = new Vector3[meshData.Points.Count];
-            Parallel.For(0, meshData.Points.Count,
-            i =>
-            {
-                points[i] = MeshToLocalMatrix.MultiplyPoint(meshData.Points[i]);
-            });
-
-            //Second, initialize our raster 3D space. Each cell contains the list of triangles it contains. Indice(x, y, z) = z*CUBE_SIZE_X*CUBE_SIZE_Y + y*CUBE_SIZE_X + x
-            RasteredCube[] rasteredSpace = new RasteredCube[CUBE_SIZE_X*CUBE_SIZE_Y*CUBE_SIZE_Z];
-            //rasteredSpace.Capacity = CUBE_SIZE_X * CUBE_SIZE_Y * CUBE_SIZE_Z; //Set the capacity of this list
-            for(int i = 0; i <  CUBE_SIZE_X * CUBE_SIZE_Y * CUBE_SIZE_Z; i++)
-                rasteredSpace[i] = new RasteredCube();
-
-            //Go through all the triangles. For each triangle, determine in which cells it is
-            for(int i = 0; i < meshData.Triangles.Count/3; i++)
-            {
-                //Get the bounding box of the triangle
-                float[] minPos = new float[3];
-                float[] maxPos = new float[3];
-                for(int j = 0; j < 3; j++)
-                {
-                    minPos[j] = Math.Min(points[meshData.Triangles[3*i+0]][j], Math.Min(points[meshData.Triangles[3*i+1]][j], points[meshData.Triangles[3*i+2]][j]));
-                    maxPos[j] = Math.Max(points[meshData.Triangles[3*i+0]][j], Math.Max(points[meshData.Triangles[3*i+1]][j], points[meshData.Triangles[3*i+2]][j]));
-
-                    //Set them as indices in our 3D restered space
-                    minPos[j] = CUBE_SIZE[j] * ((minPos[j] - m_dataset.MinPos[j]) / (m_dataset.MaxPos[j] - m_dataset.MinPos[j]));
-                    maxPos[j] = CUBE_SIZE[j] * ((maxPos[j] - m_dataset.MinPos[j]) / (m_dataset.MaxPos[j] - m_dataset.MinPos[j]));
-
-                    minPos[j] = Math.Max(0.0f,  minPos[j]);
-                    maxPos[j] = Math.Max(-1.0f, maxPos[j]);
-                }
-
-                //Cross the bounding box and our 3D rastered space
-                for(int kk = (int)minPos[2]; kk <= (int)maxPos[2] && kk < CUBE_SIZE_Z; kk++)
-                    for(int jj = (int)minPos[1]; jj <= (int)maxPos[1] && jj < CUBE_SIZE_Y; jj++)
-                        for(int ii = (int)minPos[0]; ii <= (int)maxPos[0] && ii < CUBE_SIZE_X; ii++)
-                            rasteredSpace[ii + CUBE_SIZE_X*jj + CUBE_SIZE_Y*CUBE_SIZE_X*kk].TriangleIDs.Add(i);
-            }
-
-            //Update the variable "MaxNbTriangles", useful to know the most efficient way to cast a ray
-            for(int k = 0; k < CUBE_SIZE_Z; k++)
-            {
-                for(int j = 0; j < CUBE_SIZE_Y; j++)
-                {
-                    int nbTriangles = 0;
-                    for(int i = 0; i < CUBE_SIZE_X; i++)
-                    {
-                        nbTriangles += rasteredSpace[i + CUBE_SIZE_X*j + CUBE_SIZE_Y*CUBE_SIZE_X*k].TriangleIDs.Count;
-                        rasteredSpace[i + CUBE_SIZE_X*j + CUBE_SIZE_Y*CUBE_SIZE_X*k].MaxNbTriangle = nbTriangles;
-                    }
-                }
-            }
-
-            //Go through all the points of the dataset and check if it is inside or outside the Mesh
-            Parallel.For(0, m_dataset.NbPoints,
-            k =>
-            {
-                Vector3 pos    = new Vector3(m_dataset.Position[3*k + 0], m_dataset.Position[3*k + 1], m_dataset.Position[3*k + 2]);
-                Vector3 rayDir = new Vector3(1.0f, 0.0f, 0.0f);
-                int nbIntersection = 0;
-                List<int> triangleIDAlready = new List<int>();
-
-                //The particule X position in the rastered space
-                int particuleX = (int)Math.Min(CUBE_SIZE_X-1, CUBE_SIZE_X * ((pos[0] - m_dataset.MinPos[0]) / (m_dataset.MaxPos[0] - m_dataset.MinPos[0])));
-                int particuleY = (int)Math.Min(CUBE_SIZE_Y-1, CUBE_SIZE_Y * ((pos[1] - m_dataset.MinPos[1]) / (m_dataset.MaxPos[1] - m_dataset.MinPos[1])));
-                int particuleZ = (int)Math.Min(CUBE_SIZE_Z-1, CUBE_SIZE_Z * ((pos[2] - m_dataset.MinPos[2]) / (m_dataset.MaxPos[2] - m_dataset.MinPos[2])));
-
-                particuleX = Math.Max(particuleX, 0);
-                particuleY = Math.Max(particuleY, 0);
-                particuleZ = Math.Max(particuleZ, 0);
-
-                //Go through all the cubes
-                Vector3[] triangle = new Vector3[3];
-
-                Action<int> rayCastAction = 
-                (j) => 
-                {
-                    RasteredCube cube = rasteredSpace[j + particuleY*CUBE_SIZE_X + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y];
-
-                    foreach(int triangleID in cube.TriangleIDs)
-                    {
-                        for (int i = 0; i < 3; i++)
-                            triangle[i] = points[meshData.Triangles[3*triangleID + i]];
-
-                        //Ray -- triangle intersection along the positive x axis
-                        float t;
-                        if (RayIntersection.RayTriangleIntersection(pos, rayDir, triangle, out t))
-                        {
-                            //Do not check multiple times the same triangle
-                            if (triangleIDAlready.Contains(triangleID))
-                                continue;
-                            nbIntersection++;
-                            triangleIDAlready.Add(triangleID);
-                        }
-                    }
-                };
-
-                //Select the most efficient direction (i.e., less test)
-                if(2*rasteredSpace[particuleX    + particuleY*CUBE_SIZE_Y + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y].MaxNbTriangle - 
-                     rasteredSpace[CUBE_SIZE_X-1 + particuleY*CUBE_SIZE_Y + particuleZ*CUBE_SIZE_X*CUBE_SIZE_Y].MaxNbTriangle > 0)
-                { 
-                    for(int j = particuleX; j < CUBE_SIZE_X; j++)
-                        rayCastAction(j);
-                }
-                else
-                {
-                    rayDir = new Vector3(-1.0f, 0.0f, 0.0f);
-                    for (int j = particuleX; j >= 0; j--)
-                        rayCastAction(j);
-                }
-
-                //Apply the boolean operation
-                switch (meshData.BooleanOP)
-                {
-                    case BooleanSelectionOperation.UNION:
-                        m_mask[k] = m_mask[k] || (nbIntersection % 2 == 1);
-                        break;
-                    case BooleanSelectionOperation.INTER:
-                        m_mask[k] = m_mask[k] && (nbIntersection % 2 == 1);
-                        break;
-                    case BooleanSelectionOperation.MINUS:
-                        m_mask[k] = m_mask[k] && !(nbIntersection % 2 == 1);
-                        break;
-                    default:
-                        break;
-                }
-            });
-
-            //Update the transfer function at the end
+            base.OnChangeVolumetricMask(dataset);
             UpdateTF();
-        }
-
-        /// <summary>
-        /// The Mask array used to say wether or not a point is selected.
-        /// The array follows the same order as the values contained in the associated dataset (CloudPointDataset.ptDesc).
-        /// </summary>
-        public bool[] SelectionMask
-        {
-            get => m_mask;
-        }
-
-        /// <summary>
-        /// As a selection been performed yet?
-        /// </summary>
-        public bool AsASelection
-        {
-            get => m_noSelection;
         }
     }
 }

@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Sereno.SciVis
 {
-    public class DefaultSubDatasetGameObject : MonoBehaviour, IChangeInternalState, ISubDatasetCallback, ISubvolumeSelection
+    public class DefaultSubDatasetGameObject : MonoBehaviour, IChangeInternalState, ISubDatasetCallback
     {
         /// <summary>
         /// The Outline gameobject
@@ -440,10 +440,10 @@ namespace Sereno.SciVis
             }
         }
 
-        public virtual void OnSelection(NewSelectionMeshData meshData, Matrix4x4 MeshToLocalMatrix)
+        public virtual void OnToggleMapVisibility(SubDataset dataset, bool visibility)
         {}
 
-        public void OnToggleMapVisibility(SubDataset dataset, bool visibility)
+        public virtual void OnChangeVolumetricMask(SubDataset dataset)
         {}
 
         /// <summary>

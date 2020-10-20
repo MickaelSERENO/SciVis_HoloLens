@@ -145,10 +145,15 @@ namespace Sereno.Network
 			if(!m_closed)
 			{
 				m_closed = true;
+                m_readThread.Interrupt();
 				m_readThread.Join();
+                m_writeThread.Interrupt();
 				m_writeThread.Join();
-				if(m_sock != null && m_sock.Connected)
-					m_sock.Close();
+                if(m_sock != null && m_sock.Connected)
+                {
+                    m_sock.Close();
+                    m_sock = null;
+                }
 			}
         }
 

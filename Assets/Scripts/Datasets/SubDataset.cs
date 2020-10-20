@@ -79,6 +79,12 @@ namespace Sereno.Datasets
         /// <param name="dataset">The dataset being modified</param>
         /// <param name="visibility">The new visibility</param>
         void OnToggleMapVisibility(SubDataset dataset, bool visibility);
+
+        /// <summary>
+        /// Called when the volumetric mask of this SubDataset has changed
+        /// </summary>
+        /// <param name="dataset">The SubDataset calling this method</param>
+        void OnChangeVolumetricMask(SubDataset dataset);
     }
 
     public class SubDataset
@@ -145,6 +151,16 @@ namespace Sereno.Datasets
         protected bool m_mapVisibility = true;
 
         /// <summary>
+        /// The volumetric mask. Each bit contains one boolean value
+        /// </summary>
+        protected byte[] m_volumetricMask = null;
+
+        /// <summary>
+        /// Is the volumetric mask enabled?
+        /// </summary>
+        protected bool m_enableVolumetricMask = false;
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="parent">The Dataset parent</param>
@@ -155,6 +171,8 @@ namespace Sereno.Datasets
             m_parent  = parent;
             m_name    = name;
             m_ownerID = ownerID;
+
+            m_volumetricMask = new byte[(parent.GetNbSpatialValues()+7) / 8];
         }
 
         /// <summary>
@@ -201,7 +219,34 @@ namespace Sereno.Datasets
         public void RemoveListener(ISubDatasetCallback clbk)
         {
             m_listeners.Remove(clbk);
-        } 
+        }
+
+        /// <summary>
+        /// Get the volumetric mask at x
+        /// </summary>
+        /// <param name="x">The x position to evaluate</param>
+        /// <returns>VolumetricMask[x / 8] & (0x01 << x % 8) converted to a boolean value</returns>
+        public bool GetVolumetricMaskAt(int x)
+        {
+            return (m_volumetricMask[x / 8] & (0x01 << x % 8)) == 0 ? false : true;
+        }
+
+        /// <summary>
+        /// Reset the volumetric mask to a default value
+        /// </summary>
+        /// <param name="value">The new mask value to apply</param>
+        /// <param name="enable">Should we enable  this volumetric mask?</param>
+        public void ResetVolumetricMask(bool value, bool enable = true)
+        {
+            byte val = (byte)(value ? 0xff : 0x00);
+            for (int i = 0; i < m_parent.GetNbSpatialValues(); i++)
+                m_volumetricMask[i] = val;
+
+            m_enableVolumetricMask = enable;
+
+            foreach (var l in m_listeners)
+                l.OnChangeVolumetricMask(this);
+        }
 
         /// <summary>
         /// The Dataset parent
@@ -373,6 +418,41 @@ namespace Sereno.Datasets
         {
             get => m_ID;
             set => m_ID = value;
+        }
+
+        /// <summary>
+        /// The Volumetric Mask this SubDataset has registered.
+        /// Pay attention that each value are contained inside a bit and not a byte.
+        /// 
+        /// Array size: (Parent.GetNbSpatialValues()+7)/8
+        /// </summary>
+        public byte[] VolumetricMask
+        {
+            get => m_volumetricMask;
+            set
+            {
+                m_volumetricMask = value;
+
+                foreach (var l in m_listeners)
+                    l.OnChangeVolumetricMask(this);
+            }
+        }
+
+        /// <summary>
+        /// Is the associated volumetric mask enabled or not?
+        /// </summary>
+        public bool EnableVolumetricMask
+        {
+            get => m_enableVolumetricMask;
+            set
+            {
+                if (m_enableVolumetricMask != value)
+                {
+                    m_enableVolumetricMask = value;
+                    foreach (var l in m_listeners)
+                        l.OnChangeVolumetricMask(this);
+                }
+            }
         }
 
         public Matrix4x4 GraphicalMatrix
