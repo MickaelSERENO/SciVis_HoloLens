@@ -94,6 +94,11 @@ namespace Sereno.Network.MessageHandler
         public ColorMode ColorType;
 
         /// <summary>
+        /// The timestep cursor
+        /// </summary>
+        public float Timestep;
+
+        /// <summary>
         /// The TFData object being used
         /// </summary>
         private Object m_tfData = null;
@@ -109,15 +114,18 @@ namespace Sereno.Network.MessageHandler
             else if (Cursor == 3 || Cursor == 4)
                 return (byte)'b'; //TFID, ColorMode
 
+            else if (Cursor == 5)
+                return (byte)'f'; //Timestep
+
             switch(TFID)
             {
                 case TFType.TF_GTF:
                 case TFType.TF_TRIANGULAR_GTF:
                 {
-                    if (Cursor == 5)
+                    if (Cursor == 6)
                         return (byte)'I'; //length
 
-                    if((Cursor-6)/3 < GTFData.Props.Length)
+                    if((Cursor-7)/3 < GTFData.Props.Length)
                     {
                         switch((Cursor-6)%3)
                         {
@@ -133,8 +141,8 @@ namespace Sereno.Network.MessageHandler
 
                 case TFType.TF_MERGE:
                 {
-                    if (Cursor == 5)
-                        return (byte)'f';
+                    if (Cursor == 6)
+                        return (byte)'f'; //t
 
                     if(MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
                         return MergeTFData.tf1.GetCurrentType();
@@ -165,12 +173,12 @@ namespace Sereno.Network.MessageHandler
                     case TFType.TF_GTF:
                     case TFType.TF_TRIANGULAR_GTF:
                     {
-                        if(Cursor == 5)
+                        if(Cursor == 6)
                             GTFData.Props = new GTFProp[value];
-                        else if(Cursor >= 6)
+                        else if(Cursor >= 7)
                         {
-                            int propID = (Cursor - 6)/3;
-                            int offset = (Cursor - 6)%3;
+                            int propID = (Cursor - 7)/3;
+                            int offset = (Cursor - 7)%3;
                             if (propID < GTFData.Props.Length && offset == 0)
                                 GTFData.Props[propID].PID = value;
                         }
@@ -178,7 +186,7 @@ namespace Sereno.Network.MessageHandler
                     }
                     case TFType.TF_MERGE:
                     {
-                        if (Cursor > 5)
+                        if (Cursor > 6)
                         {
                             if (MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
                                 MergeTFData.tf1.Push(value);
@@ -227,7 +235,7 @@ namespace Sereno.Network.MessageHandler
                 {
                     case TFType.TF_MERGE:
                     {
-                        if(Cursor > 5)
+                        if(Cursor > 6)
                         {
                             if(MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
                                 MergeTFData.tf1.Push(value);
@@ -246,53 +254,58 @@ namespace Sereno.Network.MessageHandler
 
         public override void Push(float value)
         {
-            switch (TFID)
-            {
-                case TFType.TF_GTF:
-                case TFType.TF_TRIANGULAR_GTF:
+            if (Cursor == 5)
+                Timestep = value;
+            else
+            { 
+                switch (TFID)
                 {
-                    if (Cursor >= 6)
+                    case TFType.TF_GTF:
+                    case TFType.TF_TRIANGULAR_GTF:
                     {
-                        int propID = (Cursor - 6) / 3;
-                        int offset = (Cursor - 6) % 3;
-                        if (propID < GTFData.Props.Length)
+                        if (Cursor >= 7)
                         {
-                            switch(offset)
+                            int propID = (Cursor - 7) / 3;
+                            int offset = (Cursor - 7) % 3;
+                            if (propID < GTFData.Props.Length)
                             {
-                                case 1:
-                                    GTFData.Props[propID].Center = value;
-                                    break;
-                                case 2:
-                                    GTFData.Props[propID].Scale  = value;
-                                    break;
+                                switch(offset)
+                                {
+                                    case 1:
+                                        GTFData.Props[propID].Center = value;
+                                        break;
+                                    case 2:
+                                        GTFData.Props[propID].Scale  = value;
+                                        break;
+                                }
                             }
                         }
+                        break;
                     }
-                    break;
-                }
 
-                case TFType.TF_MERGE:
-                {
-                    if (Cursor == 5)
-                        MergeTFData.t = value;
-                    else
+                    case TFType.TF_MERGE:
                     {
-                        if (MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
-                            MergeTFData.tf1.Push(value);
-                        else if (MergeTFData.tf2.Cursor <= MergeTFData.tf2.GetMaxCursor())
-                            MergeTFData.tf2.Push(value);
+                        if (Cursor == 6)
+                            MergeTFData.t = value;
+                        else
+                        {
+                            if (MergeTFData.tf1.Cursor <= MergeTFData.tf1.GetMaxCursor())
+                                MergeTFData.tf1.Push(value);
+                            else if (MergeTFData.tf2.Cursor <= MergeTFData.tf2.GetMaxCursor())
+                                MergeTFData.tf2.Push(value);
+                        }
+                        break;
                     }
-                    break;
+                    default:
+                        break;
                 }
-                default:
-                    break;
             }
             base.Push(value);
         }
 
         public override Int32 GetMaxCursor()
         {
-            int maxCursor = 4;
+            int maxCursor = 5;
 
             switch (TFID)
             {

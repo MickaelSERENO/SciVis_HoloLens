@@ -14,6 +14,11 @@ namespace Sereno.SciVis
         private ColorMode m_mode;
 
         /// <summary>
+        /// The current timestep parameterized for this visualization
+        /// </summary>
+        private float m_timestep = 0;
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="mode">The ColorMode to apply</param>
@@ -58,5 +63,10 @@ namespace Sereno.SciVis
         /// The ColorMode bound to this Transfer Function
         /// </summary>
         public ColorMode ColorMode { get => m_mode; set => m_mode = value; }
+
+        /// <summary>
+        /// The current timestep parameterized for this visualization. Its value must be positive
+        /// </summary>
+        public float Timestep {get => m_timestep; set => m_timestep = value;}
     }
 }

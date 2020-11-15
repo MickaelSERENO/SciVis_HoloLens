@@ -172,15 +172,15 @@ namespace Sereno.SciVis
                                 {
                                     int ids = indices[l];
                                     if (ptDescs[ids].NbValuesPerTuple == 1)
-                                        partialRes[ids] = (ptDescs[ids].Value.ReadAsFloat((ulong)i) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
+                                        partialRes[ids] = (ptDescs[ids].Value[0].ReadAsFloat((ulong)i) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
                                     else
-                                        partialRes[ids] = (ptDescs[ids].ReadMagnitude((ulong)i) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
+                                        partialRes[ids] = (ptDescs[ids].ReadMagnitude((ulong)i, 0) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
                                 }
 
                                 if(tf.HasGradient())
                                 {
                                     if(gradient != null)
-                                        partialRes[partialRes.Length-1] = gradient.Values[(ulong)i]; //In case we need the gradient
+                                        partialRes[partialRes.Length-1] = gradient.Values[0][(ulong)i]; //In case we need the gradient
                                     else
                                         partialRes[partialRes.Length-1] = 0.0f;
                                 }

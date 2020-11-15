@@ -20,17 +20,17 @@ namespace Sereno.Datasets
         /// <summary>
         /// The minimum value loaded
         /// </summary>
-        public float MinVal = float.MinValue;
+        public float MinVal = float.MaxValue;
 
         /// <summary>
         /// The maximum value loaded
         /// </summary>
-        public float MaxVal = float.MaxValue;
+        public float MaxVal = float.MinValue;
 
         /// <summary>
-        /// The Value loaded wrapped using the VTK value container
+        /// The Value loaded wrapped using the VTK value container. Each cell contains a timestep data
         /// </summary>
-        public VTKValue Value = null;
+        public List<VTKValue> Value = new List<VTKValue>();
 
         /// <summary>
         /// Default constructor
@@ -45,18 +45,18 @@ namespace Sereno.Datasets
         public PointFieldDescriptor(FieldValueMetaData metaData) : base(metaData)
         {}
 
-
         /// <summary>
         /// Read the magnitude of a vector at indice "ind"
         /// </summary>
         /// <param name="ind">The indice to look at, without taking into account the parameter NbValuesPerTuple (i.e., 0 <= ind < nbTuples </param>
+        /// <param name="t">The timestep to look at </param>
         /// <returns>The vector magnitude</returns>
-        public float ReadMagnitude(UInt64 ind) 
+        public float ReadMagnitude(UInt64 ind, int t) 
         {
             float mag = 0;
             for(UInt32 i = 0; i<NbValuesPerTuple; i++)
             {
-                float r = Value.ReadAsFloat(NbValuesPerTuple * ind + i);
+                float r = Value[t].ReadAsFloat(NbValuesPerTuple * ind + i);
                 mag += r* r;
             }
             return (float) Math.Sqrt(mag);

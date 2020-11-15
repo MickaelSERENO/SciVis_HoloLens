@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.XR.WSA.Sharing;
 using UnityEngine.XR;
+using System.IO;
 
 namespace Sereno
 {
@@ -1368,6 +1369,38 @@ namespace Sereno
 
             //Create the Dataset
             VTKDataset dataset = new VTKDataset(msg.DataID, msg.Path, parser, ptValues, cellValues);
+
+            //Search for the other timesteps
+            List<String> suffixes = new List<String>();
+            foreach(String path in Directory.GetFiles(Application.streamingAssetsPath))
+            {
+                String fileName = Path.GetFileName(path);
+                if(fileName.StartsWith(msg.Path+".") && fileName.Length > msg.Path.Length+1)
+                {
+                    String suffix = fileName.Substring(msg.Path.Length + 1);
+                    bool isDigits = true;
+                    foreach (char c in suffix)
+                        if (c < '0' || c > '9')
+                        {
+                            isDigits = false;
+                            break;
+                        }
+                    if(isDigits)
+                        suffixes.Add(suffix);
+                }
+            }
+            suffixes.Sort();
+            foreach(String s in suffixes)
+            {
+                Debug.Log($"Parsing {Application.streamingAssetsPath}/{msg.Path}.{s}...");
+                VTKParser  parsert = new VTKParser($"{Application.streamingAssetsPath}/{msg.Path}.{s}");
+                if(parsert.Parse())
+                    dataset.AddTimestep(parsert);
+                else
+                    Debug.Log($"Issue at parsing {Application.streamingAssetsPath}/{msg.Path}.{s}");
+            }
+
+            //Set properties
             dataset.DatasetProperties = m_appProperties.DatasetPropertiesArray.FirstOrDefault(prop => dataset.Name == prop.Name);
             
             //Load the values in an asynchronous way
