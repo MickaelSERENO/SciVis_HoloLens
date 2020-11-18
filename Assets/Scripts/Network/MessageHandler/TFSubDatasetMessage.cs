@@ -127,7 +127,7 @@ namespace Sereno.Network.MessageHandler
 
                     if((Cursor-7)/3 < GTFData.Props.Length)
                     {
-                        switch((Cursor-6)%3)
+                        switch((Cursor-7)%3)
                         {
                             case 0: //PropID
                                 return (byte)'I';

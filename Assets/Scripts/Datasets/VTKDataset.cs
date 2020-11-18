@@ -152,7 +152,6 @@ namespace Sereno.Datasets
                                 () => new float[2] { float.MaxValue, float.MinValue },
                                 (j, loopState, partialRes) =>
                                 {
-
                                     //Read mask
                                     unsafe
                                     {
@@ -253,9 +252,9 @@ namespace Sereno.Datasets
 
             for(int t = 0; t < m_nbTimesteps; t++)
             {
-                VTKStructuredPoints ptsDesc = m_timesteps[t].Parser.GetStructuredPointsDescriptor();
+                VTKStructuredPoints ptsDesc = Parser.GetStructuredPointsDescriptor();
                 float[] grad  = new float[ptsDesc.Size[0] * ptsDesc.Size[1] * ptsDesc.Size[2]];
-                float   maxVal = float.MinValue;
+                float   maxVal = 0;
 
                 object lockObject = new object();
 
@@ -333,9 +332,14 @@ namespace Sereno.Datasets
                                     for(UInt32 l = 0; l < 9; l++)
                                         gradMag += partialRes.g[l]*partialRes.g[l];
 
-                                    gradMag = (float)Math.Sqrt(gradMag);
-                                    grad[ind] = gradMag;
-                                    partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
+                                    if (!float.IsNaN(gradMag))
+                                    {
+                                        gradMag = (float)Math.Sqrt(gradMag);
+                                        grad[ind] = gradMag;
+                                        partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
+                                    }
+                                    else
+                                        grad[ind] = 0;
                                 }
                             }
                             return partialRes;
@@ -354,7 +358,7 @@ namespace Sereno.Datasets
                 {
                     int ids = indices[0];
                     Parallel.For(1, ptsDesc.Size[2] - 1,
-                        () => new { maxGrad = new float[1] { float.MinValue }, localGrad = new float[3] },
+                        () => new { maxGrad = new float[1] { 0 }, localGrad = new float[3] },
                         (k, loopState, partialRes) =>
                         {
                             for (UInt32 j = 1; j < ptsDesc.Size[1] - 1; j++)
@@ -391,9 +395,15 @@ namespace Sereno.Datasets
                                         partialRes.localGrad[l] /= (m_ptFieldDescs[ids].MaxVal - m_ptFieldDescs[ids].MinVal);
                                         gradMag += partialRes.localGrad[l] * partialRes.localGrad[l];
                                     }
-                                    gradMag = (float)Math.Sqrt(gradMag);
-                                    grad[ind] = gradMag;
-                                    partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
+
+                                    if (!float.IsNaN(gradMag))
+                                    {
+                                        gradMag = (float)Math.Sqrt(gradMag);
+                                        grad[ind] = gradMag;
+                                        partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
+                                    }
+                                    else
+                                        grad[ind] = 0;
                                 }
                             }
                             return partialRes;
@@ -412,7 +422,7 @@ namespace Sereno.Datasets
                     int ids = indices[0];
 
                     Parallel.For(1, ptsDesc.Size[2] - 1,
-                        () => new { maxGrad = new float[1] { float.MinValue }, localGrad = new float[3] },
+                        () => new { maxGrad = new float[1] { 0 }, localGrad = new float[3] },
                     (k, loopState, partialRes) =>
                     {
                         for (UInt32 j = 1; j < ptsDesc.Size[1] - 1; j++)
@@ -450,9 +460,15 @@ namespace Sereno.Datasets
                                     gradMag += partialRes.localGrad[l] * partialRes.localGrad[l];
                                 }
 
-                                gradMag = (float)Math.Sqrt(gradMag);
-                                grad[ind] = gradMag;
-                                partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
+
+                                if (!float.IsNaN(gradMag))
+                                {
+                                    gradMag = (float)Math.Sqrt(gradMag);
+                                    grad[ind] = gradMag;
+                                    partialRes.maxGrad[0] = Math.Max(partialRes.maxGrad[0], gradMag);
+                                }
+                                else
+                                    grad[ind] = 0;
                             }
                         }
                         return partialRes;

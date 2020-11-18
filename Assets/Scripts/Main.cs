@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -611,7 +611,7 @@ namespace Sereno
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
-                addVTKMsg.Path = "Agulhas_10_resampled.vtk";
+                addVTKMsg.Path = "history.vtk";
                 addVTKMsg.PtFieldValueIndices = new int[] { 2 };
                 OnAddVTKDataset(null, addVTKMsg);
                 
@@ -1294,6 +1294,7 @@ namespace Sereno
         // Update is called once per frame
         void LateUpdate()
         {
+            Debug.Log("Update");
             foreach (Camera cam in Camera.allCameras)
             {
                 if (cam.depthTextureMode == DepthTextureMode.None)
@@ -1330,6 +1331,7 @@ namespace Sereno
 
                 m_connectionLost = false;
             }
+            Debug.Log("End Update");
         }
 
         public void OnDestroy()
@@ -1556,14 +1558,16 @@ namespace Sereno
             }
 
             if (tf != null)
+            {
                 tf.ColorMode = msg.ColorType;
-
+                tf.Timestep = msg.Timestep;
+            }
             return tf;
         }
 
         public void OnTFDataset(MessageBuffer messageBuffer, TFSubDatasetMessage msg)
         {
-            Debug.Log("Received a Transfer Function even");
+            Debug.Log("Received a Transfer Function event");
 
             SubDataset       sd = GetSubDataset(msg.DataID, msg.SubDataID);
             if(sd == null)
@@ -1573,6 +1577,7 @@ namespace Sereno
             //Update the TF. Numerous thread will be separately launched to update the visual
             lock (sd)
                 sd.TransferFunction = tf;
+            Debug.Log("End Transfer Function event");
         }
 
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
