@@ -68,11 +68,26 @@ namespace Sereno
 		/// </summary>
 		[MarshalAs(UnmanagedType.ByValArray, ArraySubType=UnmanagedType.R8, SizeConst = 3)]
 		public double[] Origin;
+
+        public static bool operator==(VTKStructuredPoints p1, VTKStructuredPoints p2)
+        {
+            for(byte i = 0; i < 3; i++)
+                if(p1.Size[i]    != p2.Size[i]    ||
+                   p1.Spacing[i] != p2.Spacing[i] ||
+                   p1.Origin[i]  != p2.Origin[i])
+                   return false;
+            return true;
+        }
+
+        public static bool operator!=(VTKStructuredPoints p1, VTKStructuredPoints p2)
+        {
+            return !(p1 == p2);
+        }
 	};
 
 
 	/// <summary>
-	/// VTK cell construction structure. It contains meta data about celle construction (buffer size, etc.).
+	/// VTK cell construction structure. It contains meta data about cell construction (buffer size, etc.).
 	/// </summary>
 	[StructLayout(LayoutKind.Sequential)]
     public struct VTKCellConstruction
@@ -349,6 +364,19 @@ namespace Sereno
             Format   = cpy.Format;
             NbTuples = cpy.NbTuples;
             NbValuesPerTuple = cpy.NbValuesPerTuple;
+        }
+
+        public static bool operator==(FieldValueMetaData p1, FieldValueMetaData p2)
+        {
+            return (p1.Name             == p2.Name             &&
+                    p1.Format           == p2.Format           &&
+                    p1.NbTuples         == p2.NbTuples         &&
+                    p1.NbValuesPerTuple == p2.NbValuesPerTuple);
+        }
+
+        public static bool operator!=(FieldValueMetaData p1, FieldValueMetaData p2)
+        {
+            return !(p1 == p2);
         }
     }
 

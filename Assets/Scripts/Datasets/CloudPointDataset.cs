@@ -78,6 +78,8 @@ namespace Sereno.Datasets
                         return 0;
                     }
 
+                    m_nbTimesteps = 1; //No error, we can register this data
+
                     //Init the min and max position
                     for(int k = 0; k < 3; k++)
                     {
@@ -136,12 +138,12 @@ namespace Sereno.Datasets
                         }
                     }
 
-                    m_ptFieldDescs[0].Value = new VTKValue()
+                    m_ptFieldDescs[0].Value.Add(new VTKValue()
                     {
                         Value = (IntPtr)m_dataHandle.AddrOfPinnedObject(),
                         Format = VTKValueFormat.VTK_FLOAT,
                         NbValues = m_nbPoints
-                    };
+                    });
                     m_ptFieldDescs[0].MaxVal = maxVal;
                     m_ptFieldDescs[0].MinVal = minVal;
                     m_isLoaded = true;

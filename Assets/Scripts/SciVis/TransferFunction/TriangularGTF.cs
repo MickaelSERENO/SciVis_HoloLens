@@ -91,6 +91,7 @@ namespace Sereno.SciVis
         {
             TriangularGTF g = new TriangularGTF((float[])m_center.Clone(), (float[])m_scale.Clone(), m_alphaMax);
             g.ColorMode = ColorMode;
+            g.Timestep  = Timestep;
 
             return g;
         }

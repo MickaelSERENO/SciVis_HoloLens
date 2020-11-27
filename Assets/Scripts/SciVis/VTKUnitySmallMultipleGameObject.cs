@@ -198,6 +198,7 @@ namespace Sereno.SciVis
 
                 else if (textureColor != null) //New data?
                 {
+                    Debug.Log("Start Update TextureColor GPU");
                     m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGBA4444, false);
                     m_texture3D.wrapModeU  = TextureWrapMode.Clamp;
                     m_texture3D.wrapModeV  = TextureWrapMode.Clamp;
@@ -206,9 +207,9 @@ namespace Sereno.SciVis
                     m_texture3D.SetPixelData<short>(textureColor, 0);
                     m_texture3D.Apply();
                     m_unloadModel.SetActive(false);
-                    lock(m_sm.TextureColor)
+                    lock(m_sm)
                     {
-                        if (m_sm.TextureColor == textureColor)
+                        if(m_sm.TextureColor == textureColor)
                             m_sm.TextureColor = null;
                     }
 

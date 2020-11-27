@@ -577,6 +577,7 @@ namespace Sereno.Network.MessageHandler
         /// <param name="type">The type of the message</param>
         private void AllocateData(Int16 type)
         {
+            Debug.Log($"Allocate type: {(ServerType)type}");
             switch((ServerType)type)
             {
                 case ServerType.GET_ON_HEADSET_INIT:
