@@ -27,6 +27,32 @@ using System.IO;
 namespace Sereno
 {
     /// <summary>
+    /// The different volumetric selection mode
+    /// </summary>
+    public enum VolumetricSelectionMode
+    {
+        /// <summary>
+        /// No selection mode
+        /// </summary>
+        NONE = -1,
+
+        /// <summary>
+        /// The absolute mapping
+        /// </summary>
+        ABSOLUTE = 0,
+        
+        /// <summary>
+        /// The relative aligned mapping
+        /// </summary>
+        RELATIVE_ALIGNED = 1,
+        
+        /// <summary>
+        /// The relative full mapping
+        /// </summary>
+        RELATIVE_FULL = 2,
+    }
+
+    /// <summary>
     /// The different viewtype this application handles
     /// </summary>
     public enum ViewType
@@ -1995,6 +2021,38 @@ namespace Sereno
                     sd.VolumetricMask = msg.Mask;
                     sd.EnableVolumetricMask = msg.IsEnabled;
                 }
+            }
+        }
+
+        
+        public void OnNextTrial(MessageBuffer messageBuffer, NextTrialMessage msg)
+        {
+            VolumetricSelectionMode mode = (VolumetricSelectionMode)msg.TangibleMode;
+            String modeString = "none";
+            switch(mode)
+            {
+                case VolumetricSelectionMode.ABSOLUTE:
+                    modeString = "Absolute";
+                    break;
+                case VolumetricSelectionMode.RELATIVE_ALIGNED:
+                    modeString = "Relative Aligned";
+                    break;
+                case VolumetricSelectionMode.RELATIVE_FULL:
+                    modeString = "Relative Full";
+                    break;
+            }
+
+            lock(this)
+            {
+
+                m_textValues.EnableRandomText = true;
+                m_textValues.UpdateRandomText = true;
+
+                if(mode != VolumetricSelectionMode.NONE)
+                    m_textValues.RandomStr = $"Technique: {modeString}\nTrial: {msg.SubTrialID}" + (msg.InTraining ? "\n Training session" : "");
+                else
+                    m_textValues.RandomStr = "End of the study.\nYou can remove the headset.\nThank you for your participation!";
+                m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 2000; //Print this message for two seconds
             }
         }
 

@@ -31,5 +31,6 @@ namespace Sereno.Network.MessageHandler
         GET_TOGGLE_MAP_VISIBILITY   = 25, /*!< Toggle the map visibility*/
         GET_SUBDATASET_VOLUMETRIC_MASK = 26, /*!< Get the volumetric mask binary data*/
         GET_RESET_VOLUMETRIC_SELECTION = 27, /*!< Reset one volumetric selection performed by a user*/
+        GET_NEXT_TRIAL = 28, /*!< Get the next trial for the volume select study*/
     }
 }

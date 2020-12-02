@@ -192,6 +192,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnSubDatasetVolumetricMask(MessageBuffer messageBuffer, SubDatasetVolumetricMaskMessage msg);
+
+        /// <summary>
+        /// Function called when a new trial has been launched
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">the message parsed</param>
+        void OnNextTrial(MessageBuffer messageBuffer, NextTrialMessage msg);
     }
 
     /// <summary>
@@ -428,6 +435,10 @@ namespace Sereno.Network.MessageHandler
                             foreach (var l in m_listeners)
                                 l.OnSubDatasetVolumetricMask(this, (SubDatasetVolumetricMaskMessage)m_msg);
                             break;
+                        case ServerType.GET_NEXT_TRIAL:
+                            foreach (var l in m_listeners)
+                                l.OnNextTrial(this, (NextTrialMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -657,6 +668,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_SUBDATASET_VOLUMETRIC_MASK:
                     m_msg = new SubDatasetVolumetricMaskMessage(ServerType.GET_SUBDATASET_VOLUMETRIC_MASK);
+                    break;
+                case ServerType.GET_NEXT_TRIAL:
+                    m_msg = new NextTrialMessage(ServerType.GET_NEXT_TRIAL);
                     break;
             }
         }
