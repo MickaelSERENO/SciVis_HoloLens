@@ -173,7 +173,7 @@ namespace Sereno.Datasets
             m_ownerID = ownerID;
 
             m_volumetricMask = new byte[(parent.GetNbSpatialValues()+7) / 8];
-	    ResetVolumetricMask(true, false);
+	        ResetVolumetricMask(false, false);
         }
 
         /// <summary>
