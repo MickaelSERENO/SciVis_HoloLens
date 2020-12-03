@@ -173,6 +173,7 @@ namespace Sereno.Datasets
             m_ownerID = ownerID;
 
             m_volumetricMask = new byte[(parent.GetNbSpatialValues()+7) / 8];
+            ResetVolumetricMask(false, false);
         }
 
         /// <summary>
@@ -239,7 +240,7 @@ namespace Sereno.Datasets
         public void ResetVolumetricMask(bool value, bool enable = true)
         {
             byte val = (byte)(value ? 0xff : 0x00);
-            for (int i = 0; i < m_parent.GetNbSpatialValues(); i++)
+            for (int i = 0; i < (m_parent.GetNbSpatialValues()+7)/8; i++)
                 m_volumetricMask[i] = val;
 
             m_enableVolumetricMask = enable;

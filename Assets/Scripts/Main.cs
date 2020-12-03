@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -454,7 +454,7 @@ namespace Sereno
         /// <summary>
         /// The current view type 
         /// </summary>
-        private ViewType m_viewType = ViewType.TWO_DIMENSION;
+        private ViewType m_viewType = ViewType.AR;
 
         /// <summary>
         /// Is the current view type updated? (useful for asynchronous messages)
@@ -827,7 +827,7 @@ namespace Sereno
             if(m_textValues.UpdateRandomText)
             {
                 //Enable/Disable the IP Text
-                RandomText.enabled = m_textValues.EnableRandomText;
+                RandomText.gameObject.SetActive(m_textValues.EnableRandomText);
 
                 //If we should enable the text, set the text value
                 if(m_textValues.EnableRandomText)
@@ -2044,15 +2044,14 @@ namespace Sereno
 
             lock(this)
             {
-
                 m_textValues.EnableRandomText = true;
                 m_textValues.UpdateRandomText = true;
 
                 if(mode != VolumetricSelectionMode.NONE)
-                    m_textValues.RandomStr = $"Technique: {modeString}\nTrial: {msg.SubTrialID}" + (msg.InTraining ? "\n Training session" : "");
+                    m_textValues.RandomStr = $"Technique: {modeString}\nTrial: {msg.SubTrialID}" + (msg.InTraining ? "\nTraining session" : "");
                 else
                     m_textValues.RandomStr = "End of the study.\nYou can remove the headset.\nThank you for your participation!";
-                m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 2000; //Print this message for two seconds
+                m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 5000; //Print this message for two seconds
             }
         }
 
