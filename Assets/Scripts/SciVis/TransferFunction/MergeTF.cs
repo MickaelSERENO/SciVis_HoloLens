@@ -36,7 +36,9 @@ namespace Sereno.SciVis
 
         public override TransferFunction Clone()
         {
-            return new MergeTF(m_tf1, m_tf2, m_t);
+            MergeTF tf  = new MergeTF(m_tf1, m_tf2, m_t);
+            tf.Timestep = Timestep;
+            return tf;
         }
 
         /// <summary>

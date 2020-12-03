@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.XR.WSA.Sharing;
 using UnityEngine.XR;
+using System.IO;
 
 namespace Sereno
 {
@@ -610,7 +611,7 @@ namespace Sereno
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
-                addVTKMsg.Path = "Agulhas_10_resampled.vtk";
+                addVTKMsg.Path = "history.vtk";
                 addVTKMsg.PtFieldValueIndices = new int[] { 2 };
                 OnAddVTKDataset(null, addVTKMsg);
                 
@@ -1293,6 +1294,7 @@ namespace Sereno
         // Update is called once per frame
         void LateUpdate()
         {
+            Debug.Log("Update");
             foreach (Camera cam in Camera.allCameras)
             {
                 if (cam.depthTextureMode == DepthTextureMode.None)
@@ -1329,6 +1331,7 @@ namespace Sereno
 
                 m_connectionLost = false;
             }
+            Debug.Log("End Update");
         }
 
         public void OnDestroy()
@@ -1368,6 +1371,38 @@ namespace Sereno
 
             //Create the Dataset
             VTKDataset dataset = new VTKDataset(msg.DataID, msg.Path, parser, ptValues, cellValues);
+
+            //Search for the other timesteps
+            List<String> suffixes = new List<String>();
+            foreach(String path in Directory.GetFiles(Application.streamingAssetsPath))
+            {
+                String fileName = Path.GetFileName(path);
+                if(fileName.StartsWith(msg.Path+".") && fileName.Length > msg.Path.Length+1)
+                {
+                    String suffix = fileName.Substring(msg.Path.Length + 1);
+                    bool isDigits = true;
+                    foreach (char c in suffix)
+                        if (c < '0' || c > '9')
+                        {
+                            isDigits = false;
+                            break;
+                        }
+                    if(isDigits)
+                        suffixes.Add(suffix);
+                }
+            }
+            suffixes.Sort();
+            foreach(String s in suffixes)
+            {
+                Debug.Log($"Parsing {Application.streamingAssetsPath}/{msg.Path}.{s}...");
+                VTKParser  parsert = new VTKParser($"{Application.streamingAssetsPath}/{msg.Path}.{s}");
+                if(parsert.Parse())
+                    dataset.AddTimestep(parsert);
+                else
+                    Debug.Log($"Issue at parsing {Application.streamingAssetsPath}/{msg.Path}.{s}");
+            }
+
+            //Set properties
             dataset.DatasetProperties = m_appProperties.DatasetPropertiesArray.FirstOrDefault(prop => dataset.Name == prop.Name);
             
             //Load the values in an asynchronous way
@@ -1523,14 +1558,16 @@ namespace Sereno
             }
 
             if (tf != null)
+            {
                 tf.ColorMode = msg.ColorType;
-
+                tf.Timestep = msg.Timestep;
+            }
             return tf;
         }
 
         public void OnTFDataset(MessageBuffer messageBuffer, TFSubDatasetMessage msg)
         {
-            Debug.Log("Received a Transfer Function even");
+            Debug.Log("Received a Transfer Function event");
 
             SubDataset       sd = GetSubDataset(msg.DataID, msg.SubDataID);
             if(sd == null)
@@ -1540,6 +1577,7 @@ namespace Sereno
             //Update the TF. Numerous thread will be separately launched to update the visual
             lock (sd)
                 sd.TransferFunction = tf;
+            Debug.Log("End Transfer Function event");
         }
 
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)

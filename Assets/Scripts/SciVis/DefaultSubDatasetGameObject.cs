@@ -202,7 +202,6 @@ namespace Sereno.SciVis
         
         public virtual void OnLockOwnerIDChange(SubDataset dataset, int ownerID)
         {
-            Debug.Log($"New modification owner : {ownerID}");
             lock (this)
             {
                 if (ownerID == -1)

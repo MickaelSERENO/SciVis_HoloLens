@@ -7,6 +7,7 @@ using Sereno.Datasets;
 using Sereno.SciVis;
 using System.Threading.Tasks;
 using Unity.Burst;
+using System.Threading;
 
 namespace Sereno.SciVis
 {
@@ -72,12 +73,10 @@ namespace Sereno.SciVis
         {
             subDataset.AddListener(this);
             m_subDataset = subDataset;
-
             m_dataProvider = dataProvider;
 
             //Copy the variables
             m_dimensions = dimensions;
-            m_subDataset = subDataset;
 
             VTKStructuredPoints descPts = parser.GetStructuredPointsDescriptor();
             m_descPts = descPts;
@@ -100,41 +99,36 @@ namespace Sereno.SciVis
         /// </summary>
         public void UpdateTF()
         {
-            Task.Factory.StartNew(() =>
+            Task.Run(UpdateTF_Thread);
+        }
+
+        private void UpdateTF_Thread()
+        {
+            //First, discard multiple call to this function (only two calls are available)
+            lock (m_isTFUpdateLock)
             {
-                //First, discard multiple call to this function (only two calls are available)
+                if (m_waitToUpdateTF)
+                {
+                    Debug.Log("Already waiting for TF");
+                    return;
+                }
+                else
+                    m_waitToUpdateTF = true;
+            }
+
+            //The wait to update the TF
+            lock (m_updateTFLock)
+            {
+                //Another one can wait to update the TF if it wants (max: two parallel call, one pending, one executing)
                 lock (m_isTFUpdateLock)
-                {
-                    if (m_waitToUpdateTF)
-                    {
-                        Debug.Log("Already waiting for TF");
-                        return;
-                    }
-                    else
-                        m_waitToUpdateTF = true;
-                }
+                    m_waitToUpdateTF = false;
 
-                //The wait to update the TF
-                lock (m_updateTFLock)
-                {
-                    //Another one can wait to update the TF if it wants (max: two parallel call, one pending, one executing)
-                    lock (m_isTFUpdateLock)
-                        m_waitToUpdateTF = false;
+                TransferFunction tf = null;
+                lock (m_subDataset)
+                    tf = (TransferFunction)m_subDataset.TransferFunction.Clone();
 
-                    TransferFunction tf = null;
-                    lock (m_subDataset)
-                        tf = (TransferFunction)m_subDataset.TransferFunction.Clone();
-
-                    Debug.Log("Updating TF...");
-
-                    lock (this)
-                    {
-                        m_textureColor = ComputeTFColor(tf);
-                    }
-
-                    Debug.Log("Updating TF finished");
-                }
-            });
+                TextureColor = ComputeTFColor(tf);
+            }
         }
 
         [BurstCompile(CompileSynchronously = true)]
@@ -143,90 +137,108 @@ namespace Sereno.SciVis
             VTKDataset vtk = (VTKDataset)m_subDataset.Parent;
             int hasGradient = (tf.HasGradient() ? 1 : 0);
 
-            if (vtk.IsLoaded == false || tf == null || tf.GetDimension()- hasGradient > vtk.PointFieldDescs.Count ||
+            if (vtk.IsLoaded == false || tf == null || tf.GetDimension() - hasGradient > vtk.PointFieldDescs.Count ||
                (m_subDataset.OwnerID != -1 && m_subDataset.OwnerID != m_dataProvider.GetHeadsetID())) //Not a public subdataset
                 return null;
 
-            else
+            int t1 = (int)Math.Floor(tf.Timestep);
+            int t2 = (int)Math.Ceiling(tf.Timestep);
+            int[] times = new int[]{t1, t2};
+
+            //Debug.Log($"t1: {t1}, t2: {t2}");
+
+            unsafe
             {
-                unsafe
+                int[] indices = new int[vtk.PointFieldDescs.Count];
+                for (int i = 0; i < indices.Length; i++)
+                    indices[i] = i;
+
+                Datasets.Gradient gradient = vtk.GetGradient(indices);
+                short[] colors = new short[m_dimensions.x * m_dimensions.y * m_dimensions.z]; //short because RGBA4444 == 2 bytes -> short
+                float frac = tf.Timestep - (float)Math.Truncate(tf.Timestep);
+
+                List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
+
+                Parallel.For(0, m_dimensions.z, new ParallelOptions { MaxDegreeOfParallelism = 4 },
+                () =>
+                new
                 {
-                    int[] indices = new int[vtk.PointFieldDescs.Count];
-                    for (int i = 0; i < indices.Length; i++)
-                        indices[i] = i;
+                    partialResT1 = new float[indices.Length + hasGradient],
+                    partialResT2 = new float[indices.Length + hasGradient]
+                },
 
-                    Datasets.Gradient gradient = vtk.GetGradient(indices);
-                    short[] colors = new short[m_dimensions.x * m_dimensions.y * m_dimensions.z]; //short because RGBA4444 == 2 bytes -> short
-
-                    List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
-                    Parallel.For(0, m_dimensions.z,
-                        k =>
+                (k, state, localState) =>
+                {
+                    fixed (short* pcolors = colors)
+                    {
+                        UInt64 ind = (UInt64)(k * m_dimensions.x * m_dimensions.y);
+                        for (int j = 0; j < m_dimensions.y; j++)
                         {
-                            float[] partialRes = new float[indices.Length + hasGradient];
+                            //Pre compute the indice up to J--K coordinate
+                            UInt64 readIntJK = (UInt64)(m_descPts.Size[0] * (j * m_descPts.Size[1] / m_dimensions.y) +
+                                                        m_descPts.Size[0] * m_descPts.Size[1] * (k * m_descPts.Size[2] / m_dimensions.z));
 
-                            fixed (short* pcolors = colors)
+                            for (int i = 0; i < m_dimensions.x; i++)
                             {
-                                UInt64 ind = (UInt64)(k * m_dimensions.x * m_dimensions.y);
-                                for (int j = 0; j < m_dimensions.y; j++)
+                                UInt64 readInd = (UInt64)(i * m_descPts.Size[0] / m_dimensions.x) + readIntJK;
+
+                                if (vtk.MaskValue != null && ((byte*)(vtk.MaskValue.Value))[readInd] == 0 ||
+                                    (m_subDataset.EnableVolumetricMask && m_subDataset.GetVolumetricMaskAt((int)readInd) == false))
+                                    pcolors[ind] = 0;
+                                else
                                 {
-                                    //Pre compute the indice up to J--K coordinate
-                                    UInt64 readIntJK = (UInt64)(m_descPts.Size[0] * (j * m_descPts.Size[1] / m_dimensions.y) +
-                                                                m_descPts.Size[0] * m_descPts.Size[1] * (k * m_descPts.Size[2] / m_dimensions.z));
+                                    float[][] partialRes = new float[][] { localState.partialResT1, localState.partialResT2 };
 
-                                    for (int i = 0; i < m_dimensions.x; i++)
+                                    for (int p = 0; p < 2; p++)
                                     {
-                                        UInt64 readInd = (UInt64)(i * m_descPts.Size[0] / m_dimensions.x) + readIntJK;
-
-                                        if (vtk.MaskValue != null && ((byte*)(vtk.MaskValue.Value))[readInd] == 0 ||
-                                            (m_subDataset.EnableVolumetricMask && m_subDataset.GetVolumetricMaskAt((int)readInd) == false))
-                                            pcolors[ind] = 0;
-                                        else
+                                        //Determine transfer function coordinates
+                                        for (int l = 0; l < indices.Length; l++)
                                         {
-                                            //Determine transfer function coordinates
-                                            for(int l = 0; l < indices.Length; l++)
-                                            {
-                                                int ids = indices[l];
-                                                if (ptDescs[ids].NbValuesPerTuple == 1)
-                                                    partialRes[ids] = (ptDescs[ids].Value.ReadAsFloat(readInd) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
-                                                else
-                                                    partialRes[ids] = (ptDescs[ids].ReadMagnitude(readInd) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
-                                            }
-
-                                            if(tf.HasGradient())
-                                            {
-                                                if (gradient != null)
-                                                    partialRes[partialRes.Length - 1] = gradient.Values[readInd]; //In case we need the gradient
-                                                else
-                                                    partialRes[partialRes.Length - 1] = 0.0f;
-                                            }
-
-                                            Color c = tf.ComputeColor(partialRes);
-                                            float a = tf.ComputeAlpha(partialRes);
-                                            
-                                            short r = (short)(16 * c.r);
-                                            if (r > 15)
-                                                r = 15;
-                                            short g = (short)(16 * c.g);
-                                            if (g > 15)
-                                                g = 15;
-                                            short b = (short)(16 * c.b);
-                                            if (b > 15)
-                                                b = 15;
-                                            short _a = (short)(16 * a);
-                                            if (_a > 15)
-                                                _a = 15;
-                                            pcolors[ind] = (short)((r << 12) + (g << 8) + //RGBA4444 color format
-                                                                   (b << 4) + _a);
+                                            int ids = indices[l];
+                                            if (ptDescs[ids].NbValuesPerTuple == 1)
+                                                partialRes[p][ids] = (ptDescs[ids].Value[times[p]].ReadAsFloat(readInd) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
+                                            else
+                                                partialRes[p][ids] = (ptDescs[ids].ReadMagnitude(readInd, times[p]) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
                                         }
-                                        ind += 1;
+
+                                        if (tf.HasGradient())
+                                        {
+                                            if (gradient != null)
+                                                partialRes[p][partialRes[p].Length - 1] = gradient.Values[times[p]][readInd]; //In case we need the gradient
+                                            else
+                                                partialRes[p][partialRes[p].Length - 1] = 0.0f;
+                                        }
                                     }
+
+                                    //Linear interpolation
+                                    Color c = (1.0f - frac) * tf.ComputeColor(localState.partialResT1) + frac * tf.ComputeColor(localState.partialResT2);
+                                    float a = (1.0f - frac) * tf.ComputeAlpha(localState.partialResT1) + frac * tf.ComputeAlpha(localState.partialResT2);
+
+                                    short r = (short)(16 * c.r);
+                                    if (r > 15)
+                                        r = 15;
+                                    short g = (short)(16 * c.g);
+                                    if (g > 15)
+                                        g = 15;
+                                    short b = (short)(16 * c.b);
+                                    if (b > 15)
+                                        b = 15;
+                                    short _a = (short)(16 * a);
+                                    if (_a > 15)
+                                        _a = 15;
+
+                                    pcolors[ind] = (short)((r << 12) + (g << 8) + //RGBA4444 color format
+                                                           (b << 4 ) + _a);
                                 }
+                                ind += 1;
                             }
-                        });
-                    return colors;
-                }
+                        }
+                    }
+                    return localState;
+                },
+                (partialRes) => {}); ;
+                return colors;
             }
-            return null;
         }
         
         public void OnRotationChange(SubDataset dataset, float[] rotationQuaternion){}

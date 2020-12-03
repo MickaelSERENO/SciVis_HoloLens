@@ -13,12 +13,15 @@ namespace Sereno.Datasets
     /// <param name="status">The loading status</param>
     public delegate void LoadDatasetCallback(Dataset d, int status);
 
+    /// <summary>
+    /// Class containing gradient data
+    /// </summary>
     public class Gradient
     {
         /// <summary>
         /// The gradient values
         /// </summary>
-        private float[] m_values;
+        private List<float[]> m_values = new List<float[]>();
 
         /// <summary>
         /// The property indices matching this Gradient (multi dimensional or one-dimensional)
@@ -30,17 +33,16 @@ namespace Sereno.Datasets
         /// </summary>
         private float m_maxGrad;
 
-        public Gradient(int[] indices, float[] values, float maxGrad)
+        public Gradient(int[] indices, float maxGrad=0)
         {
             m_indices = indices;
-            m_values  = values;
             m_maxGrad = maxGrad;
         }
 
         /// <summary>
-        /// Get the multi dimensionnal gradient raw values. 
+        /// Get the multi dimensionnal gradient raw values. Each cell contains the data of one timestep
         /// </summary>
-        public float[] Values { get => m_values; }
+        public List<float[]> Values { get => m_values; }
 
         /// <summary>
         /// Get the maximum gradient magnitude computed.
@@ -53,6 +55,9 @@ namespace Sereno.Datasets
         public int[] Indices { get => m_indices; }
     }
 
+    /// <summary>
+    /// Abstract class containing all the meta data necessary for handling opened datasets
+    /// </summary>
     public abstract class Dataset
     {
         /// <summary>
@@ -99,6 +104,11 @@ namespace Sereno.Datasets
         /// The parsed Dataset properties
         /// </summary>
         protected Properties.DatasetProperties m_props;
+
+        /// <summary>
+        /// The number of registered timesteps.
+        /// </summary>
+        protected int m_nbTimesteps = 0;
 
         /// <summary>
         /// Constructor, does nothing
@@ -227,5 +237,11 @@ namespace Sereno.Datasets
         /// The parsed Dataset Properties
         /// </summary>
         public Properties.DatasetProperties DatasetProperties { get => m_props; set => m_props = value; }
+
+        /// <summary>
+        /// The number of timestep registered in this dataset
+        /// </summary>
+        /// <value></value>
+        public int NbTimesteps { get => m_nbTimesteps; }
     }
 }
