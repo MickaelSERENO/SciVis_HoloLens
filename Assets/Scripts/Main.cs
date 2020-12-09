@@ -1983,9 +1983,16 @@ namespace Sereno
 
                 //Close the current selection mesh, useful for the computation
                 CloseTabletCurrentSelectionMesh();
-                
-                m_tabletSelectionData.CurrentNewSelectionMeshIDs = new NewSelectionMeshData() { PositionID = m_tabletSelectionData.PositionList.Count, BooleanOP = (BooleanSelectionOperation)msg.BooleanOperation, ShouldUpdate = true };
-                m_tabletSelectionData.NewSelectionMeshIDs.Add(m_tabletSelectionData.CurrentNewSelectionMeshIDs);
+
+                if ((BooleanSelectionOperation)msg.BooleanOperation != BooleanSelectionOperation.NONE)
+                {
+                    m_tabletSelectionData.CurrentNewSelectionMeshIDs = new NewSelectionMeshData() { PositionID = m_tabletSelectionData.PositionList.Count, BooleanOP = (BooleanSelectionOperation)msg.BooleanOperation, ShouldUpdate = true };
+                    m_tabletSelectionData.NewSelectionMeshIDs.Add(m_tabletSelectionData.CurrentNewSelectionMeshIDs);
+                }
+                else
+                {
+                    m_tabletSelectionData.CurrentNewSelectionMeshIDs = null;
+                }
             }
         }
         
@@ -2018,8 +2025,8 @@ namespace Sereno
                 SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
                 if (sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
                 {
-                    sd.VolumetricMask       = msg.Mask;
                     sd.EnableVolumetricMask = msg.IsEnabled;
+                    sd.VolumetricMask       = msg.Mask;
                 }
             }
         }

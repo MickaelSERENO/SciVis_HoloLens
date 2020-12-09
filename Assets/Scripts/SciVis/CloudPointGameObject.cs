@@ -161,9 +161,10 @@ namespace Sereno.SciVis
                             {
                                 float[] partialRes = new float[indices.Length + hasGradient];
 
-                                if(m_sd.EnableVolumetricMask && !m_sd.GetVolumetricMaskAt((int)i))
+                                if(m_sd.EnableVolumetricMask && m_sd.GetVolumetricMaskAt((int)i))
                                 {
-                                    pcolors[4 * i + 3] = 0;
+                                    for(int j = 0; j < 4; j++)
+                                        pcolors[4 * i + j] = 255;
                                     return;
                                 }
 

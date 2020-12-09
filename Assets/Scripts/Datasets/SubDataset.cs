@@ -226,10 +226,10 @@ namespace Sereno.Datasets
         /// Get the volumetric mask at x
         /// </summary>
         /// <param name="x">The x position to evaluate</param>
-        /// <returns>VolumetricMask[x / 8] & (0x01 << x % 8) converted to a boolean value</returns>
+        /// <returns>VolumetricMask[x / 8] & (0x01 << (x % 8)) converted to a boolean value</returns>
         public bool GetVolumetricMaskAt(int x)
         {
-            return (m_volumetricMask[x / 8] & (0x01 << x % 8)) == 0 ? false : true;
+            return (m_volumetricMask[x/8] & (0x01 << (x % 8))) == 0 ? false : true;
         }
 
         /// <summary>
@@ -244,6 +244,20 @@ namespace Sereno.Datasets
                 m_volumetricMask[i] = val;
 
             m_enableVolumetricMask = enable;
+
+            foreach (var l in m_listeners)
+                l.OnChangeVolumetricMask(this);
+        }
+
+        /// <summary>
+        /// Set the volumetric mask
+        /// </summary>
+        /// <param name="mask">The volumetric mask to apply. The size must be the same as in this.VolumetricMask.Length</param>
+        /// <param name="enable">Should we set to enable the new volumetric mask?</param>
+        public void SetVolumetricMask(byte[] mask, bool enable=true)
+        {
+            m_enableVolumetricMask = enable;
+            m_volumetricMask = mask;
 
             foreach (var l in m_listeners)
                 l.OnChangeVolumetricMask(this);
@@ -432,10 +446,7 @@ namespace Sereno.Datasets
             get => m_volumetricMask;
             set
             {
-                m_volumetricMask = value;
-
-                foreach (var l in m_listeners)
-                    l.OnChangeVolumetricMask(this);
+                SetVolumetricMask(value, m_enableVolumetricMask);
             }
         }
 
@@ -447,11 +458,9 @@ namespace Sereno.Datasets
             get => m_enableVolumetricMask;
             set
             {
-                if (m_enableVolumetricMask != value)
+                if(m_enableVolumetricMask != value)
                 {
-                    m_enableVolumetricMask = value;
-                    foreach (var l in m_listeners)
-                        l.OnChangeVolumetricMask(this);
+                    SetVolumetricMask(VolumetricMask, value);
                 }
             }
         }
