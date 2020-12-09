@@ -47,7 +47,7 @@ namespace Sereno.Network.MessageHandler
             if (Cursor == 0)
                 DataID = value;
             else if (Cursor == 1)
-                DataID = value;
+                SubDataID = value;
             base.Push(value);
         }
 

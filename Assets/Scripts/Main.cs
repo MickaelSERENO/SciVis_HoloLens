@@ -1968,7 +1968,7 @@ namespace Sereno
             lock(this)
             {
                 SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-                if(sd != null)
+                if(sd != null)   
                     sd.IsMapVisible = msg.IsVisible;
             }
         }
@@ -1992,8 +1992,7 @@ namespace Sereno
                 SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
                 if (sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
                 {
-                    sd.VolumetricMask = msg.Mask;
-                    sd.EnableVolumetricMask = msg.IsEnabled;
+                    sd.SetVolumetricMask(msg.Mask, msg.IsEnabled);
                 }
             }
         }
