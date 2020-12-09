@@ -2025,8 +2025,7 @@ namespace Sereno
                 SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
                 if (sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
                 {
-                    sd.EnableVolumetricMask = msg.IsEnabled;
-                    sd.VolumetricMask       = msg.Mask;
+                    sd.SetVolumetricMask(msg.Mask, msg.IsEnabled);
                 }
             }
         }
