@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -669,7 +669,7 @@ namespace Sereno
                 tfMsgSD1.Timestep = 0.0f;
                 tfMsgSD1.HeadsetID = -1;
 
-                Thread.Sleep(15000);
+                //Thread.Sleep(15000);
                 
                 while (true)
                 {
@@ -677,7 +677,7 @@ namespace Sereno
                         tfMsgSD1.Timestep = 0.0f;
                     OnTFDataset(null, tfMsgSD1);
                     tfMsgSD1.Timestep += 0.25f;
-                    Thread.Sleep(4500);
+                    Thread.Sleep(50);
                 }
 
                 //Simulate a lasso input

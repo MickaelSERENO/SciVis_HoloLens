@@ -199,6 +199,8 @@ namespace Sereno.SciVis
                 else if (textureColor != null) //New data?
                 {
                     Debug.Log("Start Update TextureColor GPU");
+                    if (m_texture3D != null)
+                        Destroy(m_texture3D);
                     m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGBA4444, false);
                     m_texture3D.wrapModeU  = TextureWrapMode.Clamp;
                     m_texture3D.wrapModeV  = TextureWrapMode.Clamp;
@@ -237,6 +239,13 @@ namespace Sereno.SciVis
                 v.Value.CommandBuffer.Clear();
                 if(v.Key != null) //!= is overloaded in this case
                     v.Key.RemoveCommandBuffer(CameraEvent.AfterForwardOpaque, v.Value.CommandBuffer);
+            }
+
+            //Release our texture3D object
+            if (m_texture3D != null)
+            {
+                Destroy(m_texture3D);
+                m_texture3D = null;
             }
         }
 
