@@ -677,7 +677,7 @@ namespace Sereno
                         tfMsgSD1.Timestep = 0.0f;
                     OnTFDataset(null, tfMsgSD1);
                     tfMsgSD1.Timestep += 0.25f;
-                    Thread.Sleep(50);
+                    Thread.Sleep(500);
                 }
 
                 //Simulate a lasso input
@@ -1242,8 +1242,6 @@ namespace Sereno
 
                             meshData.Mesh.vertices = meshData.Points.ToArray();
                             meshData.Mesh.triangles = meshData.Triangles.ToArray();
-
-                            Debug.Log("Update Mesh");
                         }
                     }
                 }
@@ -1339,7 +1337,6 @@ namespace Sereno
         // Update is called once per frame
         void LateUpdate()
         {
-            Debug.Log("Update");
             foreach (Camera cam in Camera.allCameras)
             {
                 if (cam.depthTextureMode == DepthTextureMode.None)
@@ -1376,7 +1373,6 @@ namespace Sereno
 
                 m_connectionLost = false;
             }
-            Debug.Log("End Update");
         }
 
         public void OnDestroy()

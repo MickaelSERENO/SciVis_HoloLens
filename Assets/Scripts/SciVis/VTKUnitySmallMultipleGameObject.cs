@@ -199,13 +199,18 @@ namespace Sereno.SciVis
                 else if (textureColor != null) //New data?
                 {
                     Debug.Log("Start Update TextureColor GPU");
-                    if (m_texture3D != null)
-                        Destroy(m_texture3D);
-                    m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGBA4444, false);
-                    m_texture3D.wrapModeU  = TextureWrapMode.Clamp;
-                    m_texture3D.wrapModeV  = TextureWrapMode.Clamp;
-                    m_texture3D.wrapModeW  = TextureWrapMode.Clamp;
-                    m_texture3D.filterMode = FilterMode.Bilinear; 
+                    if (m_texture3D == null || m_texture3D.width != m_sm.Dimensions.x || m_texture3D.height != m_sm.Dimensions.y || m_texture3D.depth != m_sm.Dimensions.z)
+                    {
+                        if(m_texture3D != null)
+                            Destroy(m_texture3D);
+                        m_texture3D = new Texture3D(m_sm.Dimensions.x, m_sm.Dimensions.y, m_sm.Dimensions.z, TextureFormat.RGBA4444, false);
+
+                        m_texture3D.wrapModeU = TextureWrapMode.Clamp;
+                        m_texture3D.wrapModeV = TextureWrapMode.Clamp;
+                        m_texture3D.wrapModeW = TextureWrapMode.Clamp;
+                        m_texture3D.filterMode = FilterMode.Bilinear;
+                    }
+
                     m_texture3D.SetPixelData<short>(textureColor, 0);
                     m_texture3D.Apply();
                     m_unloadModel.SetActive(false);
