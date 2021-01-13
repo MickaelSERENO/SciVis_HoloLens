@@ -4,6 +4,7 @@
 using Windows.Perception.Spatial;
 #endif
 
+using System.Collections;
 using Sereno.Datasets;
 using Sereno.Network;
 using Sereno.Network.MessageHandler;
@@ -553,7 +554,7 @@ namespace Sereno
         /// </summary>
         public int NBTabletPositionIgnored = 2;
         #endregion
-
+        
         void Awake()
         {
             m_appProperties = Properties.ParseProperties();
@@ -618,22 +619,66 @@ namespace Sereno
                 AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
                 addSDMsg.DatasetID = 0;
                 addSDMsg.SubDatasetID = 0;
-                addSDMsg.Name = "data";
+                addSDMsg.Name = m_datasets[0].PointFieldDescs[0].Name;
+                OnAddSubDataset(null, addSDMsg);
+                addSDMsg.SubDatasetID = 1;
+                addSDMsg.Name = $"{m_datasets[0].PointFieldDescs[0].Name}_bis";
                 OnAddSubDataset(null, addSDMsg);
 
-                /*MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
                 moveVTKMsg.SubDataID = 0;
-                moveVTKMsg.Position = new float[3] { 0.2f, 0.2f, 0.2f };
+                moveVTKMsg.Position = new float[3] { -0.30f, -0.75f, 1.5f };
                 moveVTKMsg.HeadsetID = -1;
-                OnMoveDataset(null, moveVTKMsg);*/
+                OnMoveDataset(null, moveVTKMsg);
+                moveVTKMsg.SubDataID = 1;
+                moveVTKMsg.Position = new float[3] { 0.30f, -0.75f, 1.5f };
+                OnMoveDataset(null, moveVTKMsg);
 
                 ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
                 scaleMsg.SubDataID = 0;
                 scaleMsg.HeadsetID = -1;
-                scaleMsg.Scale = new float[3] { 1.0f, 1.0f, 1.0f };
+                scaleMsg.Scale = new float[3] { 0.4f, 0.4f, 0.4f };
                 OnScaleDataset(null, scaleMsg);
+                scaleMsg.SubDataID = 1;
+                OnScaleDataset(null, scaleMsg);
+                
+                TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
+                tfMsgSD2.ColorType = ColorMode.WARM_COLD_CIELAB;
+                tfMsgSD2.DataID = 0;
+                tfMsgSD2.SubDataID = 1;
+                tfMsgSD2.TFID = TFType.TF_TRIANGULAR_GTF;
+                tfMsgSD2.GTFData = new TFSubDatasetMessage.GTF();
+                tfMsgSD2.GTFData.Props = new TFSubDatasetMessage.GTFProp[1];
+                tfMsgSD2.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 0.5f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.5f };
+                tfMsgSD2.Timestep = 0.0f;
+                tfMsgSD2.HeadsetID = -1;
+                OnTFDataset(null, tfMsgSD2);
+
+
+                //Simulate a time animation
+                TFSubDatasetMessage tfMsgSD1 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
+                tfMsgSD1.ColorType = ColorMode.WARM_COLD_CIELAB;
+                tfMsgSD1.DataID = 0;
+                tfMsgSD1.SubDataID = 0;
+                tfMsgSD1.TFID = TFType.TF_TRIANGULAR_GTF;
+                tfMsgSD1.GTFData = new TFSubDatasetMessage.GTF();
+                tfMsgSD1.GTFData.Props = new TFSubDatasetMessage.GTFProp[1];
+                tfMsgSD1.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 1.0f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.10f };
+                tfMsgSD1.Timestep = 0.0f;
+                tfMsgSD1.HeadsetID = -1;
+
+                Thread.Sleep(15000);
+                
+                while (true)
+                {
+                    if (m_datasets[0].PointFieldDescs[0].Value == null || tfMsgSD1.Timestep > m_datasets[0].PointFieldDescs[0].Value.Count)
+                        tfMsgSD1.Timestep = 0.0f;
+                    OnTFDataset(null, tfMsgSD1);
+                    tfMsgSD1.Timestep += 0.25f;
+                    Thread.Sleep(4500);
+                }
 
                 //Simulate a lasso input
                 /*CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);

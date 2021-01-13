@@ -326,11 +326,11 @@ namespace Sereno.Network.MessageHandler
         /// <summary>
         /// The Gaussian Transfer Function Data usable only if TFID == TF_GTF or TFID == TF_TRIANGULAR_GTF
         /// </summary>
-        public GTF GTFData { get => (GTF)m_tfData; }
+        public GTF GTFData { get => (GTF)m_tfData; set => m_tfData = value; }
 
         /// <summary>
         /// The Merge Transfer Function Data usable only if TFID == TF_MERGE
         /// </summary>
-        public MergeTF MergeTFData { get => (MergeTF)m_tfData; }
+        public MergeTF MergeTFData { get => (MergeTF)m_tfData; set => m_tfData = value; }
     }
 }
