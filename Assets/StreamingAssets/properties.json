@@ -19,7 +19,7 @@
     {
       "Name": "history.vtk",
       "RotateX": true,
-      "InverseX": false,
+      "InverseX": true,
       "MapProperties": {
         "TexturePath": "caboVerde",
         "Tiling": [  0.800, 1.29  ],

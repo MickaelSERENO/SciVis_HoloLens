@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sereno.Datasets.Annotation;
 using Sereno.SciVis;
 using UnityEngine;
 
@@ -61,17 +62,17 @@ namespace Sereno.Datasets
         void OnNameChange(SubDataset dataset, String name);
 
         /// <summary>
-        /// Called when a new annotation has been added
+        /// Called when a new canvas annotation has been added
         /// </summary>
         /// <param name="dataset">The dataset being modified</param>
         /// <param name="annot">The annotation local space</param>
-        void OnAddAnnotation(SubDataset dataset, Annotation annot);
+        void OnAddCanvasAnnotation(SubDataset dataset, CanvasAnnotation annot);
 
         /// <summary>
         /// Called when annotations are about to be cleaned
         /// </summary>
         /// <param name="dataset">The SubDataset being modified</param>
-        void OnClearAnnotations(SubDataset dataset);
+        void OnClearCanvasAnnotations(SubDataset dataset);
 
         /// <summary>
         /// Called when the map visibility for this situated subdataset has been changed
@@ -112,7 +113,7 @@ namespace Sereno.Datasets
         /// <summary>
         /// List of created annotations
         /// </summary>
-        protected List<Annotation> m_annotations = new List<Annotation>();
+        protected List<CanvasAnnotation> m_canvasAnnots = new List<CanvasAnnotation>();
         
         /// <summary>
         /// The Quaternion rotation
@@ -189,18 +190,22 @@ namespace Sereno.Datasets
             m_scale        = (float[])m_scale.Clone();
         }
 
-        public void AddAnnotation(Annotation annot)
+        /// <summary>
+        /// Register a new canvas annotation. The event 'OnAddCanvasAnnotation' shall be fired
+        /// </summary>
+        /// <param name="annot">The annotation to register</param>
+        public void AddCanvasAnnotation(CanvasAnnotation annot)
         {
-            m_annotations.Add(annot);
+            m_canvasAnnots.Add(annot);
             foreach (var l in m_listeners)
-                l.OnAddAnnotation(this, annot);
+                l.OnAddCanvasAnnotation(this, annot);
         }
 
         public void ClearAnnotations()
         {
             foreach (var l in m_listeners)
-                l.OnClearAnnotations(this);
-            m_annotations.Clear();
+                l.OnClearCanvasAnnotations(this);
+            m_canvasAnnots.Clear();
         }
 
 
@@ -419,11 +424,11 @@ namespace Sereno.Datasets
         }
 
         /// <summary>
-        /// The list of annotation. Please, do not modify the list (but list's items can)
+        /// The list of canvas annotations. Please, do not modify the list (but list's items can)
         /// </summary>
-        public List<Annotation> Annotations
+        public List<CanvasAnnotation> CanvasAnnotations
         {
-            get => m_annotations;
+            get => m_canvasAnnots;
         }
 
         /// <summary>

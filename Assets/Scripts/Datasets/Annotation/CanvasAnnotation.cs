@@ -1,9 +1,9 @@
-﻿namespace Sereno.Datasets
+﻿namespace Sereno.Datasets.Annotation
 {
     /// <summary>
-    /// Class representing an annotation.
+    /// Class representing a cavas annotation.
     /// </summary>
-    public class Annotation
+    public class CanvasAnnotation
     {
         /// <summary>
         /// The annotation position in the local subdataset space
@@ -14,7 +14,7 @@
         /// Constructor. Initialize an annotation
         /// </summary>
         /// <param name="localPosition">The annotation position in the SubDataset local space</param>
-        public Annotation(float[] localPosition)
+        public CanvasAnnotation(float[] localPosition)
         {
             LocalPosition = localPosition;
         }

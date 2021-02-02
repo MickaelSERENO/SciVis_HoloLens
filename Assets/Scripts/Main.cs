@@ -6,6 +6,7 @@ using Windows.Perception.Spatial;
 
 using System.Collections;
 using Sereno.Datasets;
+using Sereno.Datasets.Annotation;
 using Sereno.Network;
 using Sereno.Network.MessageHandler;
 using Sereno.Pointing;
@@ -676,7 +677,7 @@ namespace Sereno
                     if (m_datasets[0].PointFieldDescs[0].Value == null || tfMsgSD1.Timestep > m_datasets[0].PointFieldDescs[0].Value.Count)
                         tfMsgSD1.Timestep = 0.0f;
                     OnTFDataset(null, tfMsgSD1);
-                    tfMsgSD1.Timestep += 0.25f;
+                    tfMsgSD1.Timestep += 0.10f;
                     Thread.Sleep(500);
                 }
 
@@ -1748,7 +1749,7 @@ namespace Sereno
             {
                 SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
                 if(sd != null)
-                    sd.AddAnnotation(new Annotation(msg.LocalPosition));
+                    sd.AddCanvasAnnotation(new CanvasAnnotation(msg.LocalPosition));
             }
         }
 

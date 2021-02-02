@@ -8,6 +8,7 @@ using Sereno.SciVis;
 using System.Threading.Tasks;
 using Unity.Burst;
 using System.Threading;
+using Sereno.Datasets.Annotation;
 
 namespace Sereno.SciVis
 {
@@ -261,9 +262,9 @@ namespace Sereno.SciVis
             UpdateTF();
         }
 
-        public void OnAddAnnotation(SubDataset dataset, Annotation annot){}
+        public void OnAddCanvasAnnotation(SubDataset dataset, CanvasAnnotation annot){}
 
-        public void OnClearAnnotations(SubDataset dataset){}
+        public void OnClearCanvasAnnotations(SubDataset dataset){}
         
         public void OnToggleMapVisibility(SubDataset dataset, bool visibility)
         {}

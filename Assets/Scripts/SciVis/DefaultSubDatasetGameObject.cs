@@ -1,4 +1,5 @@
 ﻿using Sereno.Datasets;
+using Sereno.Datasets.Annotation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -138,12 +139,12 @@ namespace Sereno.SciVis
         /// <summary>
         /// List of annotation where a GameObject is needed to be created
         /// </summary>
-        private List<Annotation> m_annotationGOsInRemoving = new List<Annotation>();
+        private List<CanvasAnnotation> m_annotationGOsInRemoving = new List<CanvasAnnotation>();
 
         /// <summary>
         /// List of annotation where a GameObject is needed to be created
         /// </summary>
-        private List<Annotation> m_annotationGOsInCreation = new List<Annotation>();
+        private List<CanvasAnnotation> m_annotationGOsInCreation = new List<CanvasAnnotation>();
 
         /// <summary>
         /// The instantiate map texture gameobject
@@ -268,7 +269,7 @@ namespace Sereno.SciVis
         {
         }
 
-        public void OnAddAnnotation(SubDataset dataset, Annotation annot)
+        public void OnAddCanvasAnnotation(SubDataset dataset, CanvasAnnotation annot)
         {
             lock(this)
             {
@@ -276,11 +277,11 @@ namespace Sereno.SciVis
             }
         }
 
-        public void OnClearAnnotations(SubDataset dataset)
+        public void OnClearCanvasAnnotations(SubDataset dataset)
         {
             lock(this)
             {
-                foreach (Annotation annot in dataset.Annotations)
+                foreach (CanvasAnnotation annot in dataset.CanvasAnnotations)
                     m_annotationGOsInRemoving.Add(annot);
             }
         }
@@ -366,7 +367,7 @@ namespace Sereno.SciVis
                         m_annotationGOs.Clear();
 
                         //Create every Annotations
-                        foreach(Annotation annot in m_sd.Annotations)
+                        foreach(CanvasAnnotation annot in m_sd.CanvasAnnotations)
                             CreateAnnotationGO(annot);
 
                         m_sdChanged = false;
@@ -375,13 +376,13 @@ namespace Sereno.SciVis
                     else
                     {
                         //Create annotation game object received asynchronously
-                        foreach (Annotation annot in m_annotationGOsInCreation)
+                        foreach (CanvasAnnotation annot in m_annotationGOsInCreation)
                             CreateAnnotationGO(annot);
 
                         m_annotationGOsInCreation.Clear();
 
                         //Delete annotation game object received asynchronously
-                        foreach (Annotation annot in m_annotationGOsInRemoving)
+                        foreach (CanvasAnnotation annot in m_annotationGOsInRemoving)
                         {
                             for (int i = 0; i < m_annotationGOs.Count; i++)
                             {
@@ -418,7 +419,7 @@ namespace Sereno.SciVis
         /// Create an annotation GameObject
         /// </summary>
         /// <param name="annot">The annotation model data</param>
-        private void CreateAnnotationGO(Annotation annot)
+        private void CreateAnnotationGO(CanvasAnnotation annot)
         {
             bool found = false;
             foreach(AnnotationGameObject go in m_annotationGOs)

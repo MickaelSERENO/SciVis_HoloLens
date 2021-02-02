@@ -1,4 +1,5 @@
 ﻿using Sereno.Datasets;
+using Sereno.Datasets.Annotation;
 using System;
 using UnityEngine;
 
@@ -6,9 +7,9 @@ namespace Sereno.SciVis
 {
     public class AnnotationGameObject : MonoBehaviour
     {
-        private Annotation m_annot = null;
+        private CanvasAnnotation m_annot = null;
 
-        public virtual void Init(Annotation annot)
+        public virtual void Init(CanvasAnnotation annot)
         {
             Annotation = annot;
             transform.localPosition = new Vector3(annot.LocalPosition[0],
@@ -26,7 +27,7 @@ namespace Sereno.SciVis
             
         }
 
-        public Annotation Annotation
+        public CanvasAnnotation Annotation
         {
             get => m_annot;
             set
