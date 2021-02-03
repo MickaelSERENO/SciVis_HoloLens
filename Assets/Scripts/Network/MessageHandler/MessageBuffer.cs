@@ -1,5 +1,3 @@
-using System.ComponentModel;
-using System.IO;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -192,6 +190,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnSubDatasetVolumetricMask(MessageBuffer messageBuffer, SubDatasetVolumetricMaskMessage msg);
+
+        /// <summary>
+        /// Function called to add a log annotation
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnAddLogAnnotation(MessageBuffer messageBuffer, AddLogAnnotationMessage msg);
     }
 
     /// <summary>
@@ -428,6 +433,10 @@ namespace Sereno.Network.MessageHandler
                             foreach (var l in m_listeners)
                                 l.OnSubDatasetVolumetricMask(this, (SubDatasetVolumetricMaskMessage)m_msg);
                             break;
+                        case ServerType.GET_ADD_LOG_ANNOTATION:
+                            foreach (var l in m_listeners)
+                                l.OnAddLogAnnotation(this, (AddLogAnnotationMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -657,6 +666,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_SUBDATASET_VOLUMETRIC_MASK:
                     m_msg = new SubDatasetVolumetricMaskMessage(ServerType.GET_SUBDATASET_VOLUMETRIC_MASK);
+                    break;
+                case ServerType.GET_ADD_LOG_ANNOTATION:
+                    m_msg = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
                     break;
             }
         }

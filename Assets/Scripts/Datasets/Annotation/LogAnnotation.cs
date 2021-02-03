@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,7 @@ namespace Sereno.Datasets.Annotation
     /// <summary>
     /// Represent a row in a log annotation object
     /// </summary>
-    class LogEntry : IEnumerable<string>
+    public class LogEntry : IEnumerable<string>
     {
         /// <summary>
         /// The stored values
@@ -102,16 +103,27 @@ namespace Sereno.Datasets.Annotation
         {
             get => m_headers != null;
         }
+
+        /// <summary>
+        /// Data representing the stored row 
+        /// </summary>
+        public List<String> Data
+        {
+            get => m_values;
+        }
     }
 
-    class LogAnnotation : IEnumerable<LogEntry>
+    /// <summary>
+    /// Basic class storing annotations from log. This has to be combined with AnnotationPosition for example to be useful
+    /// </summary>
+    public class LogAnnotation : IEnumerable<LogEntry>
     {
-        private bool           m_hasHeader;
-        private List<String>   m_headers = new List<string>();
-        private List<LogEntry> m_values  = new List<LogEntry>();
-        private int            m_timeIdx = -1;
-        private bool m_hasRead = false;
-
+        /// <summary>
+        /// Try to find the column indice corresponding to the header h
+        /// </summary>
+        /// <param name="headers">The list of headers to look on</param>
+        /// <param name="h">h the header to look after</param>
+        /// <returns> -1 if not found, the indice of the "h" value in "headers" otherwise</returns>
         public static int IndiceFromHeader(List<String> headers, String h)
         {
             if (headers == null)
@@ -123,18 +135,60 @@ namespace Sereno.Datasets.Annotation
             return -1;
         }
 
+        /// <summary>
+        /// Is this data associated to a header?
+        /// </summary>
+        private bool           m_hasHeader;
+
+        /// <summary>
+        /// The list of available headers
+        /// </summary>
+        private List<String>   m_headers = new List<string>();
+
+        /// <summary>
+        /// All the rows read from streams
+        /// </summary>
+        private List<LogEntry> m_values  = new List<LogEntry>();
+
+        /// <summary>
+        /// The column indice containing time values
+        /// </summary>
+        private int            m_timeIdx = -1;
+
+        /// <summary>
+        /// Has this log being read?
+        /// </summary>
+        private bool m_hasRead = false;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="header"></param>
         public LogAnnotation(bool header=true)
         {
             m_hasHeader = header;
         }
 
+        /// <summary>
+        /// Access the x-th row
+        /// </summary>
+        /// <value> a LogEntry representing the x-th row</value>
         public LogEntry this[int x]
         {
             get => m_values[x];
         }
 
+        /// <summary>
+        /// Function that can be override. This function is called after a stream has been successfully parsed
+        /// </summary>
         protected virtual void OnParsed() { }
 
+        /// <summary>
+        /// Initialize the logs from a csv file
+        /// </summary>
+        /// <param name="reader">The stream to read from</param>
+        /// <param name="separator">The CSV separator to use</param>
+        /// <returns>true if success, false otherwise. A message is printed in Error in case of errors</returns>
         public bool ReadFromCSV(StreamReader reader, char separator=',')
         {
             int size = -1;
@@ -176,11 +230,21 @@ namespace Sereno.Datasets.Annotation
             return true;
         }
                 
+        /// <summary>
+        /// Is a header available?
+        /// </summary>
+        /// <param name="s">The header to evaluate</param>
+        /// <returns>True if 's' is a header column of this object, false otherwise</returns>
         public bool HasStringHeader(String s)
         {
             return HasHeader && m_headers.Contains(s);
         }
 
+        /// <summary>
+        /// Try to find the column indice corresponding to the header h
+        /// </summary>
+        /// <param name="h">the header to look after</param>
+        /// <returns>-1 if not found, the indice of the "h" values otherwise</returns>
         public int IndiceFromHeader(String h)
         {
             return LogAnnotation.IndiceFromHeader(m_headers, h);
@@ -196,29 +260,44 @@ namespace Sereno.Datasets.Annotation
             return GetEnumerator();
         }
 
+        /// <summary>
+        /// The number of available rows
+        /// </summary>
         public int NbRows
         {
             get => m_values.Count;
         }
         
+        /// <summary>
+        /// The number of available columns
+        /// </summary>
         public int NbColumns
         {
             get => (m_values.Count > 0 ? m_values[0].Count : 0);
         }
 
+        /// <summary>
+        /// Has this log headers?
+        /// </summary>
         public bool HasHeader
         {
             get => m_hasHeader;
         }
 
+        /// <summary>
+        /// What are the headers available on this object?
+        /// </summary>
         public List<String> Headers
         {
             get => m_headers;
         }
 
-        protected virtual void OnSetTimeIdx() {}
-
-        public bool SetTimeIdx(int timeCol)
+        /// <summary>
+        /// Set the column indice where time is expected. Negative values == no expected time
+        /// </summary>
+        /// <param name="timeCol">the time column indice. Negatif values for no expected time</param>
+        /// <returns>return false in case of an invalid time column: No values were entered (and timeCol is positive), or timeCol is outside the number of columns of this annotation.</returns>
+        public virtual bool SetTimeIdx(int timeCol)
         {
             if(timeCol < 0)
             {
@@ -247,10 +326,14 @@ namespace Sereno.Datasets.Annotation
                     m_timeIdx = timeCol;
             }
 
-            OnSetTimeIdx();
             return true;
         }
 
+        /// <summary>
+        /// Set the time header based on the column header name. 
+        /// </summary>
+        /// <param name="timeHeader">The headers to evaluate</param>
+        /// <returns>false if the header is not valid, true otherwise</returns>
         public bool SetTimeIdx(String timeHeader)
         {
             if(!m_hasRead || !m_hasHeader)
@@ -263,21 +346,38 @@ namespace Sereno.Datasets.Annotation
             return SetTimeIdx(timeCol);
         }
 
+        /// <summary>
+        /// The column index representing time values
+        /// </summary>
         public int TimeIdx
         {
             get => m_timeIdx;
             set => SetTimeIdx(value);
         }
 
-        public IEnumerator<float> TimeValues
+        /// <summary>
+        /// The time values
+        /// </summary>
+        public IEnumerable<float> TimeValues
         {
             get
             {
                 if(m_timeIdx < 0)
                     yield break;
 
+                var nf = CultureInfo.InvariantCulture.NumberFormat;
+
                 foreach (LogEntry l in this)
-                    yield return float.Parse(l[m_timeIdx]);
+                {
+                    float f = 0.0f;
+                    try
+                    {
+                        f = float.Parse(l[m_timeIdx], nf);
+                    }
+                    catch(Exception){}
+                    yield return f;
+                }
+
             }
         }
     }

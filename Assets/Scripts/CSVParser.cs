@@ -134,7 +134,7 @@ namespace Sereno
         /// </summary>
         public List<String> Data
         {
-            get => Data;
+            get => m_data;
         }
     }
 

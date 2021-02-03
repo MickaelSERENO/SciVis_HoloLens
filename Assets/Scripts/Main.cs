@@ -4,7 +4,6 @@
 using Windows.Perception.Spatial;
 #endif
 
-using System.Collections;
 using Sereno.Datasets;
 using Sereno.Datasets.Annotation;
 using Sereno.Network;
@@ -18,13 +17,12 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.XR.WSA.Sharing;
-using UnityEngine.XR;
 using System.IO;
+using System.Globalization;
 
 namespace Sereno
 {
@@ -239,6 +237,8 @@ namespace Sereno
         /// The Dataset currently parsed. The key represents the datase ID
         /// </summary>
         private Dictionary<Int32, Dataset> m_datasets = new Dictionary<Int32, Dataset>();
+
+        private Dictionary<Int32, LogAnnotationContainer> m_logAnnotations = new Dictionary<Int32, LogAnnotationContainer>();
 
         /// <summary>
         /// The VTK Structured Grid information shared by all SubDataset for a given VTK dataset
@@ -644,6 +644,12 @@ namespace Sereno
                 OnScaleDataset(null, scaleMsg);
                 scaleMsg.SubDataID = 1;
                 OnScaleDataset(null, scaleMsg);
+
+                AddLogAnnotationMessage logAnnot = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
+                logAnnot.HasHeader = true;
+                logAnnot.FileName  = "history-20191122.csv";
+                logAnnot.TimeIdx   = 2;
+                OnAddLogAnnotation(null, logAnnot);
                 
                 TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD2.ColorType = ColorMode.WARM_COLD_CIELAB;
@@ -1396,7 +1402,7 @@ namespace Sereno
             Debug.Log($"Opening VTK Dataset ID {msg.DataID}, path {msg.Path}");
 
             //Open the parser
-            VTKParser  parser   = new VTKParser($"{Application.streamingAssetsPath}/{msg.Path}");
+            VTKParser  parser   = new VTKParser($"{Application.streamingAssetsPath}/Datasets/{msg.Path}");
             parser.Parse();
 
             var ptDescriptors   = parser.GetPointFieldValueDescriptors();
@@ -2037,6 +2043,12 @@ namespace Sereno
                     sd.SetVolumetricMask(msg.Mask, msg.IsEnabled);
                 }
             }
+        }
+        
+        public void OnAddLogAnnotation(MessageBuffer messageBuffer, AddLogAnnotationMessage msg)
+        {
+            LogAnnotationContainer container = new LogAnnotationContainer($"{Application.streamingAssetsPath}/Logs/{msg.FileName}", msg.HasHeader);
+            container.SetTimeIdx(msg.TimeIdx);
         }
 
         #endregion

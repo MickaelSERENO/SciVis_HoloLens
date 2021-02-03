@@ -82,9 +82,22 @@ namespace Sereno
         public static bool operator!=(VTKStructuredPoints p1, VTKStructuredPoints p2)
         {
             return !(p1 == p2);
-        }
-	};
+        }     
 
+        public override bool Equals(object obj)
+        {
+            return obj is VTKStructuredPoints points && this == points;
+        }
+
+        public override int GetHashCode()
+        {
+            int hashCode = -299769095;
+            hashCode = hashCode * -1521134295 + EqualityComparer<uint[]>.Default.GetHashCode(Size);
+            hashCode = hashCode * -1521134295 + EqualityComparer<double[]>.Default.GetHashCode(Spacing);
+            hashCode = hashCode * -1521134295 + EqualityComparer<double[]>.Default.GetHashCode(Origin);
+            return hashCode;
+        }
+	}
 
 	/// <summary>
 	/// VTK cell construction structure. It contains meta data about cell construction (buffer size, etc.).
@@ -358,12 +371,31 @@ namespace Sereno
         public FieldValueMetaData()
         { }
 
+        /// <summary>
+        /// Copy constructor
+        /// </summary>
+        /// <param name="cpy">The parameter to copy</param>
         public FieldValueMetaData(FieldValueMetaData cpy)
         {
             Name     = (String)cpy.Name.Clone();
             Format   = cpy.Format;
             NbTuples = cpy.NbTuples;
             NbValuesPerTuple = cpy.NbValuesPerTuple;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is FieldValueMetaData data && data == this;
+        }
+
+        public override int GetHashCode()
+        {
+            int hashCode = -855528038;
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Name);
+            hashCode = hashCode * -1521134295 + Format.GetHashCode();
+            hashCode = hashCode * -1521134295 + NbTuples.GetHashCode();
+            hashCode = hashCode * -1521134295 + NbValuesPerTuple.GetHashCode();
+            return hashCode;
         }
 
         public static bool operator==(FieldValueMetaData p1, FieldValueMetaData p2)

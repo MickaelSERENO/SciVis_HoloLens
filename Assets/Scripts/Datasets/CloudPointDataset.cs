@@ -23,7 +23,7 @@ namespace Sereno.Datasets
         {
             m_path = path;
 
-            using(FileStream file = File.Open($"{Application.streamingAssetsPath}/{name}", FileMode.Open, FileAccess.Read))
+            using(FileStream file = File.Open($"{Application.streamingAssetsPath}/Datasets/{name}", FileMode.Open, FileAccess.Read))
             {
                 if (file == null)
                 {
