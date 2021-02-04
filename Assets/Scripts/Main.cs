@@ -1764,7 +1764,7 @@ namespace Sereno
             SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
 
             if(sd != null)
-                sd.ClearAnnotations();
+                sd.ClearCanvasAnnotations();
         }
 
         public void OnAddSubDataset(MessageBuffer messageBuffer, AddSubDatasetMessage msg)
@@ -2049,7 +2049,49 @@ namespace Sereno
         {
             LogAnnotationContainer container = new LogAnnotationContainer($"{Application.streamingAssetsPath}/Logs/{msg.FileName}", msg.HasHeader);
             container.SetTimeIdx(msg.TimeIdx);
+            m_logAnnotations.Add(msg.LogID, container);
         }
+
+        public void OnAddLogAnnotationPosition(MessageBuffer message, AddLogAnnotationPositionMessage msg)
+        {
+            LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
+            if(annot != null)
+            {
+                LogAnnotationPosition pos = annot.BuildAnnotationPositionView();
+                pos.SetXYZIndices(msg.Indexes[0], msg.Indexes[1], msg.Indexes[2]);
+                annot.ParseAnnotationPosition(pos);
+                pos.ID = msg.CompID;
+            }
+        }
+
+        public void OnSetLogAnnotationPositionIndexes(MessageBuffer message, SetLogAnnotationPositionIndexesMessage msg)
+        {
+            LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
+            if(annot != null)
+            {
+                LogAnnotationPosition pos = annot.LogAnnotationPositions.Keys.FirstOrDefault((p) => p.ID == msg.CompID);
+                if(pos != null)
+                    pos.SetXYZIndices(msg.Indexes[0], msg.Indexes[1], msg.Indexes[2]);
+            }
+        }
+
+        public void OnLinkLogAnnotationPositionSubDataset(MessageBuffer message, LinkLogAnnotationPositionSubDatasetMessage msg)
+        {
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            if(sd != null)
+                return;
+
+            LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
+            if(annot == null)
+                return;
+            
+            LogAnnotationPosition pos = annot.LogAnnotationPositions.Keys.FirstOrDefault((p) => p.ID == msg.CompID);
+            if(pos == null)
+                return;
+                
+            sd.AddLogAnnotationPosition(new LogAnnotationPositionInstance(annot, pos));
+        }
+
 
         #endregion
 
@@ -2251,6 +2293,9 @@ namespace Sereno
 
                     //Selection
                     ClearSelectionData();
+
+                    //Annotation logs
+                    m_logAnnotations.Clear();
 
                     m_currentAction = HeadsetCurrentAction.NOTHING; //Reset the current action
                 }

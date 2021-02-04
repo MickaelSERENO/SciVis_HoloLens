@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Sereno.SciVis
 {
-    public class AnnotationGameObject : MonoBehaviour
+    public class CanvasAnnotationGameObject : MonoBehaviour
     {
         private CanvasAnnotation m_annot = null;
 

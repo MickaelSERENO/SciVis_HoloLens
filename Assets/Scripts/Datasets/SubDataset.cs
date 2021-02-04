@@ -69,6 +69,13 @@ namespace Sereno.Datasets
         void OnAddCanvasAnnotation(SubDataset dataset, CanvasAnnotation annot);
 
         /// <summary>
+        /// Called when a new log annotation position component has been added
+        /// </summary>
+        /// <param name="dataset">The dataset being modified</param>
+        /// <param name="annot">The annotation</param>
+        void OnAddLogAnnotationPosition(SubDataset dataset, LogAnnotationPositionInstance annot);
+
+        /// <summary>
         /// Called when annotations are about to be cleaned
         /// </summary>
         /// <param name="dataset">The SubDataset being modified</param>
@@ -114,7 +121,12 @@ namespace Sereno.Datasets
         /// List of created annotations
         /// </summary>
         protected List<CanvasAnnotation> m_canvasAnnots = new List<CanvasAnnotation>();
-        
+
+        /// <summary>
+        /// List of create annotations to visualize positions
+        /// </summary>
+        protected List<LogAnnotationPositionInstance> m_logAnnotPositions = new List<LogAnnotationPositionInstance>();
+
         /// <summary>
         /// The Quaternion rotation
         /// 0 -> W, 1 -> i, 2 -> j, 3 -> k
@@ -201,7 +213,22 @@ namespace Sereno.Datasets
                 l.OnAddCanvasAnnotation(this, annot);
         }
 
-        public void ClearAnnotations()
+
+        /// <summary>
+        /// Register a new LogAnnotationPositionInstance. The event 'OnAddLogAnnotationPosition' shall be fired
+        /// </summary>
+        /// <param name="pos">The annotation to register</param>
+        public void AddLogAnnotationPosition(LogAnnotationPositionInstance pos)
+        {
+            m_logAnnotPositions.Add(pos);
+            foreach(var l in m_listeners)
+                l.OnAddLogAnnotationPosition(this, pos);
+        }
+
+        /// <summary>
+        /// Clear (remove) all canvas annotations
+        /// </summary>
+        public void ClearCanvasAnnotations()
         {
             foreach (var l in m_listeners)
                 l.OnClearCanvasAnnotations(this);
@@ -429,6 +456,14 @@ namespace Sereno.Datasets
         public List<CanvasAnnotation> CanvasAnnotations
         {
             get => m_canvasAnnots;
+        }
+
+        /// <summary>
+        /// The list of log annotation position. Please, do not modify the list (but list's items can)
+        /// </summary>
+        public List<LogAnnotationPositionInstance> LogAnnotationPositions
+        {
+            get => m_logAnnotPositions;
         }
 
         /// <summary>

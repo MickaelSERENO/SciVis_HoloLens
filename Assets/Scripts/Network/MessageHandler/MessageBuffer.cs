@@ -197,6 +197,27 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnAddLogAnnotation(MessageBuffer messageBuffer, AddLogAnnotationMessage msg);
+
+        /// <summary>
+        /// Function called to register a new log annotation position component
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnAddLogAnnotationPosition(MessageBuffer message, AddLogAnnotationPositionMessage msg);
+
+        /// <summary>
+        /// Function called to set an already-registered log annotation position headers
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnSetLogAnnotationPositionIndexes(MessageBuffer message, SetLogAnnotationPositionIndexesMessage msg);
+
+        /// <summary>
+        /// Function called to link a subdataset object to a log annotation position component
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnLinkLogAnnotationPositionSubDataset(MessageBuffer message, LinkLogAnnotationPositionSubDatasetMessage msg);
     }
 
     /// <summary>
@@ -437,6 +458,18 @@ namespace Sereno.Network.MessageHandler
                             foreach (var l in m_listeners)
                                 l.OnAddLogAnnotation(this, (AddLogAnnotationMessage)m_msg);
                             break;
+                        case ServerType.GET_ADD_LOG_ANNOTATION_POSITION:
+                            foreach(var l in m_listeners)
+                                l.OnAddLogAnnotationPosition(this, (AddLogAnnotationPositionMessage)m_msg);
+                            break;
+                        case ServerType.GET_SET_LOG_ANNOTATION_POSITION_INDEXES:
+                            foreach(var l in m_listeners)
+                                l.OnSetLogAnnotationPositionIndexes(this, (SetLogAnnotationPositionIndexesMessage)m_msg);
+                            break;
+                        case ServerType.GET_LINK_LOG_ANNOT_POS_SD:
+                            foreach(var l in m_listeners)
+                                l.OnLinkLogAnnotationPositionSubDataset(this, (LinkLogAnnotationPositionSubDatasetMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -669,6 +702,15 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_ADD_LOG_ANNOTATION:
                     m_msg = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
+                    break;
+                case ServerType.GET_ADD_LOG_ANNOTATION_POSITION:
+                    m_msg = new AddLogAnnotationPositionMessage(ServerType.GET_ADD_LOG_ANNOTATION_POSITION);
+                    break;
+                case ServerType.GET_SET_LOG_ANNOTATION_POSITION_INDEXES:
+                    m_msg = new SetLogAnnotationPositionIndexesMessage(ServerType.GET_SET_LOG_ANNOTATION_POSITION_INDEXES);
+                    break;
+                case ServerType.GET_LINK_LOG_ANNOT_POS_SD:
+                    m_msg = new LinkLogAnnotationPositionSubDatasetMessage(ServerType.GET_LINK_LOG_ANNOT_POS_SD);
                     break;
             }
         }

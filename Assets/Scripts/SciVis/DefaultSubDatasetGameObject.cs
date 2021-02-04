@@ -1,5 +1,6 @@
 ﻿using Sereno.Datasets;
 using Sereno.Datasets.Annotation;
+using Sereno.DataVis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,9 +33,14 @@ namespace Sereno.SciVis
         public Color ColorOnTargetPointingIT = new Color(1.0f, 1.0f, 1.0f);
 
         /// <summary>
-        /// the annotation prefab to use
+        /// the canvas annotation prefab to use
         /// </summary>
-        public AnnotationGameObject AnnotationPrefab = null;
+        public CanvasAnnotationGameObject CanvasAnnotationPrefab = null;
+
+        /// <summary>
+        /// the log annotation position prefab to use
+        /// </summary>
+        public LogAnnotationPositionGameObject LogAnnotationPositionPrefab = null;
 
         /// <summary>
         /// The Miniature prefab
@@ -127,9 +133,9 @@ namespace Sereno.SciVis
         protected bool m_sdChanged = false;
 
         /// <summary>
-        /// List of annotations game object created
+        /// List of canvas annotations game object created
         /// </summary>
-        protected List<AnnotationGameObject> m_annotationGOs = new List<AnnotationGameObject>();
+        protected List<CanvasAnnotationGameObject> m_canvasAnnotationGOs = new List<CanvasAnnotationGameObject>();
 
         /// <summary>
         /// The matrix local to World of this GameObject
@@ -137,14 +143,30 @@ namespace Sereno.SciVis
         private Matrix4x4 m_localToWorldMatrix = Matrix4x4.identity;
 
         /// <summary>
-        /// List of annotation where a GameObject is needed to be created
+        /// List of canvas annotation where a GameObject is needed to be created
         /// </summary>
-        private List<CanvasAnnotation> m_annotationGOsInRemoving = new List<CanvasAnnotation>();
+        private List<CanvasAnnotation> m_canvasAnnotationGOsInRemoving = new List<CanvasAnnotation>();
 
         /// <summary>
-        /// List of annotation where a GameObject is needed to be created
+        /// List of canvas annotation where a GameObject is needed to be created
         /// </summary>
-        private List<CanvasAnnotation> m_annotationGOsInCreation = new List<CanvasAnnotation>();
+        private List<CanvasAnnotation> m_canvasAnnotationGOsInCreation = new List<CanvasAnnotation>();
+
+        
+        /// <summary>
+        /// List of log annotation positions component game objects created
+        /// </summary>
+        protected List<LogAnnotationPositionGameObject> m_annotationPositionsGOs = new List<LogAnnotationPositionGameObject>();
+
+        /// <summary>
+        /// List of log annotation positions components where a GameObject is needed to be created
+        /// </summary>
+        private List<LogAnnotationPositionInstance> m_annotationPositionsGOsInRemoving = new List<LogAnnotationPositionInstance>();
+
+        /// <summary>
+        /// List of log annotation positions components where a GameObject is needed to be created
+        /// </summary>
+        private List<LogAnnotationPositionInstance> m_annotationPositionsGOsInCreation = new List<LogAnnotationPositionInstance>();
 
         /// <summary>
         /// The instantiate map texture gameobject
@@ -273,7 +295,7 @@ namespace Sereno.SciVis
         {
             lock(this)
             {
-                m_annotationGOsInCreation.Add(annot);
+                m_canvasAnnotationGOsInCreation.Add(annot);
             }
         }
 
@@ -282,7 +304,7 @@ namespace Sereno.SciVis
             lock(this)
             {
                 foreach (CanvasAnnotation annot in dataset.CanvasAnnotations)
-                    m_annotationGOsInRemoving.Add(annot);
+                    m_canvasAnnotationGOsInRemoving.Add(annot);
             }
         }
 
@@ -301,7 +323,7 @@ namespace Sereno.SciVis
             Destroy(m_outline);
             if(!m_isMiniature)
             {
-                foreach (var annot in m_annotationGOs)
+                foreach (var annot in m_canvasAnnotationGOs)
                     Destroy(annot.gameObject);
             }
         }
@@ -362,39 +384,60 @@ namespace Sereno.SciVis
                     if(m_sdChanged)
                     {
                         //Destroy every annotation GO
-                        foreach (AnnotationGameObject go in m_annotationGOs)
+                        foreach (CanvasAnnotationGameObject go in m_canvasAnnotationGOs)
                             Destroy(go.gameObject);
-                        m_annotationGOs.Clear();
+                        m_canvasAnnotationGOs.Clear();
+                        foreach(LogAnnotationPositionGameObject go in m_annotationPositionsGOs)
+                            Destroy(go.gameObject);
+                        m_annotationPositionsGOs.Clear();
 
                         //Create every Annotations
                         foreach(CanvasAnnotation annot in m_sd.CanvasAnnotations)
-                            CreateAnnotationGO(annot);
+                            CreateCanvasAnnotationGO(annot);
+                        foreach(LogAnnotationPositionInstance annot in m_sd.LogAnnotationPositions)
+                            CreateLogAnnotationPositionGO(annot);
 
                         m_sdChanged = false;
-                        m_annotationGOsInCreation.Clear();
+                        m_canvasAnnotationGOsInCreation.Clear();
                     }
                     else
                     {
                         //Create annotation game object received asynchronously
-                        foreach (CanvasAnnotation annot in m_annotationGOsInCreation)
-                            CreateAnnotationGO(annot);
-
-                        m_annotationGOsInCreation.Clear();
+                        foreach (CanvasAnnotation annot in m_canvasAnnotationGOsInCreation)
+                            CreateCanvasAnnotationGO(annot);
+                        m_canvasAnnotationGOsInCreation.Clear();
+                        foreach(LogAnnotationPositionInstance annot in m_annotationPositionsGOsInCreation)
+                            CreateLogAnnotationPositionGO(annot);
 
                         //Delete annotation game object received asynchronously
-                        foreach (CanvasAnnotation annot in m_annotationGOsInRemoving)
+                        foreach (CanvasAnnotation annot in m_canvasAnnotationGOsInRemoving)
                         {
-                            for (int i = 0; i < m_annotationGOs.Count; i++)
+                            for (int i = 0; i < m_canvasAnnotationGOs.Count; i++)
                             {
-                                if(m_annotationGOs[i].Annotation == annot)
+                                if(m_canvasAnnotationGOs[i].Annotation == annot)
                                 {
-                                    Destroy(m_annotationGOs[i].gameObject);
-                                    m_annotationGOs.RemoveAt(i);
+                                    Destroy(m_canvasAnnotationGOs[i].gameObject);
+                                    m_canvasAnnotationGOs.RemoveAt(i);
                                     break;
                                 }
                             }
                         }
-                        m_annotationGOsInRemoving.Clear();
+                        m_canvasAnnotationGOsInRemoving.Clear();
+
+                        foreach(LogAnnotationPositionInstance annot in m_annotationPositionsGOsInRemoving)
+                        {
+                            for(int i = 0; i < m_annotationPositionsGOs.Count; i++)
+                            {
+                                if(m_annotationPositionsGOs[i].Component == annot)
+                                {
+                                    Destroy(m_annotationPositionsGOs[i].gameObject);
+                                    m_annotationPositionsGOs.RemoveAt(i);
+                                    break;
+                                }
+                            }
+                        }
+                        m_annotationPositionsGOsInRemoving.Clear();
+
                     }
                 }
 
@@ -416,13 +459,13 @@ namespace Sereno.SciVis
         }
 
         /// <summary>
-        /// Create an annotation GameObject
+        /// Create a canvas annotation GameObject
         /// </summary>
         /// <param name="annot">The annotation model data</param>
-        private void CreateAnnotationGO(CanvasAnnotation annot)
+        private void CreateCanvasAnnotationGO(CanvasAnnotation annot)
         {
             bool found = false;
-            foreach(AnnotationGameObject go in m_annotationGOs)
+            foreach(CanvasAnnotationGameObject go in m_canvasAnnotationGOs)
             {
                 if(go.Annotation == annot)
                 {
@@ -433,10 +476,35 @@ namespace Sereno.SciVis
 
             if (!found)
             {
-                AnnotationGameObject go = Instantiate(AnnotationPrefab);
+                CanvasAnnotationGameObject go = Instantiate(CanvasAnnotationPrefab);
                 go.transform.SetParent(transform, false);
                 go.Init(annot);
-                m_annotationGOs.Add(go);
+                m_canvasAnnotationGOs.Add(go);
+            }
+        }
+
+        /// <summary>
+        /// Create a log annotation position GameObject
+        /// </summary>
+        /// <param name="annot">The annotation model data</param>
+        private void CreateLogAnnotationPositionGO(LogAnnotationPositionInstance annot)
+        {
+            bool found = false;
+            foreach(LogAnnotationPositionGameObject go in m_annotationPositionsGOs)
+            {
+                if(go.Component == annot)
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                LogAnnotationPositionGameObject go = Instantiate(LogAnnotationPositionPrefab);
+                go.transform.SetParent(transform, false);
+                go.Init(annot);
+                m_annotationPositionsGOs.Add(go);
             }
         }
 
@@ -445,6 +513,14 @@ namespace Sereno.SciVis
 
         public virtual void OnChangeVolumetricMask(SubDataset dataset)
         {}
+
+        public void OnAddLogAnnotationPosition(SubDataset dataset, LogAnnotationPositionInstance annot)
+        {
+            lock(this)
+            {
+                m_annotationPositionsGOsInCreation.Add(annot);
+            }
+        }
 
         /// <summary>
         /// Is this GameObject targeted?

@@ -835,8 +835,9 @@ MonoBehaviour:
   NameUI: {fileID: 5561796694246222822}
   NameUIPivot: {fileID: 2202207265666950382}
   ColorOnTargetPointingIT: {r: 1, g: 1, b: 1, a: 1}
-  AnnotationPrefab: {fileID: 7564776657790048829, guid: 99e5be874ec5d1b408d60a1be29b157d,
+  CanvasAnnotationPrefab: {fileID: 7564776657790048829, guid: 99e5be874ec5d1b408d60a1be29b157d,
     type: 3}
+  LogAnnotationPositionPrefab: {fileID: 0}
   DefaultMiniaturePrefab: {fileID: 5339560771976640971}
   MapTextureGameObject: {fileID: 1940345517537522273, guid: 40583c425cff9e84d8cf3f0d797de5dd,
     type: 3}

@@ -32,6 +32,11 @@ namespace Sereno.Datasets.Annotation
         protected List<ILogAnnotationComponentListener> m_listeners;
 
         /// <summary>
+        /// The ID of this component as defined by the server
+        /// </summary>
+        public Int32 ID = -1;
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="ann">The LogAnnotation object containing the log data</param>

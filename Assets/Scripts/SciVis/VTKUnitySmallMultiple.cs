@@ -274,6 +274,9 @@ namespace Sereno.SciVis
             UpdateTF();
         }
 
+        public void OnAddLogAnnotationPosition(SubDataset dataset, LogAnnotationPositionInstance annot)
+        {}
+
         /// <summary>
         /// The 3D Texure RGBA4444 byte array computed via the given transfer function.
         /// </summary>
