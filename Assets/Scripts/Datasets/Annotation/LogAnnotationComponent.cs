@@ -29,7 +29,7 @@ namespace Sereno.Datasets.Annotation
         /// <summary>
         /// The registered listeners to call on events
         /// </summary>
-        protected List<ILogAnnotationComponentListener> m_listeners;
+        protected List<ILogAnnotationComponentListener> m_listeners = new List<ILogAnnotationComponentListener>();
 
         /// <summary>
         /// The ID of this component as defined by the server

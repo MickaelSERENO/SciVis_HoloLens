@@ -837,7 +837,8 @@ MonoBehaviour:
   ColorOnTargetPointingIT: {r: 1, g: 1, b: 1, a: 1}
   CanvasAnnotationPrefab: {fileID: 7564776657790048829, guid: 99e5be874ec5d1b408d60a1be29b157d,
     type: 3}
-  LogAnnotationPositionPrefab: {fileID: 0}
+  LogAnnotationPositionPrefab: {fileID: 803141522843599225, guid: fc90f44f984062f43ac7dac85287582b,
+    type: 3}
   DefaultMiniaturePrefab: {fileID: 5339560771976640971}
   MapTextureGameObject: {fileID: 1940345517537522273, guid: 40583c425cff9e84d8cf3f0d797de5dd,
     type: 3}

@@ -503,6 +503,9 @@ namespace Sereno.SciVis
             {
                 LogAnnotationPositionGameObject go = Instantiate(LogAnnotationPositionPrefab);
                 go.transform.SetParent(transform, false);
+                go.transform.localPosition = new Vector3(0, 0, 0);
+                go.transform.localRotation = Quaternion.identity;
+                go.transform.localScale    = new Vector3(1, 1, 1);
                 go.Init(annot);
                 m_annotationPositionsGOs.Add(go);
             }

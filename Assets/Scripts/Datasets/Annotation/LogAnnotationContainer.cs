@@ -21,9 +21,37 @@ namespace Sereno.Datasets.Annotation
     /// </summary>
     public class LogAnnotationContainer : LogAnnotation, LogAnnotationComponent.ILogAnnotationComponentListener
     {
+        /// <summary>
+        /// Interface use for events fired from LogAnnotationContainer
+        /// </summary>
+        public interface ILogAnnotationContainerListener
+        {
+            /// <summary>
+            /// Function called when time has been set
+            /// </summary>
+            /// <param name="container">the contianer firing this event</param>
+            void OnSetTime(LogAnnotationContainer container);
+        }
+
+        /// <summary>
+        /// All the headers already assigned (hence not reusable)
+        /// </summary>
         private List<Int32> m_assignedHeaders = new List<Int32>();
+
+        /// <summary>
+        /// The annotation log position registered, and their 3D data read from disk
+        /// </summary>
         private Dictionary<LogAnnotationPosition, List<Vector3>> m_positions = new  Dictionary<LogAnnotationPosition, List<Vector3>>();
+
+        /// <summary>
+        /// Stored time data
+        /// </summary>
         private List<float> m_time = new List<float>();
+
+        /// <summary>
+        /// The listeners to call on events
+        /// </summary>
+        private List<ILogAnnotationContainerListener> m_listeners = new List<ILogAnnotationContainerListener>();
 
         /// <summary>
         /// Initialize the Log reading
@@ -43,6 +71,36 @@ namespace Sereno.Datasets.Annotation
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Add a listener to consider each time this object is modified
+        /// </summary>
+        /// <param name="l">the object to call on events</param>
+        /// <returns> true if this listener was not already added. Otherwise, the function returns false and the object is not added</returns>
+        public bool AddListener(ILogAnnotationContainerListener l)
+        {
+            if (!m_listeners.Contains(l))
+            {
+                m_listeners.Add(l);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Remove an already registered listener which we considered each time this object is modified
+        /// </summary>
+        /// <param name="l">the object to stop calling on events</param>
+        /// <returns>true if this listener was already added. Otherwise, the function returns false and nothing is done</returns>
+        public bool RemoveListener(ILogAnnotationContainerListener l)
+        {
+            if (m_listeners.Contains(l))
+            {
+                m_listeners.Remove(l);
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -195,6 +253,9 @@ namespace Sereno.Datasets.Annotation
             }
             else
                 m_time.Clear();
+
+            foreach(ILogAnnotationContainerListener l in m_listeners)
+                l.OnSetTime(this);
             return true;
         }
 

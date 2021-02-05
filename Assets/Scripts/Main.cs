@@ -645,11 +645,26 @@ namespace Sereno
                 scaleMsg.SubDataID = 1;
                 OnScaleDataset(null, scaleMsg);
 
+                //Annotations
                 AddLogAnnotationMessage logAnnot = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
+                logAnnot.LogID     = 0;
                 logAnnot.HasHeader = true;
                 logAnnot.FileName  = "history-20191122.csv";
                 logAnnot.TimeIdx   = 2;
                 OnAddLogAnnotation(null, logAnnot);
+
+                AddLogAnnotationPositionMessage logPos = new AddLogAnnotationPositionMessage(ServerType.GET_ADD_LOG_ANNOTATION_POSITION);
+                logPos.AnnotID = 0;
+                logPos.CompID  = 0;
+                logPos.Indexes = new int[]{0, 1, -1};
+                OnAddLogAnnotationPosition(null, logPos);
+
+                LinkLogAnnotationPositionSubDatasetMessage linkPos = new LinkLogAnnotationPositionSubDatasetMessage(ServerType.GET_LINK_LOG_ANNOT_POS_SD);
+                linkPos.DataID    = 0;
+                linkPos.SubDataID = 0;
+                linkPos.AnnotID   = 0;
+                linkPos.CompID    = 0;
+                OnLinkLogAnnotationPositionSubDataset(null, linkPos);
                 
                 TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD2.ColorType = ColorMode.WARM_COLD_CIELAB;
@@ -662,7 +677,6 @@ namespace Sereno
                 tfMsgSD2.Timestep = 0.0f;
                 tfMsgSD2.HeadsetID = -1;
                 OnTFDataset(null, tfMsgSD2);
-
 
                 //Simulate a time animation
                 TFSubDatasetMessage tfMsgSD1 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
@@ -2078,7 +2092,7 @@ namespace Sereno
         public void OnLinkLogAnnotationPositionSubDataset(MessageBuffer message, LinkLogAnnotationPositionSubDatasetMessage msg)
         {
             SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if(sd != null)
+            if(sd == null)
                 return;
 
             LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];

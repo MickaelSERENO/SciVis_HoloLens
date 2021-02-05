@@ -309,6 +309,13 @@ namespace Sereno.Datasets
             set
             {
                 m_tf = value;
+
+                //Update annotations relying on time
+                if(m_tf != null)
+                    foreach(var comp in m_logAnnotPositions)
+                        comp.CurrentTime = m_tf.Timestep;
+
+                //Fire the event
                 foreach(var l in m_listeners)
                     l.OnTransferFunctionChange(this, m_tf);
             }

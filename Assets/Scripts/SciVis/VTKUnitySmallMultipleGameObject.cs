@@ -42,12 +42,10 @@ namespace Sereno.SciVis
         /// </summary>
         public Material ColorMaterial = null;
 
-
         /// <summary>
         /// Material to use in the "down scale" mode
         /// </summary>
         public Material ColorMaterialDownScale = null;
-
 
         /// <summary>
         /// The copy material to use

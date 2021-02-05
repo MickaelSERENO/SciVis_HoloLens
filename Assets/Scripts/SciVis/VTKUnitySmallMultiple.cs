@@ -160,7 +160,7 @@ namespace Sereno.SciVis
 
                 List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
 
-                Parallel.For(0, m_dimensions.z, new ParallelOptions { MaxDegreeOfParallelism = 4 },
+                Parallel.For(0, m_dimensions.z, new ParallelOptions { MaxDegreeOfParallelism = 6 },
                 () =>
                 new
                 {

@@ -23,7 +23,7 @@ namespace Sereno.Datasets.Annotation
         /// <summary>
         /// Should we use time?
         /// </summary>
-        private bool                   m_useTime = true;
+        private bool                   m_useTime = false;
 
         /// <summary>
         /// What is the data model?
