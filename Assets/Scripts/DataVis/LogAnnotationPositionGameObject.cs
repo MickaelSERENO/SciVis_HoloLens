@@ -30,12 +30,12 @@ namespace Sereno.DataVis
         /// <summary>
         /// Should we update the positions?
         /// </summary>
-        private bool m_updatePos = false;
+        private bool m_updatePos = true;
 
         /// <summary>
         /// Should we update the color of the material?
         /// </summary>
-        private bool m_updateColor = false;
+        private bool m_updateColor = true;
 
         /// <summary>
         /// The graphical component tube renderer 
@@ -109,7 +109,7 @@ namespace Sereno.DataVis
                 //Update the color
                 if(m_updateColor)
                 {
-                    m_tubeRenderer.material.SetColor("_Color", Component.Color);
+                    m_tubeRenderer.material.color = Component.Color;
                     m_updateColor = false;
                 }
             }
@@ -142,10 +142,10 @@ namespace Sereno.DataVis
                         m_data.Add(new AssociatedData() { Time = -1, Pos = posData[i] });
                 }
 
-                //Default y position : 0.5
+                //Default y position : 0.5 + small offset
                 if(Component.Component.Headers[2] < 0)
                     for(int i = 0; i < m_data.Count; i++)
-                        m_data[i].Pos.z = -0.5f;
+                        m_data[i].Pos.z = 0.51f;
 
                 m_updatePos = true;
             }
