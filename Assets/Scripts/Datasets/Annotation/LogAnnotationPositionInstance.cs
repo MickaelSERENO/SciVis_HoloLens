@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -56,8 +57,8 @@ namespace Sereno.Datasets.Annotation
         /// </summary>
         /// <param name="container">Container which has loaded the values</param>
         /// <param name="pos">The position data model</param>
-        /// <returns></returns>
-        public LogAnnotationPositionInstance(LogAnnotationContainer container, LogAnnotationPosition pos) : base(pos)
+        /// <param name="instanceID">The ID of this object to link it to its attached object</param>
+        public LogAnnotationPositionInstance(LogAnnotationContainer container, LogAnnotationPosition pos, Int32 instanceID) : base(pos, instanceID)
         {
             m_container = container;
             m_data      = pos;

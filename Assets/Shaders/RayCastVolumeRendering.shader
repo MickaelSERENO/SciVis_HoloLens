@@ -3,6 +3,7 @@
     Properties
     {
 		_TextureData("TextureData", 3D) = "defaulttexture" {}
+		_DepthClipping("DepthClipping", Float) = 1.0
     }
 
 	SubShader

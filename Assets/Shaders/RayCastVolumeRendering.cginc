@@ -23,6 +23,9 @@ UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthTexture);
 /** The volume data*/
 sampler3D _TextureData;
 
+/** The depth clipping value to use*/
+fixed _DepthClipping = 1.0;
+
 /** The volume dimension along all axis*/
 fixed3 _Dimensions = fixed3(128,128,128);
 
@@ -70,7 +73,7 @@ bool computeRayPlaneIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, in fi
 	fixed nDir = dot(planeNormal, rayNormal);
 
 	t = dot(planeNormal, planePosition - rayOrigin) / nDir;
-	return t >= 0.0;
+	return t > 0.0;
 }
 
 /** \brief  Compute the ray-cube intersection
@@ -94,7 +97,7 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 		fixed3(0, +0.5, 0), t[3]);
 	//Front
 	tValidity[4] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 0, -1),
-		fixed3(0, 0, -0.5), t[4]);
+		fixed3(0, 0, -_DepthClipping + 0.5), t[4]);
 	//Back
 	tValidity[5] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 0, 1),
 		fixed3(0, 0, +0.5), t[5]);
@@ -106,8 +109,8 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 		if (tValidity[i])
 		{
 			fixed3 p = t[i] * rayNormal + rayOrigin;
-			if (p.y < -0.5 || p.y > +0.5 ||
-				p.z < -0.5 || p.z > +0.5)
+			if (p.y < -0.5                || p.y > +0.5 ||
+				p.z < -_DepthClipping+0.5 || p.z > +0.5)
 				tValidity[i] = false;
 		}
 
@@ -115,8 +118,8 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 		if (tValidity[i + 2])
 		{
 			fixed3 p = t[i + 2] * rayNormal + rayOrigin;
-			if (p.x < -0.5 || p.x > +0.5 ||
-				p.z < -0.5 || p.z > +0.5)
+			if (p.x < -0.5                  || p.x > +0.5 ||
+				p.z < -_DepthClipping + 0.5 || p.z > +0.5)
 				tValidity[i + 2] = false;
 		}
 
@@ -136,7 +139,7 @@ fixed4  frag(v2f input) : COLOR
 	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 	//UNITY_SETUP_INSTANCE_ID(input);
 
-	fixed4  fragColor = fixed4(0, 0, 0, 0);
+	float4 fragColor = float4(0, 0, 0, 0);
 
 	//Optimization when in perspective mode
 	const fixed3 rayNormal = normalize(input.endRayOrigin.xyz / input.endRayOrigin.w - input.begRayOrigin.xyz);
@@ -171,7 +174,7 @@ fixed4  frag(v2f input) : COLOR
 		minT = 0;
 		
 	fixed3 rayPos        = input.begRayOrigin.xyz + minT * rayNormal;
-	const fixed rayStep  = 1.0/length(rayNormal*_Dimensions);
+	const fixed rayStep  = 1.0/max(max(_Dimensions.x, _Dimensions.y), _Dimensions.z);
 	const fixed3 rayStepNormal = rayStep*rayNormal;
 	
 	//Determine max displacement (the displacement the ray can perform) regarding the depth. Done here for optimization process
@@ -197,8 +200,8 @@ fixed4  frag(v2f input) : COLOR
 	
 	for(int j = 0; j < count; j+=1)
 	{
-		fixed4 texPos  = fixed4(clamp(j * rayStepNormal + rayPos.xyz, fixed3(0, 0, 0), fixed3(1, 1, 1)), 0.0);
-		fixed4 tfColor = tex3Dlod(_TextureData, texPos);
+		fixed4 texPos  = fixed4(j * rayStepNormal + rayPos.xyz, 0.0);
+		float4 tfColor = tex3Dlod(_TextureData, texPos);
 		fragColor = fragColor + ((1.0 - fragColor.a) * tfColor.a) * fixed4(tfColor.xyz, 1.0);
 
 		//If enough contribution

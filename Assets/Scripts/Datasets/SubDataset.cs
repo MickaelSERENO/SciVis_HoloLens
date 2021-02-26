@@ -93,6 +93,13 @@ namespace Sereno.Datasets
         /// </summary>
         /// <param name="dataset">The SubDataset calling this method</param>
         void OnChangeVolumetricMask(SubDataset dataset);
+
+        /// <summary>
+        /// Called when the depth clipping value of this SubDataset has changed
+        /// </summary>
+        /// <param name="dataset">The SubDataset calling this method</param>
+        /// <param name="depth">The new depth clipping value</param>
+        void OnChangeDepthClipping(SubDataset dataset, float depth);
     }
 
     public class SubDataset
@@ -142,6 +149,11 @@ namespace Sereno.Datasets
         /// The Scaling factors
         /// </summary>
         private float[] m_scale    = new float[3]{1.0f, 1.0f, 1.0f};
+
+        /// <summary>
+        /// The depth clipping plane factor, between 0.0f and 1.0f
+        /// </summary>
+        private float m_depthClip = 1.0f;
 
         /// <summary>
         /// The SubDataset name
@@ -415,6 +427,20 @@ namespace Sereno.Datasets
             }
         }
 
+        public float DepthClipping
+        {
+            get => m_depthClip;
+            set
+            {
+                if(m_depthClip != value)
+                {
+                    m_depthClip = value;
+                    foreach (var l in m_listeners)
+                        l.OnChangeDepthClipping(this, value);
+                }
+            }
+        }
+
         /// <summary>
         /// The Modification Owner ID
         /// </summary>
@@ -512,6 +538,9 @@ namespace Sereno.Datasets
             }
         }
 
+        /// <summary>
+        /// Compute the graphical matrix that should be used for this SubDataset. The computation is performed at each call: better save the result than calling this property repeatedly
+        /// </summary>
         public Matrix4x4 GraphicalMatrix
         {
             get
@@ -532,6 +561,9 @@ namespace Sereno.Datasets
             }
         }
 
+        /// <summary>
+        /// It the map placed at the bottom visible?
+        /// </summary>
         public bool IsMapVisible
         {
             get => m_mapVisibility;

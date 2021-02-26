@@ -626,6 +626,9 @@ namespace Sereno
                 addSDMsg.Name = $"{m_datasets[0].PointFieldDescs[0].Name}_bis";
                 OnAddSubDataset(null, addSDMsg);
 
+                m_datasets[0].SubDatasets[0].DepthClipping = 0.1f;
+                m_datasets[0].SubDatasets[1].DepthClipping = 1.0f;
+
                 MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
                 moveVTKMsg.SubDataID = 0;
@@ -656,7 +659,6 @@ namespace Sereno
                 AddLogAnnotationPositionMessage logPos = new AddLogAnnotationPositionMessage(ServerType.GET_ADD_LOG_ANNOTATION_POSITION);
                 logPos.AnnotID = 0;
                 logPos.CompID  = 0;
-                logPos.Indexes = new int[]{0, 1, -1};
                 OnAddLogAnnotationPosition(null, logPos);
 
                 LinkLogAnnotationPositionSubDatasetMessage linkPos = new LinkLogAnnotationPositionSubDatasetMessage(ServerType.GET_LINK_LOG_ANNOT_POS_SD);
@@ -664,7 +666,14 @@ namespace Sereno
                 linkPos.SubDataID = 0;
                 linkPos.AnnotID   = 0;
                 linkPos.CompID    = 0;
+                linkPos.DataID    = 0;
                 OnLinkLogAnnotationPositionSubDataset(null, linkPos);
+
+                SetLogAnnotationPositionIndexesMessage idxMsg = new SetLogAnnotationPositionIndexesMessage(ServerType.GET_SET_LOG_ANNOTATION_POSITION_INDEXES);
+                idxMsg.AnnotID = 0;
+                idxMsg.CompID  = 0;
+                idxMsg.Indexes = new int[] { 0, 1, -1 };
+                OnSetLogAnnotationPositionIndexes(null, idxMsg);
                 
                 TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD2.ColorType = ColorMode.WARM_COLD_CIELAB;
@@ -673,7 +682,7 @@ namespace Sereno
                 tfMsgSD2.TFID = TFType.TF_TRIANGULAR_GTF;
                 tfMsgSD2.GTFData = new TFSubDatasetMessage.GTF();
                 tfMsgSD2.GTFData.Props = new TFSubDatasetMessage.GTFProp[1];
-                tfMsgSD2.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 0.5f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.5f };
+                tfMsgSD2.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 0.3f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.05f };
                 tfMsgSD2.Timestep = 0.0f;
                 tfMsgSD2.HeadsetID = -1;
                 OnTFDataset(null, tfMsgSD2);
@@ -2072,7 +2081,6 @@ namespace Sereno
             if(annot != null)
             {
                 LogAnnotationPosition pos = annot.BuildAnnotationPositionView();
-                pos.SetXYZIndices(msg.Indexes[0], msg.Indexes[1], msg.Indexes[2]);
                 annot.ParseAnnotationPosition(pos);
                 pos.ID = msg.CompID;
             }
@@ -2103,7 +2111,7 @@ namespace Sereno
             if(pos == null)
                 return;
                 
-            sd.AddLogAnnotationPosition(new LogAnnotationPositionInstance(annot, pos));
+            sd.AddLogAnnotationPosition(new LogAnnotationPositionInstance(annot, pos, msg.DrawableID));
         }
 
 
@@ -2121,6 +2129,15 @@ namespace Sereno
 
                 return new Color(0.0f, 0.0f, 1.0f);
             }
+        }
+
+        public void OnSetSubDatasetClipping(MessageBuffer message, SetSubDatasetClipping msg)
+        {
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if (sd == null)
+                return;
+
+            sd.DepthClipping = msg.DepthClipping;
         }
 
         /// <summary>

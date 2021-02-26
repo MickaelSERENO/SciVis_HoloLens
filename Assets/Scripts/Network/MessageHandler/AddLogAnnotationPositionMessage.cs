@@ -17,17 +17,12 @@ namespace Sereno.Network.MessageHandler
         /// </summary>
         public Int32   CompID;
 
-        /// <summary>
-        /// The indexes to use
-        /// </summary>
-        public Int32[] Indexes = new Int32[3];
-
         public AddLogAnnotationPositionMessage(ServerType type) : base(type)
         {}
 
         public override byte GetCurrentType()
         {
-            if(Cursor <= 4)
+            if(Cursor <= 1)
                 return (byte)'I';
             return 0;
         }
@@ -38,14 +33,12 @@ namespace Sereno.Network.MessageHandler
                 AnnotID = value;
             else if(Cursor == 1)
                 CompID = value;
-            else if(Cursor <= 4)
-                Indexes[Cursor-2] = value;
             base.Push(value);
         }
 
         public override Int32 GetMaxCursor()
         {
-            return 4;
+            return 1;
         }
     }
 }

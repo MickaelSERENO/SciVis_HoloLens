@@ -218,6 +218,13 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnLinkLogAnnotationPositionSubDataset(MessageBuffer message, LinkLogAnnotationPositionSubDatasetMessage msg);
+
+        /// <summary>
+        /// Function called to set the clipping planes of a subdatasets
+        /// </summary>
+        /// <param name="messageBuffer">The message buffer in use</param>
+        /// <param name="msg">The message parsed</param>
+        void OnSetSubDatasetClipping(MessageBuffer message, SetSubDatasetClipping msg);
     }
 
     /// <summary>
@@ -470,6 +477,10 @@ namespace Sereno.Network.MessageHandler
                             foreach(var l in m_listeners)
                                 l.OnLinkLogAnnotationPositionSubDataset(this, (LinkLogAnnotationPositionSubDatasetMessage)m_msg);
                             break;
+                        case ServerType.GET_SET_SUBDATASET_CLIPPING:
+                            foreach (var l in m_listeners)
+                                l.OnSetSubDatasetClipping(this, (SetSubDatasetClipping)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -711,6 +722,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_LINK_LOG_ANNOT_POS_SD:
                     m_msg = new LinkLogAnnotationPositionSubDatasetMessage(ServerType.GET_LINK_LOG_ANNOT_POS_SD);
+                    break;
+                case ServerType.GET_SET_SUBDATASET_CLIPPING:
+                    m_msg = new SetSubDatasetClipping(ServerType.GET_SET_SUBDATASET_CLIPPING);
                     break;
             }
         }

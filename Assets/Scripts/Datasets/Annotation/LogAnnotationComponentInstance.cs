@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -36,12 +37,18 @@ namespace Sereno.Datasets.Annotation
         private List<ILogAnnotationComponentInstanceListener> m_listeners = new List<ILogAnnotationComponentInstanceListener>();
 
         /// <summary>
+        /// The Instance ID to identify this object
+        /// </summary>
+        private Int32 m_instanceID;
+
+        /// <summary>
         /// Protected constructor
         /// </summary>
         /// <param name="data">The linked LogAnnotationComponent to use</param>
-        protected LogAnnotationComponentInstance(LogAnnotationComponent data)
+        protected LogAnnotationComponentInstance(LogAnnotationComponent data, Int32 instanceID)
         {
             m_data = data;
+            m_instanceID = instanceID;
         }
 
         /// <summary>
@@ -87,6 +94,14 @@ namespace Sereno.Datasets.Annotation
         public LogAnnotationComponent Component
         {
             get => m_data;
+        }
+
+        /// <summary>
+        /// The ID to link this instance to the object it is attached to.
+        /// </summary>
+        public Int32 InstanceID
+        {
+            get => m_instanceID;
         }
     }
 }       

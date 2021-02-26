@@ -160,7 +160,7 @@ namespace Sereno.SciVis
 
                 List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
 
-                Parallel.For(0, m_dimensions.z, new ParallelOptions { MaxDegreeOfParallelism = 6 },
+                Parallel.For(0, m_dimensions.z, new ParallelOptions { MaxDegreeOfParallelism = 7 },
                 () =>
                 new
                 {
@@ -275,6 +275,9 @@ namespace Sereno.SciVis
         }
 
         public void OnAddLogAnnotationPosition(SubDataset dataset, LogAnnotationPositionInstance annot)
+        {}
+
+        public void OnChangeDepthClipping(SubDataset dataset, float depth)
         {}
 
         /// <summary>

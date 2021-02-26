@@ -24,32 +24,39 @@ namespace Sereno.Network.MessageHandler
         /// </summary>
         public Int32   CompID;
 
+        /// <summary>
+        /// The Drawable ID caracterising this drawable object
+        /// </summary>
+        public Int32   DrawableID;
+
         public LinkLogAnnotationPositionSubDatasetMessage(ServerType type) : base(type)
         {}
 
         public override byte GetCurrentType()
         {
-            if(Cursor <= 3)
+            if(Cursor <= 4)
                 return (byte)'I';
             return 0;
         }
 
         public override void Push(Int32 value)
         {
-            if(Cursor == 0)
+            if (Cursor == 0)
                 DataID = value;
-            else if(Cursor == 1)
+            else if (Cursor == 1)
                 SubDataID = value;
-            else if(Cursor == 2)
+            else if (Cursor == 2)
                 AnnotID = value;
-            else if(Cursor == 3)
+            else if (Cursor == 3)
                 CompID = value;
+            else if (Cursor == 4)
+                DrawableID = value;
             base.Push(value);
         }
 
         public override Int32 GetMaxCursor()
         {
-            return 3;
+            return 4;
         }
     }
 }

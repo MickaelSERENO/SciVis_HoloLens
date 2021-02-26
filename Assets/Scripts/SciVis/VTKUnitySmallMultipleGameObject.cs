@@ -262,8 +262,11 @@ namespace Sereno.SciVis
             //Update the 3D texture
             Check3DTexture();
 
+            m_materialDownScale.SetFloat("_DepthClipping", m_sd.DepthClipping);
+            m_materialNormalScale.SetFloat("_DepthClipping", m_sd.DepthClipping);
+
             //Draw the GameObject on render texture if the scaling needs to diminish
-            if(ResolutionScaling < 1f)
+            if (ResolutionScaling < 1f)
                 RenderToTextures();
             else if(m_mesh != null && m_materialNormalScale != null && m_texture3D != null)
             {
@@ -495,5 +498,9 @@ namespace Sereno.SciVis
 
             return vtkSDGO;
         }
+
+
+        public override void OnChangeDepthClipping(SubDataset dataset, float depth)
+        {}
     }
 }
