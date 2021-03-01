@@ -69,7 +69,12 @@ namespace Sereno.SciVis
             for(int i = 0; i < m_scale.Length; i++)
                 mag += values[i]*values[i];
             mag = (float)(Math.Sqrt(mag) / m_scale.Length);
-
+            if (mag < MinClipping)
+                mag = 0;
+            else if (mag > MaxClipping)
+                mag = 1;
+            else
+                mag = (mag - MinClipping) / (MaxClipping - MinClipping);
             return SciVisColor.GenColor(ColorMode, mag);
         }
 

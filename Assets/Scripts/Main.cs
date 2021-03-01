@@ -1632,6 +1632,8 @@ namespace Sereno
             {
                 tf.ColorMode = msg.ColorType;
                 tf.Timestep = msg.Timestep;
+                tf.MinClipping = msg.MinClipping;
+                tf.MaxClipping = msg.MaxClipping;
             }
             return tf;
         }

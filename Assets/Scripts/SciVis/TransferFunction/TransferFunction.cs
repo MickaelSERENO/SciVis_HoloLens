@@ -19,6 +19,16 @@ namespace Sereno.SciVis
         private float m_timestep = 0;
 
         /// <summary>
+        /// The current minimum clipping value to use for this visualization in the value domain (between 0.0f and 1.0f). Default: 0.0f
+        /// </summary>
+        private float m_minClipping;
+
+        /// <summary>
+        /// The current maximum clipping value to use for this visualization in the value domain (between 0.0f and 1.0f). Default: 1.0f
+        /// </summary>
+        private float m_maxClipping;
+
+        /// <summary>
         /// Constructor
         /// </summary>
         /// <param name="mode">The ColorMode to apply</param>
@@ -68,5 +78,15 @@ namespace Sereno.SciVis
         /// The current timestep parameterized for this visualization. Its value must be positive
         /// </summary>
         public float Timestep {get => m_timestep; set => m_timestep = value;}
+
+        /// <summary>
+        /// The current minimum clipping value to use for this visualization in the value domain (between 0.0f and 1.0f). Default: 0.0f
+        /// </summary>
+        public float MinClipping { get => m_minClipping; set => m_minClipping = value;}
+
+        /// <summary>
+        /// The current maximum clipping value to use for this visualization in the value domain (between 0.0f and 1.0f). Default: 1.0f
+        /// </summary>
+        public float MaxClipping { get => m_maxClipping; set => m_maxClipping = value; }
     }
 }
