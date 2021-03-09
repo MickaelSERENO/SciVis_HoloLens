@@ -36,5 +36,7 @@ namespace Sereno.Network.MessageHandler
         GET_SET_LOG_ANNOTATION_POSITION_INDEXES = 30, /*!< Change the headers of a log annotation position*/
         GET_LINK_LOG_ANNOT_POS_SD               = 31, /*!< Link a log annotation position to a subdataset*/
         GET_SET_SUBDATASET_CLIPPING             = 32, /*!< Set the clipping values of a subdataset*/
+        GET_SET_DRAWABLE_ANNOTATION_POSITION_COLOR = 33,
+        GET_SET_DRAWABLE_ANNOTATION_POSITION_IDX   = 34,
     }
 }

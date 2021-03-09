@@ -36,6 +36,8 @@ namespace Sereno.Datasets.Annotation
         /// </summary>
         private List<ILogAnnotationComponentInstanceListener> m_listeners = new List<ILogAnnotationComponentInstanceListener>();
 
+        private SubDataset m_sd;
+
         /// <summary>
         /// The Instance ID to identify this object
         /// </summary>
@@ -45,10 +47,13 @@ namespace Sereno.Datasets.Annotation
         /// Protected constructor
         /// </summary>
         /// <param name="data">The linked LogAnnotationComponent to use</param>
-        protected LogAnnotationComponentInstance(LogAnnotationComponent data, Int32 instanceID)
+        /// <param name="sd">The subdaatset owning this instance</param>
+        /// <param name="instanceID">The ID of this component</param>
+        protected LogAnnotationComponentInstance(LogAnnotationComponent data, SubDataset sd, Int32 instanceID)
         {
             m_data = data;
             m_instanceID = instanceID;
+            m_sd = sd;
         }
 
         /// <summary>
@@ -102,6 +107,11 @@ namespace Sereno.Datasets.Annotation
         public Int32 InstanceID
         {
             get => m_instanceID;
+        }
+
+        public SubDataset SubDataset
+        {
+            get => m_sd;
         }
     }
 }       

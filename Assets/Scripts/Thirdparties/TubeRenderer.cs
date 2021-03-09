@@ -1,6 +1,7 @@
 ﻿// Author: Mathias Soeholm
 // Date: 05/10/2016
 // No license, do whatever you want with this script
+using System;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -136,7 +137,6 @@ namespace Thirdparties
 					indices[currentIndicesIndex++] = (side == _sides - 1) ? (vertIndex - (_sides - 1)) : (vertIndex + 1);
 					indices[currentIndicesIndex++] = vertIndex;
 
-
 					// Triangle two
 					indices[currentIndicesIndex++] = (side == _sides - 1) ? (prevVertIndex - (_sides - 1)) : (prevVertIndex + 1);
 					indices[currentIndicesIndex++] = (side == _sides - 1) ? (vertIndex - (_sides - 1)) : (vertIndex + 1);
@@ -188,5 +188,20 @@ namespace Thirdparties
 
 			return circle;
 		}
+
+		public Mesh Mesh
+        {
+			get => _mesh;
+        }
+
+		public Int32 NbVerticesPerPosition
+        {
+			get => _sides;
+		}
+
+		public Vector3[] Positions
+        {
+			get => _positions;
+        }
 	}
 }

@@ -260,6 +260,15 @@ namespace Sereno.Datasets.Annotation
             return GetEnumerator();
         }
 
+        public IEnumerable<String> GetColumn(int x)
+        {
+            if(x < 0 || x > NbColumns)
+                yield break;
+
+            foreach (LogEntry l in this)
+                yield return l[x];
+        }
+
         /// <summary>
         /// The number of available rows
         /// </summary>

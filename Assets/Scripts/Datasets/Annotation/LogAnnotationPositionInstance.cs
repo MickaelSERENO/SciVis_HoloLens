@@ -25,6 +25,13 @@ namespace Sereno.Datasets.Annotation
             /// </summary>
             /// <param name="comp">The component calling this method</param>
             void OnSetCurrentTime(LogAnnotationPositionInstance comp);
+
+            /// <summary>
+            /// Function called when the indices to read for graphical mapping from the log container has been changed
+            /// </summary>
+            /// <param name="comp">The component calling this method</param>
+            /// <param name="old">The old indices that were used</param>
+            void OnSetMappedIndices(LogAnnotationPositionInstance comp, Int32[] old);
         }
 
         /// <summary>
@@ -42,6 +49,8 @@ namespace Sereno.Datasets.Annotation
         /// </summary>
         private Color                  m_color = Color.white;
 
+        private Int32[]                m_mappedIdx = new Int32[0];
+
         /// <summary>
         /// What is the current time?
         /// </summary>
@@ -57,8 +66,9 @@ namespace Sereno.Datasets.Annotation
         /// </summary>
         /// <param name="container">Container which has loaded the values</param>
         /// <param name="pos">The position data model</param>
+        /// <param name="sd">The subdaatset owning this instance</param>
         /// <param name="instanceID">The ID of this object to link it to its attached object</param>
-        public LogAnnotationPositionInstance(LogAnnotationContainer container, LogAnnotationPosition pos, Int32 instanceID) : base(pos, instanceID)
+        public LogAnnotationPositionInstance(LogAnnotationContainer container, LogAnnotationPosition pos, SubDataset sd, Int32 instanceID) : base(pos, sd, instanceID)
         {
             m_container = container;
             m_data      = pos;
@@ -69,7 +79,7 @@ namespace Sereno.Datasets.Annotation
         /// Add a new Listener to call on events
         /// </summary>
         /// <param name="list">The listener to call</param>
-        void AddListener(ILogAnnotationPositionInstanceListener list)
+        public void AddListener(ILogAnnotationPositionInstanceListener list)
         {
             if(!m_listeners.Contains(list))
                 m_listeners.Add(list);
@@ -79,7 +89,7 @@ namespace Sereno.Datasets.Annotation
         /// Remove an already registered listener
         /// </summary>
         /// <param name="list">The listener to remove</param>
-        void RemoveListener(ILogAnnotationPositionInstanceListener list)
+        public void RemoveListener(ILogAnnotationPositionInstanceListener list)
         {
             if(m_listeners.Contains(list))
                 m_listeners.Remove(list);
@@ -98,6 +108,24 @@ namespace Sereno.Datasets.Annotation
                 if(!old.Equals(Color))
                     foreach(ILogAnnotationPositionInstanceListener l in m_listeners)
                         l.OnSetColor(this);
+            }
+        }
+
+        /// <summary>
+        /// The indices to read from the annotation log container (Container) for graphical mapping. It should never be null. Instead, to disable the mapping, use an empty array.
+        /// </summary>
+        public Int32[] MappedIndices
+        {
+            get => m_mappedIdx;
+            set
+            {
+                Int32[] old = (Int32[])m_mappedIdx.Clone();
+                if (!old.Equals(value))
+                {
+                    m_mappedIdx = value;
+                    foreach (ILogAnnotationPositionInstanceListener l in m_listeners)
+                        l.OnSetMappedIndices(this, old);
+                }
             }
         }
 

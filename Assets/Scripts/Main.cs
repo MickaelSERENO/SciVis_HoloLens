@@ -663,10 +663,10 @@ namespace Sereno
 
                 LinkLogAnnotationPositionSubDatasetMessage linkPos = new LinkLogAnnotationPositionSubDatasetMessage(ServerType.GET_LINK_LOG_ANNOT_POS_SD);
                 linkPos.DataID    = 0;
-                linkPos.SubDataID = 0;
+                linkPos.SubDataID = 1;
                 linkPos.AnnotID   = 0;
                 linkPos.CompID    = 0;
-                linkPos.DataID    = 0;
+                linkPos.DrawableID = 0;
                 OnLinkLogAnnotationPositionSubDataset(null, linkPos);
 
                 SetLogAnnotationPositionIndexesMessage idxMsg = new SetLogAnnotationPositionIndexesMessage(ServerType.GET_SET_LOG_ANNOTATION_POSITION_INDEXES);
@@ -674,7 +674,21 @@ namespace Sereno
                 idxMsg.CompID  = 0;
                 idxMsg.Indexes = new int[] { 0, 1, -1 };
                 OnSetLogAnnotationPositionIndexes(null, idxMsg);
-                
+
+                SetDrawableAnnotationPositionColorMessage colorMsg = new SetDrawableAnnotationPositionColorMessage(ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_COLOR);
+                colorMsg.DatasetID = 0;
+                colorMsg.SubDatasetID = 1;
+                colorMsg.DrawableID = 0;
+                colorMsg.Color = 0xffff0000;
+                OnSetDrawableAnnotationPositionColor(null, colorMsg);
+
+                SetDrawableAnnotationPositionIdxMessage idxPosMsg = new SetDrawableAnnotationPositionIdxMessage(ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_IDX);
+                idxPosMsg.DatasetID = 0;
+                idxPosMsg.SubDatasetID = 1;
+                idxPosMsg.DrawableID = 0;
+                idxPosMsg.Indices = new int[] { 6 };
+                OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);
+
                 TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD2.ColorType = ColorMode.WARM_COLD_CIELAB;
                 tfMsgSD2.DataID = 0;
@@ -2113,9 +2127,46 @@ namespace Sereno
             if(pos == null)
                 return;
                 
-            sd.AddLogAnnotationPosition(new LogAnnotationPositionInstance(annot, pos, msg.DrawableID));
+            sd.AddLogAnnotationPosition(new LogAnnotationPositionInstance(annot, pos, sd, msg.DrawableID));
         }
 
+        public void OnSetSubDatasetClipping(MessageBuffer message, SetSubDatasetClipping msg)
+        {
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if (sd == null)
+                return;
+
+            sd.DepthClipping = msg.DepthClipping;
+        }
+
+        public void OnSetDrawableAnnotationPositionColor(MessageBuffer message, SetDrawableAnnotationPositionColorMessage msg)
+        {
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if(sd == null)
+                return;
+
+            LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
+            if(annot == null)
+                return;
+
+            annot.Color = new Color32((byte)((msg.Color >> 16) & 0xff),
+                                      (byte)((msg.Color >> 8 ) & 0xff),
+                                      (byte)((msg.Color >> 0 ) & 0xff),
+                                      (byte)((msg.Color >> 24) & 0xff));
+        }
+
+        public void OnSetDrawableAnnotationPositionIdx(MessageBuffer message, SetDrawableAnnotationPositionIdxMessage msg)
+        {
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if (sd == null)
+                return;
+
+            LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
+            if (annot == null)
+                return;
+
+            annot.MappedIndices = msg.Indices;
+        }
 
         #endregion
 
@@ -2133,14 +2184,6 @@ namespace Sereno
             }
         }
 
-        public void OnSetSubDatasetClipping(MessageBuffer message, SetSubDatasetClipping msg)
-        {
-            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-            if (sd == null)
-                return;
-
-            sd.DepthClipping = msg.DepthClipping;
-        }
 
         /// <summary>
         /// Get the headset data associated to the headset ID

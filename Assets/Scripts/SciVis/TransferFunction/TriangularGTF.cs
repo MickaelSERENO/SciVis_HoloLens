@@ -77,7 +77,7 @@ namespace Sereno.SciVis
         [BurstCompile(CompileSynchronously = true)]
         public override Color ComputeColor(float[] values)
         {
-            if(values.Length == 1)
+            if(values.Length < m_scale.Length)
                 return new Color(0,0,0,0);
 
             float mag = 0;

@@ -225,6 +225,9 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">The message parsed</param>
         void OnSetSubDatasetClipping(MessageBuffer message, SetSubDatasetClipping msg);
+
+        void OnSetDrawableAnnotationPositionColor(MessageBuffer message, SetDrawableAnnotationPositionColorMessage msg);
+        void OnSetDrawableAnnotationPositionIdx(MessageBuffer message, SetDrawableAnnotationPositionIdxMessage msg);
     }
 
     /// <summary>
@@ -481,6 +484,14 @@ namespace Sereno.Network.MessageHandler
                             foreach (var l in m_listeners)
                                 l.OnSetSubDatasetClipping(this, (SetSubDatasetClipping)m_msg);
                             break;
+                        case ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_COLOR:
+                            foreach(var l in m_listeners)
+                                l.OnSetDrawableAnnotationPositionColor(this, (SetDrawableAnnotationPositionColorMessage)m_msg);
+                            break;
+                        case ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_IDX:
+                            foreach(var l in m_listeners)
+                                l.OnSetDrawableAnnotationPositionIdx(this, (SetDrawableAnnotationPositionIdxMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -725,6 +736,12 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_SET_SUBDATASET_CLIPPING:
                     m_msg = new SetSubDatasetClipping(ServerType.GET_SET_SUBDATASET_CLIPPING);
+                    break;
+                case ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_COLOR:
+                    m_msg = new SetDrawableAnnotationPositionColorMessage(ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_COLOR);
+                    break;
+                case ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_IDX:
+                    m_msg = new SetDrawableAnnotationPositionIdxMessage(ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_IDX);
                     break;
             }
         }
