@@ -160,14 +160,7 @@ namespace Sereno.SciVis
                             fixed (byte* pcolors = colors)
                             {
                                 float[] partialRes = new float[indices.Length + hasGradient];
-
-                                if(m_sd.EnableVolumetricMask && m_sd.GetVolumetricMaskAt((int)i))
-                                {
-                                    for(int j = 0; j < 4; j++)
-                                        pcolors[4 * i + j] = 255;
-                                    return;
-                                }
-
+                                
                                 //Determine transfer function coordinates
                                 for (int l = 0; l < ptDescs.Count; l++)
                                 {
@@ -192,6 +185,14 @@ namespace Sereno.SciVis
                                 pcolors[4*i + 1] = (byte)(c.g*255);
                                 pcolors[4*i + 2] = (byte)(c.b*255);
                                 pcolors[4*i + 3] = (byte)(255);
+
+                                //Lighten the point
+                                if (m_sd.EnableVolumetricMask && m_sd.GetVolumetricMaskAt((int)i))
+                                    for (int j = 0; j < 3; j++)
+                                        pcolors[4*i + j] = (byte)(Math.Min((255-pcolors[4*i + j])*0.50f+ pcolors[4*i + j], 255));
+                                else
+                                    for (int j = 0; j < 3; j++)
+                                        pcolors[4 * i + j] = (byte)(0.75f*pcolors[4 * i + j]);
                             }
                         });
                     return colors;

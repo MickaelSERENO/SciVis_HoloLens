@@ -628,18 +628,18 @@ namespace Sereno
 #if TEST
             Task t = new Task( () =>
             {
-                /*AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
-                addCloudMsg.Path   = "1.cp";
+                AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
+                addCloudMsg.Path   = "2.cp";
                 addCloudMsg.DataID = 0;
-                OnAddCloudPointDataset(null, addCloudMsg);*/
+                OnAddCloudPointDataset(null, addCloudMsg);
                 
-                AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
+                /*AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
                 addVTKMsg.Path = "history.vtk";
                 addVTKMsg.PtFieldValueIndices = new int[] { 2 };
-                OnAddVTKDataset(null, addVTKMsg);
+                OnAddVTKDataset(null, addVTKMsg);*/
                 
                 AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
                 addSDMsg.DatasetID = 0;
