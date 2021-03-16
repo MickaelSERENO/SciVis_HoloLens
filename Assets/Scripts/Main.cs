@@ -582,6 +582,7 @@ namespace Sereno
 
         void Awake()
         {
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
             m_appProperties = Properties.ParseProperties();
 
             //Default text helpful to bind headset to tablet
