@@ -2,6 +2,7 @@
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
+using System.Runtime.InteropServices;
 #endif
 
 using Sereno.Datasets;
@@ -23,6 +24,7 @@ using UnityEngine;
 using UnityEngine.XR.WSA.Sharing;
 using System.IO;
 using System.Globalization;
+
 
 namespace Sereno
 {
@@ -669,6 +671,18 @@ namespace Sereno
                 linkPos.DrawableID = 0;
                 OnLinkLogAnnotationPositionSubDataset(null, linkPos);
 
+                linkPos.SubDataID = 0;
+                OnLinkLogAnnotationPositionSubDataset(null, linkPos);
+
+                SubDataset sd = GetSubDataset(0, 0);
+                if (sd == null)
+                    return;
+                LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == 0);
+                if (annot == null)
+                    return;
+
+                annot.UseTime = false;
+
                 SetLogAnnotationPositionIndexesMessage idxMsg = new SetLogAnnotationPositionIndexesMessage(ServerType.GET_SET_LOG_ANNOTATION_POSITION_INDEXES);
                 idxMsg.AnnotID = 0;
                 idxMsg.CompID  = 0;
@@ -687,6 +701,9 @@ namespace Sereno
                 idxPosMsg.SubDatasetID = 1;
                 idxPosMsg.DrawableID = 0;
                 idxPosMsg.Indices = new int[] { 6 };
+                OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);
+
+                idxPosMsg.SubDatasetID = 0;
                 OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);
 
                 TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
@@ -712,15 +729,16 @@ namespace Sereno
                 tfMsgSD1.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 1.0f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.10f };
                 tfMsgSD1.Timestep = 0.0f;
                 tfMsgSD1.HeadsetID = -1;
+                OnTFDataset(null, tfMsgSD1);
 
                 //Thread.Sleep(15000);
-                
+
                 while (true)
                 {
-                    if (m_datasets[0].PointFieldDescs[0].Value == null || tfMsgSD1.Timestep > m_datasets[0].PointFieldDescs[0].Value.Count)
-                        tfMsgSD1.Timestep = 0.0f;
-                    OnTFDataset(null, tfMsgSD1);
-                    tfMsgSD1.Timestep += 0.10f;
+                    if (m_datasets[0].PointFieldDescs[0].Value == null || tfMsgSD2.Timestep >= m_datasets[0].PointFieldDescs[0].Value.Count)
+                        tfMsgSD2.Timestep = 0.0f;
+                    OnTFDataset(null, tfMsgSD2);
+                    tfMsgSD2.Timestep += 0.25f;
                     Thread.Sleep(500);
                 }
 
@@ -1459,7 +1477,7 @@ namespace Sereno
 
             //Search for the other timesteps
             List<String> suffixes = new List<String>();
-            foreach(String path in Directory.GetFiles(Application.streamingAssetsPath))
+            foreach(String path in Directory.GetFiles($"{Application.streamingAssetsPath}/Datasets/"))
             {
                 String fileName = Path.GetFileName(path);
                 if(fileName.StartsWith(msg.Path+".") && fileName.Length > msg.Path.Length+1)
@@ -1479,12 +1497,12 @@ namespace Sereno
             suffixes.Sort();
             foreach(String s in suffixes)
             {
-                Debug.Log($"Parsing {Application.streamingAssetsPath}/{msg.Path}.{s}...");
-                VTKParser  parsert = new VTKParser($"{Application.streamingAssetsPath}/{msg.Path}.{s}");
+                Debug.Log($"Parsing {Application.streamingAssetsPath}/Datasets/{msg.Path}.{s}...");
+                VTKParser  parsert = new VTKParser($"{Application.streamingAssetsPath}/Datasets/{msg.Path}.{s}");
                 if(parsert.Parse())
                     dataset.AddTimestep(parsert);
                 else
-                    Debug.Log($"Issue at parsing {Application.streamingAssetsPath}/{msg.Path}.{s}");
+                    Debug.Log($"Issue at parsing {Application.streamingAssetsPath}/Datasets/{msg.Path}.{s}");
             }
 
             //Set properties

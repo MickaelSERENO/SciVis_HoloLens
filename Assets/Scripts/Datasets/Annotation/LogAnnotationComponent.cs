@@ -79,10 +79,10 @@ namespace Sereno.Datasets.Annotation
         /// Call the event 'OnUpdateHeaders' on all the registered listeners
         /// </summary>
         /// <param name="oldHeaders">The previous used headers</param>
-        protected void CallOnUpdateHeaders(List<Int32> oldHeaders) 
+        protected void CallOnUpdateHeaders(List<Int32> oldHeaders)
         {
-            foreach(var it in m_listeners)
-                it.OnUpdateHeaders(this, oldHeaders);
+            for (int i = 0; i < m_listeners.Count; i++)
+                m_listeners[i].OnUpdateHeaders(this, oldHeaders);
         }
 
         /// <summary>

@@ -233,6 +233,7 @@ namespace Sereno.Datasets
         public void AddLogAnnotationPosition(LogAnnotationPositionInstance pos)
         {
             m_logAnnotPositions.Add(pos);
+            pos.CurrentTime = (m_tf == null) ? 0 : m_tf.Timestep;
             foreach(var l in m_listeners)
                 l.OnAddLogAnnotationPosition(this, pos);
         }

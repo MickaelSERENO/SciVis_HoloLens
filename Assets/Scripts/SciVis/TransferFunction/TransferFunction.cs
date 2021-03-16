@@ -21,12 +21,12 @@ namespace Sereno.SciVis
         /// <summary>
         /// The current minimum clipping value to use for this visualization in the value domain (between 0.0f and 1.0f). Default: 0.0f
         /// </summary>
-        private float m_minClipping;
+        private float m_minClipping = 0.0f;
 
         /// <summary>
         /// The current maximum clipping value to use for this visualization in the value domain (between 0.0f and 1.0f). Default: 1.0f
         /// </summary>
-        private float m_maxClipping;
+        private float m_maxClipping = 1.0f;
 
         /// <summary>
         /// Constructor
