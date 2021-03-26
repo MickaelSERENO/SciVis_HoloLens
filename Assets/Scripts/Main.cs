@@ -691,16 +691,16 @@ namespace Sereno
                 //Simulate a movement
                 curAction.CurrentAction = (int)HeadsetCurrentAction.SELECTING;
                 OnCurrentAction(null, curAction);
-
-                //First entry
-                AddNewSelectionInputMessage addNewSelection = new AddNewSelectionInputMessage(ServerType.GET_ADD_NEW_SELECTION_INPUT);
-                addNewSelection.BooleanOperation = 0;
-                OnAddNewSelectionInput(null, addNewSelection);
-
+                
                 LocationMessage loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
                 loc.position = new float[3] { 0.0f, -0.3f, 0.0f };
                 loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
                 OnLocation(null, loc);
+                
+                //First entry
+                AddNewSelectionInputMessage addNewSelection = new AddNewSelectionInputMessage(ServerType.GET_ADD_NEW_SELECTION_INPUT);
+                addNewSelection.BooleanOperation = 0;
+                OnAddNewSelectionInput(null, addNewSelection);
 
                 Thread.Sleep(100);
                 loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);

@@ -183,6 +183,8 @@ namespace Sereno
         /// </summary>
         public List<List<Vector3>> ConnectionPoints = new List<List<Vector3>>();
 
+        public const int SampleRate = 3;
+
         private bool m_generateConnections;
 
         public OutlineSelectionMeshData(bool generateConnections = false)
@@ -197,9 +199,9 @@ namespace Sereno
                 m_shouldUpdate = true;
 
                 //Generate the lasso
-                List<Vector3> SubLasso = new List<Vector3>((Lasso.Count+4)/5 + 1);
-                for(int i = 0; i < (Lasso.Count+4) / 5; i++)
-                    SubLasso.Add(pos + rot * new Vector3(Lasso[5*i].x * LassoScale.x, 0.0f, Lasso[5*i].y * LassoScale.z));
+                List<Vector3> SubLasso = new List<Vector3>((Lasso.Count+ SampleRate-1) / SampleRate + 1); //cycle 
+                for(int i = 0; i < (Lasso.Count+ SampleRate-1) / SampleRate; i++)
+                    SubLasso.Add(pos + rot * new Vector3(Lasso[SampleRate * i].x * LassoScale.x, 0.0f, Lasso[SampleRate * i].y * LassoScale.z));
                 SubLasso.Add(pos + rot * new Vector3(Lasso[0].x * LassoScale.x, 0.0f, Lasso[0].y * LassoScale.z));
 
                 LassoPoints.Add(SubLasso);
@@ -209,7 +211,7 @@ namespace Sereno
                 {
                     if (ConnectionPoints.Count == 0)
                     {
-                        ConnectionPoints.Capacity = (Lasso.Count+4)/5;
+                        ConnectionPoints.Capacity = LassoPoints.Count-1;
                         for (int i = 0; i < SubLasso.Count; i++)
                             ConnectionPoints.Add(new List<Vector3>());
                     }
