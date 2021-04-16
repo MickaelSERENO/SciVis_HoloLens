@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -1808,7 +1808,13 @@ namespace Sereno
             if (m_tabletSelectionData.CurrentNewSelectionMeshIDs == null)
                 return;
 
-            m_tabletSelectionData.CurrentNewSelectionMeshIDs.MeshData?.AddPosition(m_tabletSelectionData.Position, m_tabletSelectionData.Rotation);
+            if (m_tabletSelectionData.CurrentNewSelectionMeshIDs.MeshData != null)
+            {
+                const double MINIMAL_DISTANCE = 0.005;
+                if(!m_tabletSelectionData.CurrentNewSelectionMeshIDs.MeshData.HasInserted ||
+                   (m_tabletSelectionData.CurrentNewSelectionMeshIDs.MeshData.LastInsertedPosition - m_tabletSelectionData.Position).sqrMagnitude > MINIMAL_DISTANCE * MINIMAL_DISTANCE)
+                    m_tabletSelectionData.CurrentNewSelectionMeshIDs.MeshData.AddPosition(m_tabletSelectionData.Position, m_tabletSelectionData.Rotation);
+            }
         }
 
         public void OnCurrentAction(MessageBuffer messageBuffer, CurrentActionMessage msg)

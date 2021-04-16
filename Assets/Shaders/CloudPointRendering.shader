@@ -27,23 +27,23 @@
             struct appdata
             {
                 float3 vertex : POSITION;
-                float4 color  : COLOR;
+                fixed4 color  : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct v2g
             {
                 float4 vertex   : SV_POSITION;
-                float4 color    : TEXCOORD0;
+                fixed4 color    : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct g2f
             {
                 float4 vertex   : SV_POSITION;
-                float4 localPos : TEXCOORD0;
-                float3 normal   : TEXCOORD1;
-                float4 color    : TEXCOORD2;
+                //float4 localPos : TEXCOORD0;
+                //float3 normal   : TEXCOORD1;
+                fixed4 color    : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -68,8 +68,8 @@
                 UNITY_SETUP_INSTANCE_ID(input[0]);
 
                 //Discard hidden pixels
-                if(input[0].color.a == 0.0)
-                    return;
+                //if(input[0].color.a == 0.0)
+                //    return;
 
                 const float f = _PointSize / 2; //half size
                 float4 vc[8] = { float4(-f, -f, -f, 0.0f),  //0
@@ -81,12 +81,12 @@
                                  float4(+f, +f, -f, 0.0f),  //6
                                  float4(+f, +f, +f, 0.0f) };//7
 
-                const float3 n[6]  = { float3(-1.0,  0.0,  0.0), //left
+                /*const float3 n[6]  = { float3(-1.0,  0.0,  0.0), //left
                                        float3( 0.0,  0.0, -1.0), //front
                                        float3( 1.0,  0.0,  0.0), //right
                                        float3( 0.0,  0.0,  1.0), //back
                                        float3( 0.0,  1.0,  0.0), //top
-                                       float3( 0.0, -1.0,  0.0) }; //bottom
+                                       float3( 0.0, -1.0,  0.0) }; //bottom*/
 
                 const int VERT_ORDER[24] = { 0,1,2,3, // left
                                              0,2,4,6, // front  
@@ -113,16 +113,16 @@
                 // Build the CUBE tile by submitting triangle strip vertices
                 for (int k = 0; k < 6; k++)
                 {
-                    v[k * 4 + 0].normal = n[k];
+                    //v[k * 4 + 0].normal = n[k];
                     tristream.Append(v[k*4 + 0]);
 
-                    v[k * 4 + 1].normal = n[k];
+                    //v[k * 4 + 1].normal = n[k];
                     tristream.Append(v[k*4 + 1]);
 
-                    v[k * 4 + 2].normal = n[k];
+                    //v[k * 4 + 2].normal = n[k];
                     tristream.Append(v[k * 4 + 2]);
 
-                    v[k * 4 + 3].normal = n[k];
+                    //v[k * 4 + 3].normal = n[k];
                     tristream.Append(v[k*4 + 3]);
                     
                     tristream.RestartStrip();
@@ -132,6 +132,8 @@
             fixed4 frag(g2f input) : COLOR
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                if (input.color.a == 0)
+                    discard;
                 return input.color;
             }
 

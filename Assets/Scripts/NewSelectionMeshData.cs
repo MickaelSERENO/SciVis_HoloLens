@@ -45,6 +45,21 @@ namespace Sereno
         protected bool m_shouldUpdate = false;
 
         /// <summary>
+        /// The last inserted position
+        /// </summary>
+        public Vector3    m_lastInsertedPosition;
+        
+        /// <summary>
+        /// The last inserted rotation
+        /// </summary>
+        public Quaternion m_lastInsertedRotation;
+
+        /// <summary>
+        /// Is there any position and rotation inserted?
+        /// </summary>
+        public bool m_hasInserted = false;
+
+        /// <summary>
         /// Ask to close the volume
         /// </summary>
         public virtual void CloseVolume()
@@ -56,14 +71,31 @@ namespace Sereno
         /// <param name="pos">The new mesh position</param>
         /// <param name="rot">The new mesh rotation</param>
         public virtual void AddPosition(Vector3 pos, Quaternion rot)
-        {}
-
-
-
+        {
+            m_hasInserted = true;
+            m_lastInsertedPosition = pos;
+            m_lastInsertedRotation = rot;
+        }
+               
         public bool ShouldUpdate
         {
             get => m_shouldUpdate;
             set => m_shouldUpdate = value;
+        }
+
+        public Vector3 LastInsertedPosition
+        {
+            get => m_lastInsertedPosition;
+        }
+
+        public Quaternion LastInsertedRotation
+        {
+            get => m_lastInsertedRotation;
+        }
+
+        public bool HasInserted
+        {
+            get => m_hasInserted;
         }
     }
 
@@ -167,12 +199,19 @@ namespace Sereno
                 }
 
                 m_positionID++;
+
+                base.AddPosition(pos, rot);
             }
         }
     }
 
     public class OutlineSelectionMeshData : SelectionMeshData
     {
+        /// <summary>
+        /// the sample rate to apply on the lasso points
+        /// </summary>
+        public const int SAMPLE_RATE = 2;
+
         /// <summary>
         /// All the lasso points to display
         /// </summary>
@@ -183,8 +222,9 @@ namespace Sereno
         /// </summary>
         public List<List<Vector3>> ConnectionPoints = new List<List<Vector3>>();
 
-        public const int SampleRate = 3;
-
+        /// <summary>
+        /// Should we generate connections between tablet positions?
+        /// </summary>
         private bool m_generateConnections;
 
         public OutlineSelectionMeshData(bool generateConnections = false)
@@ -199,9 +239,9 @@ namespace Sereno
                 m_shouldUpdate = true;
 
                 //Generate the lasso
-                List<Vector3> SubLasso = new List<Vector3>((Lasso.Count+ SampleRate-1) / SampleRate + 1); //cycle 
-                for(int i = 0; i < (Lasso.Count+ SampleRate-1) / SampleRate; i++)
-                    SubLasso.Add(pos + rot * new Vector3(Lasso[SampleRate * i].x * LassoScale.x, 0.0f, Lasso[SampleRate * i].y * LassoScale.z));
+                List<Vector3> SubLasso = new List<Vector3>((Lasso.Count+ SAMPLE_RATE-1) / SAMPLE_RATE + 1); //cycle 
+                for(int i = 0; i < (Lasso.Count+ SAMPLE_RATE-1) / SAMPLE_RATE; i++)
+                    SubLasso.Add(pos + rot * new Vector3(Lasso[SAMPLE_RATE * i].x * LassoScale.x, 0.0f, Lasso[SAMPLE_RATE * i].y * LassoScale.z));
                 SubLasso.Add(pos + rot * new Vector3(Lasso[0].x * LassoScale.x, 0.0f, Lasso[0].y * LassoScale.z));
 
                 LassoPoints.Add(SubLasso);
@@ -219,6 +259,8 @@ namespace Sereno
                     for (int i = 0; i < ConnectionPoints.Count; i++)
                         ConnectionPoints[i].Add(SubLasso[i]);
                 }
+
+                base.AddPosition(pos, rot);
             }
         }
     }
