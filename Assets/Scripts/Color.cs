@@ -9,7 +9,7 @@ namespace Sereno
     /// <summary>
     /// Hue Saturation Value color model https://en.wikipedia.org/wiki/HSL_and_HSV
     /// </summary>
-    [BurstCompile(CompileSynchronously = true)]
+    [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
     public struct HSVColor
     {
         /// <summary>
@@ -115,7 +115,7 @@ namespace Sereno
     /// <summary>
     /// the XYZ Color space : https://en.wikipedia.org/wiki/_1931_color_space#Meaning_of_X,_Y_and_Z
     /// </summary>
-    [BurstCompile(CompileSynchronously = true)]
+    [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
     public struct XYZColor
     {
         /// <summary>
@@ -189,7 +189,7 @@ namespace Sereno
     /// <summary>
     /// the LAB colorspace https://en.wikipedia.org/wiki/LAB_color_space
     /// </summary>
-    [BurstCompile(CompileSynchronously = true)]
+    [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
     public struct LABColor
     {
         /// <summary>
@@ -375,7 +375,7 @@ namespace Sereno
     /// <summary>
     /// LUV colorspace https://en.wikipedia.org/wiki/CIELUV
     /// </summary>
-    [BurstCompile(CompileSynchronously = true)]
+    [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
     public struct LUVColor
     {
         /// <summary>
@@ -561,7 +561,7 @@ namespace Sereno
     }
 
     /* \brief The MSH Colorspace (see Diverging Color Maps for Scientific Visualization)*/
-    [BurstCompile(CompileSynchronously = true)]
+    [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
     public struct MSHColor
     {
         /// <summary>

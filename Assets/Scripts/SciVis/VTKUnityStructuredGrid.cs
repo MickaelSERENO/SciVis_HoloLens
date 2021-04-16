@@ -150,7 +150,7 @@ namespace Sereno.SciVis
             UInt32 y = (m_ptsDesc.Size[1] + DesiredDensity - 1) / DesiredDensity;
             UInt32 z = (m_ptsDesc.Size[2] + DesiredDensity - 1) / DesiredDensity;
 
-            return Math.Max(Math.Max(x, y), z);
+            return Math.Max(1, Math.Max(Math.Max(x, y), z));
         }
 
         /// <summary>

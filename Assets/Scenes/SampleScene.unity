@@ -835,7 +835,9 @@ MonoBehaviour:
     type: 3}
   TabletPrefab: {fileID: 261364030986515346, guid: 784833022781a9f4693f70b49dfc39ae,
     type: 3}
-  SelectionMeshPrefab: {fileID: 4446784393966462764, guid: 41399465c3105c04f92b7c94770f4ecb,
+  FullSelectionMeshPrefab: {fileID: 224928577450983790, guid: b0308f0c8f76ed34e9278f2057d4baaf,
+    type: 3}
+  OutlineSelectionMeshPrefab: {fileID: 3951580813052403526, guid: 6f7e9e05725b8b842b38df31d457a66f,
     type: 3}
   TabletVirtualCamera: {fileID: 1135518673}
   TabletBirdViewCamera: {fileID: 1999081293}

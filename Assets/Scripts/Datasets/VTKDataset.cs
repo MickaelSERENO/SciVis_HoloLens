@@ -113,7 +113,7 @@ namespace Sereno.Datasets
             return true;
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
         public override Task<int> LoadValues()
         {
             return Task.Run(() =>
@@ -242,7 +242,7 @@ namespace Sereno.Datasets
         /// <summary>
         /// Compute the multi dimensionnal gradient of this dataset
         /// </summary>
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
         protected override Gradient ComputeGradient(int[] indices)
         {
             if (indices.Count() == 0)

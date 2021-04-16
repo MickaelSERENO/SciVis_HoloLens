@@ -1,7 +1,9 @@
-﻿using UnityEngine;
+﻿using Unity.Burst;
+using UnityEngine;
 
 namespace Sereno.SciVis
 {
+    [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
     public class SciVisColor
     {
         //The color needed

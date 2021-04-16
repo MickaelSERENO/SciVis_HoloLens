@@ -796,7 +796,7 @@ namespace Sereno
                         tfMsgSD2.Timestep = 0.0f;
                     OnTFDataset(null, tfMsgSD2);
                     tfMsgSD2.Timestep += 0.25f;
-                    Thread.Sleep(500);
+                    Thread.Sleep(1000);
                 }
             }
             );

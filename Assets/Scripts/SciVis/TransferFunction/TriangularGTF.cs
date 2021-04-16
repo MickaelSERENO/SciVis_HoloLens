@@ -44,7 +44,7 @@ namespace Sereno.SciVis
         /// </summary>
         /// <param name="values">Array of size at least == 2 . Last value correspond to the gradient magnitude</param>
         /// <returns>The Triangular Gaussian Transfer Function alpha component</returns>
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
         public override float ComputeAlpha(float[] values)
         {
             float grad = values[values.Length-1];
@@ -74,7 +74,7 @@ namespace Sereno.SciVis
         /// </summary>
         /// <param name="values">The values to take account of</param>
         /// <returns>The color corresponding to the color mode and length(values)/(values.length) with values a vector where gradient is discarded (i.e, we take into account indices from 0 to values.length - 2) </returns>
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
         public override Color ComputeColor(float[] values)
         {
             if(values.Length < m_scale.Length)

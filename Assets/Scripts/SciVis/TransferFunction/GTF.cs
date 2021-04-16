@@ -40,7 +40,7 @@ namespace Sereno.SciVis
             m_alphaMax = alphaMax;
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
         public override float ComputeAlpha(float[] values)
         {
             if(values.Length < GetDimension())
@@ -62,7 +62,7 @@ namespace Sereno.SciVis
             return val;
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
         public override Color ComputeColor(float[] values)
         {
             float mag = 0;

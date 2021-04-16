@@ -132,7 +132,7 @@ namespace Sereno.SciVis
             }
         }
 
-        [BurstCompile(CompileSynchronously = true)]
+        [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
         private short[] ComputeTFColor(TransferFunction tf)
         {
             VTKDataset vtk = (VTKDataset)m_subDataset.Parent;
@@ -146,8 +146,6 @@ namespace Sereno.SciVis
             int t2 = (int)Math.Ceiling(tf.Timestep);
             int[] times = new int[]{t1, t2};
 
-            //Debug.Log($"t1: {t1}, t2: {t2}");
-
             unsafe
             {
                 int[] indices = new int[vtk.PointFieldDescs.Count];
@@ -160,84 +158,83 @@ namespace Sereno.SciVis
 
                 List<PointFieldDescriptor> ptDescs = m_subDataset.Parent.PointFieldDescs;
 
-                Parallel.For(0, m_dimensions.z, new ParallelOptions { MaxDegreeOfParallelism = 7 },
-                () =>
-                new
+                Parallel.For(0, m_dimensions.z, new ParallelOptions { MaxDegreeOfParallelism = 8 },
+                (k, state) =>
                 {
-                    partialResT1 = new float[indices.Length + hasGradient],
-                    partialResT2 = new float[indices.Length + hasGradient]
-                },
 
-                (k, state, localState) =>
-                {
+                    float[] partialResT1 = new float[indices.Length + hasGradient];
+                    float[] partialResT2 = new float[indices.Length + hasGradient];
+
                     fixed (short* pcolors = colors)
                     {
-                        UInt64 ind = (UInt64)(k * m_dimensions.x * m_dimensions.y);
-                        for (int j = 0; j < m_dimensions.y; j++)
-                        {
-                            //Pre compute the indice up to J--K coordinate
-                            UInt64 readIntJK = (UInt64)(m_descPts.Size[0] * (j * m_descPts.Size[1] / m_dimensions.y) +
-                                                        m_descPts.Size[0] * m_descPts.Size[1] * (k * m_descPts.Size[2] / m_dimensions.z));
-
-                            for (int i = 0; i < m_dimensions.x; i++)
+                        //int maxOldK = Math.Max(10 * (curK + 1), m_dimensions.z);
+                        //for(int k = 10*curK; k < maxOldK; k++)
+                        { 
+                            UInt64 ind      = (UInt64)(k * m_dimensions.x * m_dimensions.y);
+                            UInt64 readIntK = (UInt64)(m_descPts.Size[0] * m_descPts.Size[1] * (k * m_descPts.Size[2] / m_dimensions.z));
+                            for (int j = 0; j < m_dimensions.y; j++)
                             {
-                                UInt64 readInd = (UInt64)(i * m_descPts.Size[0] / m_dimensions.x) + readIntJK;
+                                //Pre compute the indice up to J--K coordinate
+                                UInt64 readIntJK = (UInt64)(m_descPts.Size[0] * (j * m_descPts.Size[1] / m_dimensions.y)) + readIntK;
 
-                                if (vtk.MaskValue != null && ((byte*)(vtk.MaskValue.Value))[readInd] == 0 ||
-                                    (m_subDataset.EnableVolumetricMask && m_subDataset.GetVolumetricMaskAt((int)readInd) == false))
-                                    pcolors[ind] = 0;
-                                else
+                                for (int i = 0; i < m_dimensions.x; i++)
                                 {
-                                    float[][] partialRes = new float[][] { localState.partialResT1, localState.partialResT2 };
+                                    UInt64 readInd = (UInt64)(i * m_descPts.Size[0] / m_dimensions.x) + readIntJK;
 
-                                    for (int p = 0; p < 2; p++)
+                                    if (vtk.MaskValue != null && ((byte*)(vtk.MaskValue.Value))[readInd] == 0 ||
+                                        (m_subDataset.EnableVolumetricMask && m_subDataset.GetVolumetricMaskAt((int)readInd) == false))
+                                        pcolors[ind] = 0;
+                                    else
                                     {
-                                        //Determine transfer function coordinates
-                                        for (int l = 0; l < indices.Length; l++)
+                                        float[][] partialRes = new float[][] { partialResT1, partialResT2 };
+
+                                        for (int p = 0; p < 2; p++)
                                         {
-                                            int ids = indices[l];
-                                            if (ptDescs[ids].NbValuesPerTuple == 1)
-                                                partialRes[p][ids] = (ptDescs[ids].Value[times[p]].ReadAsFloat(readInd) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
-                                            else
-                                                partialRes[p][ids] = (ptDescs[ids].ReadMagnitude(readInd, times[p]) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
+                                            //Determine transfer function coordinates
+                                            for (int l = 0; l < indices.Length; l++)
+                                            {
+                                                int ids = indices[l];
+                                                if (ptDescs[ids].NbValuesPerTuple == 1)
+                                                    partialRes[p][ids] = (ptDescs[ids].Value[times[p]].ReadAsFloat(readInd) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
+                                                else
+                                                    partialRes[p][ids] = (ptDescs[ids].ReadMagnitude(readInd, times[p]) - ptDescs[ids].MinVal) / (ptDescs[ids].MaxVal - ptDescs[ids].MinVal);
+                                            }
+
+                                            if (tf.HasGradient())
+                                            {
+                                                if (gradient != null)
+                                                    partialRes[p][partialRes[p].Length - 1] = gradient.Values[times[p]][readInd]; //In case we need the gradient
+                                                else
+                                                    partialRes[p][partialRes[p].Length - 1] = 0.0f;
+                                            }
                                         }
 
-                                        if (tf.HasGradient())
-                                        {
-                                            if (gradient != null)
-                                                partialRes[p][partialRes[p].Length - 1] = gradient.Values[times[p]][readInd]; //In case we need the gradient
-                                            else
-                                                partialRes[p][partialRes[p].Length - 1] = 0.0f;
-                                        }
+                                        //Linear interpolation
+                                        Color c = (1.0f - frac) * tf.ComputeColor(partialResT1) + frac * tf.ComputeColor(partialResT2);
+                                        float a = (1.0f - frac) * tf.ComputeAlpha(partialResT1) + frac * tf.ComputeAlpha(partialResT2);
+
+                                        short r = (short)(16 * c.r);
+                                        if (r > 15)
+                                            r = 15;
+                                        short g = (short)(16 * c.g);
+                                        if (g > 15)
+                                            g = 15;
+                                        short b = (short)(16 * c.b);
+                                        if (b > 15)
+                                            b = 15;
+                                        short _a = (short)(16 * a);
+                                        if (_a > 15)
+                                            _a = 15;
+
+                                        pcolors[ind] = (short)((r << 12) + (g << 8) + //RGBA4444 color format
+                                                               (b << 4 ) + _a);
                                     }
-
-                                    //Linear interpolation
-                                    Color c = (1.0f - frac) * tf.ComputeColor(localState.partialResT1) + frac * tf.ComputeColor(localState.partialResT2);
-                                    float a = (1.0f - frac) * tf.ComputeAlpha(localState.partialResT1) + frac * tf.ComputeAlpha(localState.partialResT2);
-
-                                    short r = (short)(16 * c.r);
-                                    if (r > 15)
-                                        r = 15;
-                                    short g = (short)(16 * c.g);
-                                    if (g > 15)
-                                        g = 15;
-                                    short b = (short)(16 * c.b);
-                                    if (b > 15)
-                                        b = 15;
-                                    short _a = (short)(16 * a);
-                                    if (_a > 15)
-                                        _a = 15;
-
-                                    pcolors[ind] = (short)((r << 12) + (g << 8) + //RGBA4444 color format
-                                                           (b << 4 ) + _a);
+                                    ind += 1;
                                 }
-                                ind += 1;
                             }
                         }
                     }
-                    return localState;
-                },
-                (partialRes) => {}); ;
+                });
                 return colors;
             }
         }

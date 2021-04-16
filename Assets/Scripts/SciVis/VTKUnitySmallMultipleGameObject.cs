@@ -207,10 +207,11 @@ namespace Sereno.SciVis
                         m_texture3D.wrapModeV = TextureWrapMode.Clamp;
                         m_texture3D.wrapModeW = TextureWrapMode.Clamp;
                         m_texture3D.filterMode = FilterMode.Bilinear;
+                        m_texture3D.anisoLevel = 1;
                     }
 
                     m_texture3D.SetPixelData<short>(textureColor, 0);
-                    m_texture3D.Apply();
+                    m_texture3D.Apply(false, false);
                     m_unloadModel.SetActive(false);
                     lock(m_sm)
                     {
