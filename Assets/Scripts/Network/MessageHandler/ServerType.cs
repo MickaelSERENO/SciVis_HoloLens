@@ -38,5 +38,9 @@ namespace Sereno.Network.MessageHandler
         GET_SET_SUBDATASET_CLIPPING             = 32, /*!< Set the clipping values of a subdataset*/
         GET_SET_DRAWABLE_ANNOTATION_POSITION_COLOR = 33,
         GET_SET_DRAWABLE_ANNOTATION_POSITION_IDX   = 34,
+        ADD_SUBJECTIVE_VIEW_GROUP               = 35,
+        ADD_SD_TO_SV_STACKED_LINKED_GROUP       = 36,
+        SET_SV_STACKED_GLOBAL_PARAMETERS        = 37,
+        REMOVE_SUBDATASET_GROUP                 = 38,
     }
 }

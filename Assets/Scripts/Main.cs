@@ -2185,6 +2185,22 @@ namespace Sereno
 
             annot.MappedIndices = msg.Indices;
         }
+        
+        public void OnAddSubDatasetSubjectiveGroup(MessageBuffer message, AddSubDatasetSubjectiveGroupMessage msg)
+        {
+        }
+
+        public void OnAddSubDatasetToSubjectiveStackedGroup(MessageBuffer message, AddSubDatasetToSubjectiveStackedGroupMessage msg)
+        {
+        }
+
+        public void OnSetSubjectiveStackedGroupParameters(MessageBuffer message, SubjectiveStackedGroupGlobalParametersMessage msg)
+        {
+        }
+
+        public void OnRemoveSubDatasetGroup(MessageBuffer message, RemoveSubDatasetGroupMessage msg)
+        {
+        }
 
         #endregion
 
