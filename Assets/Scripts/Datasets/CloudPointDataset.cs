@@ -59,7 +59,7 @@ namespace Sereno.Datasets
         {
             return Task.Run(() =>
             {
-                using(FileStream file = File.Open($"{Application.streamingAssetsPath}/{m_path}", FileMode.Open, FileAccess.Read))
+                using(FileStream file = File.Open($"{Application.streamingAssetsPath}/Datasets/{m_path}", FileMode.Open, FileAccess.Read))
                 {
                     //Test the file
                     if(file == null)
