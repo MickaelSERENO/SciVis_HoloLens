@@ -227,7 +227,16 @@ namespace Sereno.Network.MessageHandler
         void OnSetSubDatasetClipping(MessageBuffer message, SetSubDatasetClipping msg);
 
         void OnSetDrawableAnnotationPositionColor(MessageBuffer message, SetDrawableAnnotationPositionColorMessage msg);
+        
         void OnSetDrawableAnnotationPositionIdx(MessageBuffer message, SetDrawableAnnotationPositionIdxMessage msg);
+
+        void OnAddSubDatasetSubjectiveGroup(MessageBuffer message, AddSubDatasetSubjectiveGroupMessage msg);
+        
+        void OnAddSubDatasetToSubjectiveStackedGroup(MessageBuffer message, AddSubDatasetToSubjectiveStackedGroupMessage msg);
+
+        void OnSetSubjectiveStackedGroupParameters(MessageBuffer message, SubjectiveStackedGroupGlobalParametersMessage msg);
+       
+        void OnRemoveSubDatasetGroup(MessageBuffer message, RemoveSubDatasetGroupMessage msg);
     }
 
     /// <summary>
@@ -492,6 +501,22 @@ namespace Sereno.Network.MessageHandler
                             foreach(var l in m_listeners)
                                 l.OnSetDrawableAnnotationPositionIdx(this, (SetDrawableAnnotationPositionIdxMessage)m_msg);
                             break;
+                        case ServerType.ADD_SUBJECTIVE_VIEW_GROUP:
+                            foreach (var l in m_listeners)
+                                l.OnAddSubDatasetSubjectiveGroup(this, (AddSubDatasetSubjectiveGroupMessage)m_msg);
+                            break;
+                        case ServerType.ADD_SD_TO_SV_STACKED_LINKED_GROUP:
+                            foreach (var l in m_listeners)
+                                l.OnAddSubDatasetToSubjectiveStackedGroup(this, (AddSubDatasetToSubjectiveStackedGroupMessage)m_msg);
+                            break;
+                        case ServerType.SET_SV_STACKED_GLOBAL_PARAMETERS:
+                            foreach (var l in m_listeners)
+                                l.OnSetSubjectiveStackedGroupParameters(this, (SubjectiveStackedGroupGlobalParametersMessage)m_msg);
+                            break;
+                        case ServerType.REMOVE_SUBDATASET_GROUP:
+                            foreach (var l in m_listeners)
+                                l.OnRemoveSubDatasetGroup(this, (RemoveSubDatasetGroupMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -742,6 +767,18 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_IDX:
                     m_msg = new SetDrawableAnnotationPositionIdxMessage(ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_IDX);
+                    break;
+                case ServerType.ADD_SUBJECTIVE_VIEW_GROUP:
+                    m_msg = new AddSubDatasetSubjectiveGroupMessage(ServerType.ADD_SUBJECTIVE_VIEW_GROUP);
+                    break;
+                case ServerType.ADD_SD_TO_SV_STACKED_LINKED_GROUP:
+                    m_msg = new AddSubDatasetToSubjectiveStackedGroupMessage(ServerType.ADD_SD_TO_SV_STACKED_LINKED_GROUP);
+                    break;
+                case ServerType.SET_SV_STACKED_GLOBAL_PARAMETERS:
+                    m_msg = new SubjectiveStackedGroupGlobalParametersMessage(ServerType.SET_SV_STACKED_GLOBAL_PARAMETERS);
+                    break;
+                case ServerType.REMOVE_SUBDATASET_GROUP:
+                    m_msg = new RemoveSubDatasetGroupMessage(ServerType.REMOVE_SUBDATASET_GROUP);
                     break;
             }
         }
