@@ -10,9 +10,8 @@ namespace Sereno.Datasets
         {
             void OnSetGap(SubDatasetSubjectiveStackedGroup group, float gap);
             void OnSetMerge(SubDatasetSubjectiveStackedGroup group, bool merge);
-            void OnSetStackingMethod(SubDatasetSubjectiveStackedGroup group, int method);
+            void OnSetStackMethod(SubDatasetSubjectiveStackedGroup group, StackMethod method);
             void OnAddSubjectiveViews(SubDatasetSubjectiveStackedGroup group, KeyValuePair<SubDataset, SubDataset> subjViews);
-            void OnSetFocus(SubDatasetSubjectiveStackedGroup group, bool onBase);
         }
 
         private List<ISubDatasetSubjectiveStackedGroupListener> m_listeners = new List<ISubDatasetSubjectiveStackedGroupListener>();
@@ -105,6 +104,9 @@ namespace Sereno.Datasets
                 AddSubDataset(sdLinked);
 
             m_subjViews.Add(new KeyValuePair<SubDataset, SubDataset>(sdStacked, sdLinked));
+
+            foreach(var l in m_listeners)
+                l.OnAddSubjectiveViews(this, m_subjViews[m_subjViews.Count-1]);
             return true;
         }
 
@@ -166,6 +168,48 @@ namespace Sereno.Datasets
         public List<KeyValuePair<SubDataset, SubDataset>> SubjectiveViews
         {
             get => m_subjViews;
+        }
+
+        public float Gap
+        {
+            get => m_gap;
+            set
+            {
+                if(m_gap != value)
+                {
+                    m_gap = value;
+                    foreach(var l in m_listeners)
+                        l.OnSetGap(this, m_gap);
+                }
+            }
+        }
+
+        public bool IsMerged
+        {
+            get => m_isMerged;
+            set
+            {
+                if(m_isMerged != value)
+                {
+                    m_isMerged = value;
+                    foreach(var l in m_listeners)
+                        l.OnSetMerge(this, m_isMerged);
+                }
+            }
+        }
+
+        public StackMethod StackMethod
+        {
+            get => m_stack;
+            set
+            {
+                if(m_stack != value)
+                {
+                    m_stack = value;
+                    foreach(var l in m_listeners)
+                        l.OnSetStackMethod(this, m_stack);
+                }
+            }
         }
     }
 }
