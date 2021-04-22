@@ -532,6 +532,9 @@ namespace Sereno.SciVis
         public virtual void OnChangeDepthClipping(SubDataset dataset, float depth)
         {}
 
+        public void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg)
+        {}
+
         /// <summary>
         /// Is this GameObject targeted?
         /// </summary>

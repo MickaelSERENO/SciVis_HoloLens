@@ -100,6 +100,13 @@ namespace Sereno.Datasets
         /// <param name="dataset">The SubDataset calling this method</param>
         /// <param name="depth">The new depth clipping value</param>
         void OnChangeDepthClipping(SubDataset dataset, float depth);
+
+        /// <summary>
+        /// Called when the subdataset group associated with this SubDataset has changed
+        /// </summary>
+        /// <param name="dataset">The SubDataset calling this method</param>
+        /// <param name="sdg">The new SubDataset Group owning this SubDataset. null == no group owning this object</param>
+        void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg);
     }
 
     public class SubDataset
@@ -108,6 +115,11 @@ namespace Sereno.Datasets
         /// The Dataset owning this sub dataset
         /// </summary>
         protected Dataset   m_parent;
+
+        /// <summary>
+        /// The subdataset group owning this sub dataset
+        /// </summary>
+        protected SubDatasetGroup m_sdg = null;
 
         /// <summary>
         /// The transfer function to use
@@ -312,6 +324,32 @@ namespace Sereno.Datasets
         /// The Dataset parent
         /// </summary>
         public Dataset Parent {get => m_parent;}
+
+        /// <summary>
+        /// The SubDatasetGroup owning this subdataset
+        /// </summary>
+        public SubDatasetGroup SubDatasetGroup 
+        {
+            get => m_sdg;
+            set
+            {
+                if(m_sdg == value)
+                    return;
+                if(m_sdg != null)
+                {
+                    SubDatasetGroup old = m_sdg;
+                    m_sdg = null;
+                    old.RemoveSubDataset(this);
+                }
+                m_sdg = value;
+                if(m_sdg != null)
+                    if(!m_sdg.AddSubDataset(this))
+                        m_sdg = null;
+
+                foreach(var l in m_listeners)
+                    l.OnSetSubDatasetGroup(this, m_sdg);
+            }
+        }
 
         /// <summary>
         /// The Transfer function bound to this SubDataset. Can be null (used then another algorithm, e.g, a grayscale algorithm)

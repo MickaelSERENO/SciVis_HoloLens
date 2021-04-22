@@ -653,7 +653,7 @@ namespace Sereno
                 OnScaleDataset(null, scaleMsg);
 
                 //Annotations
-                AddLogAnnotationMessage logAnnot = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
+                /*AddLogAnnotationMessage logAnnot = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
                 logAnnot.LogID     = 0;
                 logAnnot.HasHeader = true;
                 logAnnot.FileName  = "history-20191122.csv";
@@ -706,7 +706,7 @@ namespace Sereno
                 OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);
 
                 idxPosMsg.SubDatasetID = 0;
-                OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);
+                OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);*/
 
                 TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD2.ColorType = ColorMode.WARM_COLD_CIELAB;

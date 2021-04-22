@@ -312,5 +312,8 @@ namespace Sereno.DataVis
 
         public void OnChangeDepthClipping(SubDataset dataset, float depth)
         {}
+
+        public void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg)
+        {}
     }
 }

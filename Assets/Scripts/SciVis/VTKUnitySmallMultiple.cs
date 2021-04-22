@@ -277,6 +277,9 @@ namespace Sereno.SciVis
         public void OnChangeDepthClipping(SubDataset dataset, float depth)
         {}
 
+        public void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg)
+        {}
+
         /// <summary>
         /// The 3D Texure RGBA4444 byte array computed via the given transfer function.
         /// </summary>
