@@ -68,7 +68,21 @@ namespace Sereno.SciVis
         /// </summary>
         /// <returns></returns>
         public abstract TransferFunction Clone();
-        
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null)
+                return false;
+
+            if (obj is TransferFunction)
+            {
+                TransferFunction tf = obj as TransferFunction;
+                return tf.ColorMode   == ColorMode   && tf.Timestep    == Timestep &&
+                       tf.MinClipping == MinClipping && tf.MaxClipping == MaxClipping;
+            }
+            return false;
+        }
+
         /// <summary>
         /// The ColorMode bound to this Transfer Function
         /// </summary>

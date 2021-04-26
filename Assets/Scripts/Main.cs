@@ -276,6 +276,26 @@ namespace Sereno
         /// All the dataset game objects
         /// </summary>
         private List<DefaultSubDatasetGameObject> m_datasetGameObjects = new List<DefaultSubDatasetGameObject>();
+
+        /// <summary>
+        /// All the registered subdataset groups
+        /// </summary>
+        private Dictionary<Int32, SubDatasetGroup> m_sdGroups = new Dictionary<int, SubDatasetGroup>();
+
+        /// <summary>
+        /// All the game objects created for SubDatasetSubjectiveStackedGroup data objects
+        /// </summary>
+        private Dictionary<SubDatasetSubjectiveStackedGroup, SubjectiveGroupGameObject> m_subjGroupsGOs = new Dictionary<SubDatasetSubjectiveStackedGroup, SubjectiveGroupGameObject>();
+
+        /// <summary>
+        /// All the SubDatasetSubjectiveStackedGroup to graphically load
+        /// </summary>
+        private Queue<SubDatasetSubjectiveStackedGroup> m_subjViewToLoad = new Queue<SubDatasetSubjectiveStackedGroup>();
+
+        /// <summary>
+        /// All the SubDatasetSubjectiveStackedGroup to graphically unload
+        /// </summary>
+        private Queue<SubDatasetSubjectiveStackedGroup> m_subjViewToRemove = new Queue<SubDatasetSubjectiveStackedGroup>();
                
         /// <summary>
         /// The Server Client. 
@@ -458,6 +478,11 @@ namespace Sereno
         public CloudPointGameObject CloudPointGameObjectPrefab;
 
         /// <summary>
+        /// Prefab of Subjective Groups correctely configured
+        /// </summary>
+        public SubjectiveGroupGameObject SubjectiveGroupGameObjectPrefab;
+
+        /// <summary>
         /// The desired density for VTK structured grid datasets
         /// </summary>
         public UInt32 DesiredVTKDensity;
@@ -629,18 +654,18 @@ namespace Sereno
                 addSDMsg.SubDatasetID = 1;
                 addSDMsg.Name = $"{m_datasets[0].PointFieldDescs[0].Name}_bis";
                 OnAddSubDataset(null, addSDMsg);
+                addSDMsg.SubDatasetID = 2;
+                addSDMsg.Name = $"{m_datasets[0].PointFieldDescs[0].Name}_bis2";
+                OnAddSubDataset(null, addSDMsg);
 
                 m_datasets[0].SubDatasets[0].DepthClipping = 0.1f;
                 m_datasets[0].SubDatasets[1].DepthClipping = 1.0f;
 
                 MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
-                moveVTKMsg.SubDataID = 0;
+                moveVTKMsg.SubDataID = 2;
                 moveVTKMsg.Position = new float[3] { -0.30f, -0.75f, 1.5f };
                 moveVTKMsg.HeadsetID = -1;
-                OnMoveDataset(null, moveVTKMsg);
-                moveVTKMsg.SubDataID = 1;
-                moveVTKMsg.Position = new float[3] { 0.30f, -0.75f, 1.5f };
                 OnMoveDataset(null, moveVTKMsg);
 
                 ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
@@ -649,8 +674,27 @@ namespace Sereno
                 scaleMsg.HeadsetID = -1;
                 scaleMsg.Scale = new float[3] { 0.4f, 0.4f, 0.4f };
                 OnScaleDataset(null, scaleMsg);
-                scaleMsg.SubDataID = 1;
-                OnScaleDataset(null, scaleMsg);
+
+                //Create a SubjectiveView group
+                AddSubDatasetSubjectiveGroupMessage subjGroupMsg = new AddSubDatasetSubjectiveGroupMessage(ServerType.ADD_SUBJECTIVE_VIEW_GROUP);
+                subjGroupMsg.SDG_ID = 0;
+                subjGroupMsg.BaseDatasetID    = 0;
+                subjGroupMsg.BaseSubDatasetID = 0;
+                subjGroupMsg.SubjectiveViewType = (int)SubDatasetGroupType.STACKED_LINKED;
+                OnAddSubDatasetSubjectiveGroup(null, subjGroupMsg);
+
+                AddSubDatasetToSubjectiveStackedGroupMessage addSDToSubjMsg = new AddSubDatasetToSubjectiveStackedGroupMessage(ServerType.ADD_SD_TO_SV_STACKED_LINKED_GROUP);
+                addSDToSubjMsg.DatasetID = 0;
+                addSDToSubjMsg.StackedID = 1;
+                addSDToSubjMsg.LinkedID  = 2;
+                addSDToSubjMsg.SDG_ID    = 0;
+                OnAddSubDatasetToSubjectiveStackedGroup(null, addSDToSubjMsg);
+
+                /*Thread.Sleep(15000);
+                RemoveSubDatasetMessage removeSDMsg = new RemoveSubDatasetMessage(ServerType.GET_DEL_SUBDATASET);
+                removeSDMsg.DataID = 0;
+                removeSDMsg.SubDataID = 0;
+                OnRemoveSubDataset(null, removeSDMsg);*/
 
                 //Annotations
                 /*AddLogAnnotationMessage logAnnot = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
@@ -711,7 +755,7 @@ namespace Sereno
                 TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD2.ColorType = ColorMode.WARM_COLD_CIELAB;
                 tfMsgSD2.DataID = 0;
-                tfMsgSD2.SubDataID = 1;
+                tfMsgSD2.SubDataID = 2;
                 tfMsgSD2.TFID = TFType.TF_TRIANGULAR_GTF;
                 tfMsgSD2.GTFData = new TFSubDatasetMessage.GTF();
                 tfMsgSD2.GTFData.Props = new TFSubDatasetMessage.GTFProp[1];
@@ -734,7 +778,7 @@ namespace Sereno
                 OnTFDataset(null, tfMsgSD1);
                 
                 //Simulate a lasso input
-                CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
+                /*CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);
                 curAction.CurrentAction = (int)HeadsetCurrentAction.LASSO;
                 OnCurrentAction(null, curAction);
 
@@ -781,7 +825,7 @@ namespace Sereno
                 loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
                 loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
                 loc.position = new float[3] { 0.3f, -0.4f, 0.3f };
-                OnLocation(null, loc);
+                OnLocation(null, loc);*/
 
                 /*Thread.Sleep(500);
                 curAction.CurrentAction = (int)HeadsetCurrentAction.REVIEWING_SELECTION;
@@ -796,7 +840,7 @@ namespace Sereno
                         tfMsgSD2.Timestep = 0.0f;
                     OnTFDataset(null, tfMsgSD2);
                     tfMsgSD2.Timestep += 0.25f;
-                    Thread.Sleep(1000);
+                    Thread.Sleep(2000);
                 }
             }
             );
@@ -1001,6 +1045,31 @@ namespace Sereno
             {
                 SubDataset sd = m_subDatasetToRemove.Dequeue();
                 removeSubDatasetFunc(sd);
+            }
+        }
+
+        private void HandleSubDatasetGroupsToRemove()
+        {
+            while (m_subjViewToRemove.Count > 0)
+            {
+                SubDatasetSubjectiveStackedGroup svg = m_subjViewToRemove.Dequeue();
+                if (!m_subjGroupsGOs.ContainsKey(svg))
+                    continue;
+                SubjectiveGroupGameObject go = m_subjGroupsGOs[svg];
+                Destroy(go);
+                m_subjGroupsGOs.Remove(svg);
+            }
+        }
+
+        private void HandleSubDatasetGroupsLoaded()
+        {
+            while (m_subjViewToLoad.Count > 0)
+            {
+                SubDatasetSubjectiveStackedGroup svg = m_subjViewToLoad.Dequeue();
+                SubjectiveGroupGameObject go = Instantiate(SubjectiveGroupGameObjectPrefab);
+                go.transform.parent = transform;
+                go.Init(svg);
+                m_subjGroupsGOs.Add(svg, go);
             }
         }
 
@@ -1386,6 +1455,8 @@ namespace Sereno
                 m_localToWorldMatrix = transform.localToWorldMatrix;
                 HandleDatasetsToRemove();
                 HandleDatasetsLoaded();
+                HandleSubDatasetGroupsToRemove();
+                HandleSubDatasetGroupsLoaded();
                 HandlePointingID();
                 HandleAnchor();
                 HandleIPTxt();
@@ -1875,7 +1946,13 @@ namespace Sereno
         {
             lock(this)
             {
-                m_subDatasetToRemove.Enqueue(GetSubDataset(msg.DataID, msg.SubDataID));
+                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+                if (sd != null)
+                {
+                    if(sd.SubDatasetGroup != null)
+                        sd.SubDatasetGroup.RemoveSubDataset(sd);
+                    m_subDatasetToRemove.Enqueue(sd);
+                }
             }
         }
 
@@ -2074,95 +2151,167 @@ namespace Sereno
 
         public void OnAddLogAnnotationPosition(MessageBuffer message, AddLogAnnotationPositionMessage msg)
         {
-            LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
-            if(annot != null)
+            lock (this)
             {
-                LogAnnotationPosition pos = annot.BuildAnnotationPositionView();
-                annot.ParseAnnotationPosition(pos);
-                pos.ID = msg.CompID;
+                LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
+                if (annot != null)
+                {
+                    LogAnnotationPosition pos = annot.BuildAnnotationPositionView();
+                    annot.ParseAnnotationPosition(pos);
+                    pos.ID = msg.CompID;
+                }
             }
         }
 
         public void OnSetLogAnnotationPositionIndexes(MessageBuffer message, SetLogAnnotationPositionIndexesMessage msg)
         {
-            LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
-            if(annot != null)
+            lock (this)
             {
-                LogAnnotationPosition pos = annot.LogAnnotationPositions.Keys.FirstOrDefault((p) => p.ID == msg.CompID);
-                if(pos != null)
-                    pos.SetXYZIndices(msg.Indexes[0], msg.Indexes[1], msg.Indexes[2]);
+                LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
+                if (annot != null)
+                {
+                    LogAnnotationPosition pos = annot.LogAnnotationPositions.Keys.FirstOrDefault((p) => p.ID == msg.CompID);
+                    if (pos != null)
+                        pos.SetXYZIndices(msg.Indexes[0], msg.Indexes[1], msg.Indexes[2]);
+                }
             }
         }
 
         public void OnLinkLogAnnotationPositionSubDataset(MessageBuffer message, LinkLogAnnotationPositionSubDatasetMessage msg)
         {
-            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if(sd == null)
-                return;
+            lock (this)
+            {
+                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+                if (sd == null)
+                    return;
 
-            LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
-            if(annot == null)
-                return;
-            
-            LogAnnotationPosition pos = annot.LogAnnotationPositions.Keys.FirstOrDefault((p) => p.ID == msg.CompID);
-            if(pos == null)
-                return;
-                
-            sd.AddLogAnnotationPosition(new LogAnnotationPositionInstance(annot, pos, sd, msg.DrawableID));
+                LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
+                if (annot == null)
+                    return;
+
+                LogAnnotationPosition pos = annot.LogAnnotationPositions.Keys.FirstOrDefault((p) => p.ID == msg.CompID);
+                if (pos == null)
+                    return;
+
+                sd.AddLogAnnotationPosition(new LogAnnotationPositionInstance(annot, pos, sd, msg.DrawableID));
+            }
         }
 
         public void OnSetSubDatasetClipping(MessageBuffer message, SetSubDatasetClipping msg)
         {
-            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-            if (sd == null)
-                return;
+            lock (this)
+            {
+                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+                if (sd == null)
+                    return;
 
-            sd.DepthClipping = msg.DepthClipping;
+                sd.DepthClipping = msg.DepthClipping;
+            }
         }
 
         public void OnSetDrawableAnnotationPositionColor(MessageBuffer message, SetDrawableAnnotationPositionColorMessage msg)
         {
-            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-            if(sd == null)
-                return;
+            lock (this)
+            {
+                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+                if (sd == null)
+                    return;
 
-            LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
-            if(annot == null)
-                return;
+                LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
+                if (annot == null)
+                    return;
 
-            annot.Color = new Color32((byte)((msg.Color >> 16) & 0xff),
-                                      (byte)((msg.Color >> 8 ) & 0xff),
-                                      (byte)((msg.Color >> 0 ) & 0xff),
-                                      (byte)((msg.Color >> 24) & 0xff));
+                annot.Color = new Color32((byte)((msg.Color >> 16) & 0xff),
+                                          (byte)((msg.Color >> 8) & 0xff),
+                                          (byte)((msg.Color >> 0) & 0xff),
+                                          (byte)((msg.Color >> 24) & 0xff));
+            }
         }
 
         public void OnSetDrawableAnnotationPositionIdx(MessageBuffer message, SetDrawableAnnotationPositionIdxMessage msg)
         {
-            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-            if (sd == null)
-                return;
+            lock (this)
+            {
+                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+                if (sd == null)
+                    return;
 
-            LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
-            if (annot == null)
-                return;
+                LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
+                if (annot == null)
+                    return;
 
-            annot.MappedIndices = msg.Indices;
+                annot.MappedIndices = msg.Indices;
+            }
         }
         
         public void OnAddSubDatasetSubjectiveGroup(MessageBuffer message, AddSubDatasetSubjectiveGroupMessage msg)
         {
+            lock (this)
+            {
+                SubDataset baseSD = GetSubDataset(msg.BaseDatasetID, msg.BaseSubDatasetID);
+                if(baseSD == null)
+                    return;
+
+                SubDatasetSubjectiveStackedGroup svGroup = new SubDatasetSubjectiveStackedGroup(m_headsetID, (SubDatasetGroupType)msg.SubjectiveViewType, msg.SDG_ID, baseSD);
+                m_sdGroups.Add(svGroup.ID, svGroup);
+
+                m_subjViewToLoad.Enqueue(svGroup);
+            }
         }
 
         public void OnAddSubDatasetToSubjectiveStackedGroup(MessageBuffer message, AddSubDatasetToSubjectiveStackedGroupMessage msg)
         {
+            lock (this)
+            {
+                SubDataset stackedSD = null;
+                SubDataset linkedSD  = null;
+                if (msg.StackedID >= 0)
+                {
+                    stackedSD = GetSubDataset(msg.DatasetID, msg.StackedID);
+                    if (stackedSD == null)
+                        return;
+                }
+
+                if (msg.LinkedID >= 0)
+                {
+                    linkedSD = GetSubDataset(msg.DatasetID, msg.LinkedID);
+                    if (linkedSD == null)
+                        return;
+                }
+
+                SubDatasetGroup sdg = m_sdGroups[msg.SDG_ID];
+                if (sdg == null || !SubDatasetGroup.IsSubjective(sdg))
+                    return;
+                SubDatasetSubjectiveStackedGroup svGroup = (SubDatasetSubjectiveStackedGroup)sdg;
+                svGroup.AddSubjectiveSubDataset(stackedSD, linkedSD);
+            }
         }
 
         public void OnSetSubjectiveStackedGroupParameters(MessageBuffer message, SubjectiveStackedGroupGlobalParametersMessage msg)
         {
+            lock(this)
+            {
+                SubDatasetGroup sdg = m_sdGroups[msg.SDG_ID];
+                if (sdg == null || !SubDatasetGroup.IsSubjective(sdg))
+                    return;
+                SubDatasetSubjectiveStackedGroup svGroup = (SubDatasetSubjectiveStackedGroup)sdg;
+                svGroup.Gap         = msg.Gap;
+                svGroup.IsMerged    = msg.IsMerged;
+                svGroup.StackMethod = (StackMethod)msg.StackedMethod;
+            }
         }
 
         public void OnRemoveSubDatasetGroup(MessageBuffer message, RemoveSubDatasetGroupMessage msg)
         {
+            lock (this)
+            {
+                SubDatasetGroup sdg = m_sdGroups[msg.SDG_ID];
+                if (sdg == null)
+                    return;
+
+                if (SubDatasetGroup.IsSubjective(sdg))
+                    m_subjViewToRemove.Enqueue((SubDatasetSubjectiveStackedGroup)sdg);
+            }
         }
 
         #endregion
@@ -2360,8 +2509,13 @@ namespace Sereno
 
                     //Datasets
                     m_vtkSubDatasetToLoad.Clear();
-                    foreach(var d in m_datasets)
+                    foreach (var d in m_datasets)
+                    {
+                        foreach (var sd in d.Value.SubDatasets)
+                            if (sd.SubDatasetGroup != null)
+                                sd.SubDatasetGroup.RemoveSubDataset(sd);
                         m_datasetToRemove.Enqueue(d.Value);
+                    }
                     txt = "";
 
                     //Selection

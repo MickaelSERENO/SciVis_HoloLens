@@ -1,5 +1,7 @@
+using Sereno.SciVis;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Sereno.Datasets
@@ -16,15 +18,17 @@ namespace Sereno.Datasets
 
         private List<ISubDatasetSubjectiveStackedGroupListener> m_listeners = new List<ISubDatasetSubjectiveStackedGroupListener>();
 
-        private SubDataset m_base      = null;
-        private StackMethod m_stack    = StackMethod.STACK_VERTICAL;
-        private float       m_gap      = 0.0f; 
-        private bool        m_isMerged = false;
+        private SubDataset m_base       = null;
+        private StackMethod m_stack     = StackMethod.STACK_VERTICAL;
+        private float       m_gap       = 0.05f; 
+        private bool        m_isMerged  = false;
+        private Int32       m_headsetID = -1;
 
         private List<KeyValuePair<SubDataset, SubDataset>> m_subjViews = new List<KeyValuePair<SubDataset, SubDataset>>();
 
-        public SubDatasetSubjectiveStackedGroup(SubDatasetGroupType type, Int32 id, SubDataset baseSD) : base(type, id)
+        public SubDatasetSubjectiveStackedGroup(Int32 HeadsetID, SubDatasetGroupType type, Int32 id, SubDataset baseSD) : base(type, id)
         {
+            m_headsetID = HeadsetID;
             m_base = baseSD;
             AddSubDataset(m_base);
         }
@@ -63,6 +67,7 @@ namespace Sereno.Datasets
                         base.RemoveSubDataset(sd1);
                     if(sd2 != null)
                         base.RemoveSubDataset(sd2);
+                    UpdateSubDatasets();
                 }
                 return true;
             }
@@ -81,6 +86,7 @@ namespace Sereno.Datasets
                         base.RemoveSubDataset(sd1);
                     if(sd2 != null)
                         base.RemoveSubDataset(sd2);
+                    UpdateSubDatasets();
                     return true;
                 }
             }
@@ -105,8 +111,11 @@ namespace Sereno.Datasets
 
             m_subjViews.Add(new KeyValuePair<SubDataset, SubDataset>(sdStacked, sdLinked));
 
-            foreach(var l in m_listeners)
+            UpdateSubDatasets();
+
+            foreach (var l in m_listeners)
                 l.OnAddSubjectiveViews(this, m_subjViews[m_subjViews.Count-1]);
+
             return true;
         }
 
@@ -128,6 +137,18 @@ namespace Sereno.Datasets
                 {
                     it.Key.Scale    = scale;
                     it.Key.Rotation = rot;
+
+                    if(it.Value != null)
+                    {
+                        it.Key.TransferFunction     = it.Value.TransferFunction.Clone();
+                        it.Key.DepthClipping        = it.Value.DepthClipping;
+                        it.Key.EnableVolumetricMask = it.Value.EnableVolumetricMask;
+
+                        if (it.Key.EnableVolumetricMask &&
+                            it.Key.Parent.GetNbSpatialValues() == it.Value.Parent.GetNbSpatialValues() &&
+                            !it.Key.VolumetricMask.SequenceEqual(it.Value.VolumetricMask))
+                            it.Key.VolumetricMask = it.Value.VolumetricMask;
+                    }
                 }
             }
 
@@ -138,8 +159,9 @@ namespace Sereno.Datasets
                 {
                     if(it.Key != null)
                     {
-                        it.Key.Position = new float[]{pos[0], pos[1]+(i+1)*(m_gap+size), pos[2]};
-                        if(!m_isMerged)
+                        it.Key.Position     = new float[]{pos[0], pos[1]+(i+1)*(m_gap+size), pos[2]};
+                        it.Key.IsMapVisible = false;
+                        if (!m_isMerged)
                             i++;
                     }
                 }
@@ -157,7 +179,54 @@ namespace Sereno.Datasets
                             i++;
                     }
                 }
-            }        
+            }
+
+            //Hide merged subdatasets that we do not own
+            if(m_isMerged)
+            {
+                foreach (var it in m_subjViews)
+                {
+                    if (it.Key != null && it.Key.OwnerID >= 0 && it.Key.OwnerID != m_headsetID)
+                        it.Key.Visibility = SubDatasetVisibility.GONE;
+                    else if(it.Key != null && (it.Key.OwnerID < 0 || it.Key.OwnerID == m_headsetID))
+                        it.Key.Visibility = SubDatasetVisibility.VISIBLE;
+
+                }
+            }
+        }
+        public override void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)
+        {
+            UpdateSubDatasets();
+        }
+
+        public override void OnRotationChange(SubDataset dataset, float[] rotationQuaternion)
+        {
+            UpdateSubDatasets();
+        }
+
+        public override void OnPositionChange(SubDataset dataset, float[] position) 
+        {
+            UpdateSubDatasets();
+        }
+
+        public override void OnScaleChange(SubDataset dataset, float[] scale) 
+        {
+            UpdateSubDatasets();
+        }
+
+        public override void OnToggleMapVisibility(SubDataset dataset, bool visibility) 
+        {
+            UpdateSubDatasets();
+        }
+
+        public override void OnChangeVolumetricMask(SubDataset dataset) 
+        {
+            UpdateSubDatasets();
+        }
+
+        public override void OnChangeDepthClipping(SubDataset dataset, float depth) 
+        {
+            UpdateSubDatasets();
         }
 
         public SubDataset Base
@@ -180,6 +249,7 @@ namespace Sereno.Datasets
                     m_gap = value;
                     foreach(var l in m_listeners)
                         l.OnSetGap(this, m_gap);
+                    UpdateSubDatasets();
                 }
             }
         }
@@ -194,6 +264,7 @@ namespace Sereno.Datasets
                     m_isMerged = value;
                     foreach(var l in m_listeners)
                         l.OnSetMerge(this, m_isMerged);
+                    UpdateSubDatasets();
                 }
             }
         }
@@ -208,7 +279,36 @@ namespace Sereno.Datasets
                     m_stack = value;
                     foreach(var l in m_listeners)
                         l.OnSetStackMethod(this, m_stack);
+                    UpdateSubDatasets();
                 }
+            }
+        }
+
+        public float YVerticalGap
+        {
+            get
+            {
+                if(m_base == null)
+                    return -1.0f;
+
+                float[] scale = m_base.Scale;
+                float size = scale[0] * scale[0] + scale[1] * scale[1] + scale[2] * scale[2];
+                size = (float)Math.Sqrt(size);
+
+                return size - scale[1] + m_gap;
+            }
+        }
+
+        public float YMaxSize
+        {
+            get
+            {
+                if (m_base == null)
+                    return -1.0f;
+
+                float[] scale = m_base.Scale;
+                float size = scale[0] * scale[0] + scale[1] * scale[1] + scale[2] * scale[2];
+                return (float)Math.Sqrt(size);
             }
         }
     }

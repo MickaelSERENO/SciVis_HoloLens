@@ -126,8 +126,12 @@ namespace Sereno.SciVis
 
                 TransferFunction tf = null;
                 lock (m_subDataset)
-                    tf = (TransferFunction)m_subDataset.TransferFunction.Clone();
+                {
+                    if(m_subDataset.Visibility == SubDatasetVisibility.GONE)
+                        return;
 
+                    tf = (TransferFunction)m_subDataset.TransferFunction.Clone();
+                }
                 TextureColor = ComputeTFColor(tf);
             }
         }
@@ -279,6 +283,11 @@ namespace Sereno.SciVis
 
         public void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg)
         {}
+
+        public void OnSetVisibility(SubDataset dataset, SubDatasetVisibility visibility)
+        {
+            UpdateTF();
+        }
 
         /// <summary>
         /// The 3D Texure RGBA4444 byte array computed via the given transfer function.

@@ -11,8 +11,8 @@ namespace Thirdparties
 	public class TubeRenderer : MonoBehaviour
 	{
 		[SerializeField] Vector3[] _positions;
-		[SerializeField] int       _sides;
-		[SerializeField] float     _radiusOne;
+		[SerializeField] int       _sides     = 32;
+		[SerializeField] float     _radiusOne = 0.01f;
 
 		private Vector3[]    _vertices;
 		private Mesh         _mesh;

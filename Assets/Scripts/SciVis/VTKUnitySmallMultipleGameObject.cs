@@ -257,6 +257,9 @@ namespace Sereno.SciVis
         {
             base.LateUpdate();
 
+            if(!gameObject.activeInHierarchy)
+                return;
+
             if (m_sm == null)
                 return;
 
@@ -280,6 +283,9 @@ namespace Sereno.SciVis
 
         private void RenderToTextures()
         {
+            if (!gameObject.activeInHierarchy)
+                return;
+
             if (m_mesh != null && m_materialDownScale != null && m_texture3D != null)
             {
                 foreach(Camera cam in Camera.allCameras)

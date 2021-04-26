@@ -315,5 +315,8 @@ namespace Sereno.DataVis
 
         public void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg)
         {}
+
+        public void OnSetVisibility(SubDataset dataset, SubDatasetVisibility visibility)
+        {}
     }
 }

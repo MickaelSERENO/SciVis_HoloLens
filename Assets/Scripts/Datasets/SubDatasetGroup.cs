@@ -1,3 +1,5 @@
+using Sereno.Datasets.Annotation;
+using Sereno.SciVis;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,7 +9,7 @@ namespace Sereno.Datasets
     /// <summary>
     /// abstract class for SubDatasetGroup
     /// </summary>
-    public abstract class SubDatasetGroup
+    public abstract class SubDatasetGroup : ISubDatasetCallback
     {
         /// <summary>
         /// Is a given SubDatasetGroup representing a subjective view group?
@@ -103,10 +105,13 @@ namespace Sereno.Datasets
             if(sdIdx >= 0)
             {
                 m_subDatasets.RemoveAt(sdIdx);
+                sd.RemoveListener(this);
                 sd.SubDatasetGroup = null;
 
                 foreach(var l in m_listeners)
                     l.OnRemoveSubDataset(this, sd);
+
+                UpdateSubDatasets();
 
                 return true;
             }
@@ -124,10 +129,13 @@ namespace Sereno.Datasets
             if(sdIdx < 0)
             {
                 m_subDatasets.Add(sd);
+                sd.AddListener(this);
                 sd.SubDatasetGroup = this;
 
                 foreach(var l in m_listeners)
                     l.OnAddSubDataset(this, sd);
+
+                UpdateSubDatasets();
                 return true;
             }
             return false;
@@ -136,7 +144,24 @@ namespace Sereno.Datasets
         /// <summary>
         /// Update the status of every registered SubDataset
         /// </summary>
-        public abstract void UpdateSubDatasets();
+        public virtual void UpdateSubDatasets(){}
+
+
+        public virtual void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf){}
+        public virtual void OnRotationChange(SubDataset dataset, float[] rotationQuaternion){}
+        public virtual void OnPositionChange(SubDataset dataset, float[] position){}
+        public virtual void OnScaleChange(SubDataset dataset, float[] scale){}
+        public virtual void OnLockOwnerIDChange(SubDataset dataset, int ownerID){}
+        public virtual void OnOwnerIDChange(SubDataset dataset, int ownerID){}
+        public virtual void OnNameChange(SubDataset dataset, string name){}
+        public virtual void OnAddCanvasAnnotation(SubDataset dataset, CanvasAnnotation annot){}
+        public virtual void OnAddLogAnnotationPosition(SubDataset dataset, LogAnnotationPositionInstance annot){}
+        public virtual void OnClearCanvasAnnotations(SubDataset dataset){}
+        public virtual void OnToggleMapVisibility(SubDataset dataset, bool visibility){}
+        public virtual void OnChangeVolumetricMask(SubDataset dataset){}
+        public virtual void OnChangeDepthClipping(SubDataset dataset, float depth){}
+        public virtual void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg){}
+        public virtual void OnSetVisibility(SubDataset dataset, SubDatasetVisibility visibility){}
 
         public SubDatasetGroupType Type
         {

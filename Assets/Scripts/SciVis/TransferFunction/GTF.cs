@@ -78,6 +78,23 @@ namespace Sereno.SciVis
             return SciVisColor.GenColor(ColorMode, mag);
         }
 
+        public override bool Equals(object o)
+        {
+            if (o == null)
+                return false;
+            if(o.GetType().Equals(this.GetType()))
+            {
+                GTF gtf = o as GTF;
+                if (gtf.m_alphaMax != m_alphaMax || GetDimension() != gtf.GetDimension())
+                    return true;
+
+                for (int i = 0; i < GetDimension(); i++)
+                    if (gtf.m_scale[i] != m_scale[i] || m_center[i] != gtf.m_center[i])
+                        return true;
+            }
+            return base.Equals(o);
+        }
+
         public override TransferFunction Clone()
         {
             GTF g = new GTF((float[])m_center.Clone(), (float[])m_scale.Clone(), m_alphaMax);

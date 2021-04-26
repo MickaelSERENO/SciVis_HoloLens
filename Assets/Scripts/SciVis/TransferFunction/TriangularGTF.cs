@@ -104,6 +104,24 @@ namespace Sereno.SciVis
             return g;
         }
 
+        public override bool Equals(object o)
+        {
+            if (o == null)
+                return false;
+
+            if (o.GetType().Equals(this.GetType()))
+            {
+                TriangularGTF gtf = o as TriangularGTF;
+                if (gtf.m_alphaMax != m_alphaMax || GetDimension() != gtf.GetDimension())
+                    return true;
+
+                for (int i = 0; i < GetDimension()-1; i++)
+                    if (gtf.m_scale[i] != m_scale[i] || m_center[i] != gtf.m_center[i])
+                        return true;
+            }
+            return base.Equals(o);
+        }
+
         public override uint GetDimension() { return (uint)(m_scale.Length+1); }
 
         public override bool HasGradient() { return true; }

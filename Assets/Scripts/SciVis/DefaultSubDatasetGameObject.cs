@@ -337,6 +337,12 @@ namespace Sereno.SciVis
                 if (m_sd == null)
                     return;
 
+                if (m_sd.Visibility == SubDatasetVisibility.VISIBLE && !gameObject.activeInHierarchy)
+                    gameObject.SetActive(true);
+                else if (m_sd.Visibility == SubDatasetVisibility.GONE && gameObject.activeInHierarchy)
+                    gameObject.SetActive(false);
+
+
                 if (m_dataProvider != null && m_dataProvider.GetTargetedGameObject() == this)
                 {
                     if (!m_isTargeted)
@@ -533,6 +539,9 @@ namespace Sereno.SciVis
         {}
 
         public void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg)
+        {}
+
+        public void OnSetVisibility(SubDataset dataset, SubDatasetVisibility visibility)
         {}
 
         /// <summary>

@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sereno.Datasets.Annotation;
 using Sereno.SciVis;
 using UnityEngine;
 
 namespace Sereno.Datasets
 {
+    public enum SubDatasetVisibility
+    {
+        VISIBLE = 0, //Visible
+        PRIVATE = 1, //Visible only by its owner. Non-owner sees a questionmark
+        GONE    = 2, //The associated game object is not visible at all.
+    };
+
     /// <summary>
     /// Callback interface when the SubDataset internal state changed
     /// </summary>
@@ -107,6 +115,13 @@ namespace Sereno.Datasets
         /// <param name="dataset">The SubDataset calling this method</param>
         /// <param name="sdg">The new SubDataset Group owning this SubDataset. null == no group owning this object</param>
         void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg);
+
+        /// <summary>
+        /// Called when the subdataset visibility of this subdataset has changed
+        /// </summary>
+        /// <param name="dataset">The SubDataset calling this method</param>
+        /// <param name="visibility">The new visibility value</param>
+        void OnSetVisibility(SubDataset dataset, SubDatasetVisibility visibility);
     }
 
     public class SubDataset
@@ -171,6 +186,11 @@ namespace Sereno.Datasets
         /// The SubDataset name
         /// </summary>
         private String m_name = "";
+
+        /// <summary>
+        /// The visibility status of the subdataset
+        /// </summary>
+        private SubDatasetVisibility m_visibility = SubDatasetVisibility.VISIBLE;
 
         /// <summary>
         /// The listeners to call when the internal state changed
@@ -342,7 +362,7 @@ namespace Sereno.Datasets
                     old.RemoveSubDataset(this);
                 }
                 m_sdg = value;
-                if(m_sdg != null)
+                if(m_sdg != null && !m_sdg.SubDatasets.Contains(this))
                     if(!m_sdg.AddSubDataset(this))
                         m_sdg = null;
 
@@ -359,6 +379,9 @@ namespace Sereno.Datasets
             get => m_tf;
             set
             {
+                if(m_tf != null && m_tf.Equals(value))
+                    return;
+
                 m_tf = value;
 
                 //Update annotations relying on time
@@ -381,6 +404,9 @@ namespace Sereno.Datasets
             get => m_rotation; 
             set
             {
+                if (m_rotation.SequenceEqual(value))
+                    return;
+
                 for (int i = 0; i < Rotation.Length; i++) 
                     m_rotation[i] = value[i];
                 
@@ -426,7 +452,10 @@ namespace Sereno.Datasets
             get => m_position; 
             set
             {
-                for(int i = 0; i < Position.Length; i++) 
+                if (m_position.SequenceEqual(value))
+                    return;
+
+                for (int i = 0; i < Position.Length; i++) 
                     m_position[i] = value[i];
                 foreach(var l in m_listeners)
                     l.OnPositionChange(this, m_position);
@@ -442,8 +471,11 @@ namespace Sereno.Datasets
             get => m_scale;
             set
             {
+                if(m_scale.SequenceEqual(value))
+                    return;
                 for(int i = 0; i < Scale.Length; i++)
                     m_scale[i] = value[i];
+
                 foreach(var l in m_listeners)
                     l.OnScaleChange(this, m_scale);
             }
@@ -488,6 +520,8 @@ namespace Sereno.Datasets
             get => m_lockOwnerID;
             set
             {
+                if (m_lockOwnerID == value)
+                    return;
                 m_lockOwnerID = value;
                 foreach(var l in m_listeners)
                     l.OnLockOwnerIDChange(this, m_lockOwnerID);
@@ -502,6 +536,8 @@ namespace Sereno.Datasets
             get => m_ownerID;
             set
             {
+                if (m_ownerID == value)
+                    return;
                 m_ownerID = value;
                 foreach (var l in m_listeners)
                     l.OnOwnerIDChange(this, m_ownerID);
@@ -516,6 +552,8 @@ namespace Sereno.Datasets
             get => m_name;
             set
             {
+                if (m_name != null && m_name.Equals(value))
+                    return;
                 m_name = value;
                 foreach (var l in m_listeners)
                     l.OnNameChange(this, value);
@@ -608,9 +646,28 @@ namespace Sereno.Datasets
             get => m_mapVisibility;
             set 
             {
+                if (m_mapVisibility == value)
+                    return;
                 m_mapVisibility = value;
                 foreach (var l in m_listeners)
                     l.OnToggleMapVisibility(this, value);
+            }
+        }
+
+        /// <summary>
+        /// The visibility status of this subdataset
+        /// </summary>
+        public SubDatasetVisibility Visibility
+        {
+            get => m_visibility;
+            set
+            {
+                if (m_visibility != value)
+                {
+                    m_visibility = value;
+                    foreach (var l in m_listeners)
+                        l.OnSetVisibility(this, value);
+                }
             }
         }
     }
