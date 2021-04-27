@@ -118,7 +118,13 @@ namespace Sereno.SciVis
 
                     TransferFunction tf = null;
                     lock (m_sd)
+                    {
+                        if (m_sd.Visibility == SubDatasetVisibility.GONE)
+                            return;
+                        if (m_sd.TransferFunction == null)
+                            return;
                         tf = (TransferFunction)m_sd.TransferFunction.Clone();
+                    }
 
                     Debug.Log("Updating TF...");
 

@@ -18,11 +18,12 @@ namespace Sereno.Datasets
 
         private List<ISubDatasetSubjectiveStackedGroupListener> m_listeners = new List<ISubDatasetSubjectiveStackedGroupListener>();
 
-        private SubDataset m_base       = null;
+        private SubDataset  m_base      = null;
         private StackMethod m_stack     = StackMethod.STACK_VERTICAL;
         private float       m_gap       = 0.05f; 
         private bool        m_isMerged  = false;
         private Int32       m_headsetID = -1;
+        private bool        m_inUpdate = false;
 
         private List<KeyValuePair<SubDataset, SubDataset>> m_subjViews = new List<KeyValuePair<SubDataset, SubDataset>>();
 
@@ -124,6 +125,10 @@ namespace Sereno.Datasets
             if(m_base == null)
                 return;
 
+            if (m_inUpdate)
+                return;
+            m_inUpdate = true;
+
             float[] scale = m_base.Scale;
             float[] pos   = m_base.Position;
             float[] rot   = m_base.Rotation;
@@ -140,14 +145,14 @@ namespace Sereno.Datasets
 
                     if(it.Value != null)
                     {
-                        it.Key.TransferFunction     = it.Value.TransferFunction.Clone();
+                        it.Key.TransferFunction     = null; //Disable the transfer function. The subdataset should use tfComputation instead
                         it.Key.DepthClipping        = it.Value.DepthClipping;
                         it.Key.EnableVolumetricMask = it.Value.EnableVolumetricMask;
 
                         if (it.Key.EnableVolumetricMask &&
                             it.Key.Parent.GetNbSpatialValues() == it.Value.Parent.GetNbSpatialValues() &&
                             !it.Key.VolumetricMask.SequenceEqual(it.Value.VolumetricMask))
-                            it.Key.VolumetricMask = it.Value.VolumetricMask;
+                            it.Key.VolumetricMask = (byte[])it.Value.VolumetricMask.Clone();
                     }
                 }
             }
@@ -190,10 +195,12 @@ namespace Sereno.Datasets
                         it.Key.Visibility = SubDatasetVisibility.GONE;
                     else if(it.Key != null && (it.Key.OwnerID < 0 || it.Key.OwnerID == m_headsetID))
                         it.Key.Visibility = SubDatasetVisibility.VISIBLE;
-
                 }
             }
+
+            m_inUpdate = false;
         }
+
         public override void OnTransferFunctionChange(SubDataset dataset, TransferFunction tf)
         {
             UpdateSubDatasets();
@@ -228,6 +235,20 @@ namespace Sereno.Datasets
         {
             UpdateSubDatasets();
         }
+
+        public override void OnSetTFComputation(SubDataset dataset, object tfComputation)
+        {
+            foreach(var views in m_subjViews)
+            {
+                if(views.Value == dataset)
+                {
+                    if(views.Key != null)
+                        views.Key.TFComputation = views.Value.TFComputation;
+                    return;
+                }
+            }
+        }
+
 
         public SubDataset Base
         {

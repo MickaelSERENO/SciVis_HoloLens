@@ -122,6 +122,13 @@ namespace Sereno.Datasets
         /// <param name="dataset">The SubDataset calling this method</param>
         /// <param name="visibility">The new visibility value</param>
         void OnSetVisibility(SubDataset dataset, SubDatasetVisibility visibility);
+
+        /// <summary>
+        /// Called when the transfer function computation of this subdataset has changed
+        /// </summary>
+        /// <param name="dataset">The SubDataset calling this method</param>
+        /// <param name="tfComputation">The new transfer function computation. A cast is required</param>
+        void OnSetTFComputation(SubDataset dataset, object tfComputation);
     }
 
     public class SubDataset
@@ -216,6 +223,11 @@ namespace Sereno.Datasets
         /// Is the volumetric mask enabled?
         /// </summary>
         protected bool m_enableVolumetricMask = false;
+
+        /// <summary>
+        /// The transfer function computation result
+        /// </summary>
+        protected object m_tfComputation = null;
 
         /// <summary>
         /// Constructor
@@ -345,6 +357,20 @@ namespace Sereno.Datasets
         /// </summary>
         public Dataset Parent {get => m_parent;}
 
+        public object TFComputation
+        {
+            get => m_tfComputation;
+            set
+            {
+                if (m_tfComputation != value)
+                {
+                    m_tfComputation = value;
+                    foreach(ISubDatasetCallback l in m_listeners)
+                        l.OnSetTFComputation(this, m_tfComputation);
+                }
+            }
+        }
+
         /// <summary>
         /// The SubDatasetGroup owning this subdataset
         /// </summary>
@@ -379,7 +405,7 @@ namespace Sereno.Datasets
             get => m_tf;
             set
             {
-                if(m_tf != null && m_tf.Equals(value))
+                if(m_tf == value || (m_tf != null && m_tf.Equals(value)))
                     return;
 
                 m_tf = value;

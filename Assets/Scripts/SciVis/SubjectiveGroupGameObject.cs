@@ -8,20 +8,56 @@ using Sereno.Datasets.Annotation;
 
 namespace Sereno.SciVis
 {
+    /// <summary>
+    /// Game Object representing link options for subjective groups
+    /// </summary>
     public class SubjectiveGroupGameObject : MonoBehaviour, ISubDatasetSubjectiveStackedGroupListener, 
                                                             ISubDatasetGroupListener
     {
+        /// <summary>
+        /// The subjective view to consider
+        /// </summary>
         private SubDatasetSubjectiveStackedGroup m_sdg = null;
 
+        /// <summary>
+        /// All the game objects for "linked" subdatasets
+        /// </summary>
         private Dictionary<SubDataset, GameObject> m_links  = new Dictionary<SubDataset, GameObject>();
+
+        /// <summary>
+        /// All the game objects for "stacked" subdatasets
+        /// </summary>
         private Dictionary<SubDataset, GameObject> m_stacks = new Dictionary<SubDataset, GameObject>();
+
+        /// <summary>
+        /// Should we update the positions of all the created game objects? (modified via events)
+        /// </summary>
         private bool                               m_shouldUpdatePos         = false;
+
+        /// <summary>
+        /// Should we create new link options? (modified via events)
+        /// </summary>
         private bool                               m_shouldAddConnections    = false;
+
+        /// <summary>
+        /// Should we remove some link options? (modified via events)
+        /// </summary>
         private bool                               m_shouldRemoveConnections = false;
 
+        /// <summary>
+        /// Prefab for stacked connection
+        /// </summary>
         public GameObject StackedConnectionGameObject;
+
+        /// <summary>
+        /// Prefab for linked connection
+        /// </summary>
         public GameObject LinkedConnectionGameObject;
 
+        /// <summary>
+        /// Initialize the game obejct
+        /// </summary>
+        /// <param name="sdg">The subdataset group to link with</param>
         public void Init(SubDatasetSubjectiveStackedGroup sdg)
         {
             m_sdg = sdg;
@@ -39,6 +75,10 @@ namespace Sereno.SciVis
             m_shouldUpdatePos = true;
         }
 
+        /// <summary>
+        /// Add a new stack connection from a "stacked" subdataset
+        /// </summary>
+        /// <param name="stack">The stacked subdataset which needs a new "link" game object</param>
         private void AddStackConnection(SubDataset stack)
         {
             if (stack == null)
@@ -48,6 +88,11 @@ namespace Sereno.SciVis
             m_stacks.Add(stack, go);
         }
 
+
+        /// <summary>
+        /// Add a new link connection from a "linked" subdataset
+        /// </summary>
+        /// <param name="link">The linked subdataset which needs a new "link" game object</param>
         private void AddLinkConnection(SubDataset link)
         {
             if (link == null)
@@ -77,6 +122,7 @@ namespace Sereno.SciVis
 
                 if(m_shouldRemoveConnections)
                 {
+                    //Check every registered game objects. If one game object is no longer relevant --> delete it
                     bool found = true;
                     while (found)
                     {
@@ -138,6 +184,7 @@ namespace Sereno.SciVis
                         if (stack == null)
                             continue;
 
+                        //Determine the best option for the link (shortest path)
                         Vector3 anchorPoint = new Vector3(it.Key.Position[0] + it.Key.Scale[0]/2.0f,
                                                           it.Key.Position[1] + it.Key.Scale[1]/2.0f,
                                                           it.Key.Position[2] + it.Key.Scale[2]/2.0f);
@@ -146,6 +193,43 @@ namespace Sereno.SciVis
                                                         stack.Position[1] - stack.Scale[1]/2.0f,
                                                         stack.Position[2] - stack.Scale[2]/2.0f);
 
+                        float dist = (anchorPoint - targetPos).magnitude;
+
+                        for(int i = -1; i <= 1; i+=2)
+                        {
+                            for(int j = -1; j <= 1; j+=2)
+                            {
+                                for(int k = -1; k <= 1; k+=2)
+                                {
+                                    for (int ii = -1; ii <= 1; ii += 2)
+                                    {
+                                        for (int jj = -1; jj <= 1; jj += 2)
+                                        {
+                                            for (int kk = -1; kk <= 1; kk += 2)
+                                            { 
+                                                Vector3 _anchorPoint = new Vector3(it.Key.Position[0] + i*it.Key.Scale[0] / 2.0f,
+                                                                                   it.Key.Position[1] + j*it.Key.Scale[1] / 2.0f,
+                                                                                   it.Key.Position[2] + k*it.Key.Scale[2] / 2.0f);
+
+                                                Vector3 _targetPos = new Vector3(stack.Position[0] + ii*stack.Scale[0] / 2.0f,
+                                                                                 stack.Position[1] + jj*stack.Scale[1] / 2.0f,
+                                                                                 stack.Position[2] + kk*stack.Scale[2] / 2.0f);
+
+                                                float _dist = (_anchorPoint - _targetPos).magnitude;
+                                                if(_dist < dist)
+                                                {
+                                                    anchorPoint = _anchorPoint;
+                                                    targetPos   = _targetPos;
+                                                    dist        = _dist;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                                               
+                        //Configure the position + orientation of the link object (cylinder)
                         Vector3 rayVec = targetPos - anchorPoint;
                         rayVec = rayVec.normalized;
 

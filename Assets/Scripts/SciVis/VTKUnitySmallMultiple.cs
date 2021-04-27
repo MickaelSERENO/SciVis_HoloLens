@@ -33,11 +33,6 @@ namespace Sereno.SciVis
         private Vector3    m_spacing;
 
         /// <summary>
-        /// The 3D texture color RGBA4444 byte Array 
-        /// </summary>
-        private short[] m_textureColor = null;
-
-        /// <summary>
         /// The VTKStructuredPoints associated with this small multiple
         /// </summary>
         private VTKStructuredPoints m_descPts;
@@ -130,9 +125,15 @@ namespace Sereno.SciVis
                     if(m_subDataset.Visibility == SubDatasetVisibility.GONE)
                         return;
 
+                    if (m_subDataset.TransferFunction == null)
+                        return;
+
                     tf = (TransferFunction)m_subDataset.TransferFunction.Clone();
                 }
-                TextureColor = ComputeTFColor(tf);
+                
+                short[] color = ComputeTFColor(tf);
+                lock (m_subDataset)
+                    m_subDataset.TFComputation = color;
             }
         }
 
@@ -217,16 +218,16 @@ namespace Sereno.SciVis
                                         Color c = (1.0f - frac) * tf.ComputeColor(partialResT1) + frac * tf.ComputeColor(partialResT2);
                                         float a = (1.0f - frac) * tf.ComputeAlpha(partialResT1) + frac * tf.ComputeAlpha(partialResT2);
 
-                                        short r = (short)(16 * c.r);
+                                        byte r = (byte)(16 * c.r);
                                         if (r > 15)
                                             r = 15;
-                                        short g = (short)(16 * c.g);
+                                        byte g = (byte)(16 * c.g);
                                         if (g > 15)
                                             g = 15;
-                                        short b = (short)(16 * c.b);
+                                        byte b = (byte)(16 * c.b);
                                         if (b > 15)
                                             b = 15;
-                                        short _a = (short)(16 * a);
+                                        byte _a = (byte)(16 * a);
                                         if (_a > 15)
                                             _a = 15;
 
@@ -289,11 +290,25 @@ namespace Sereno.SciVis
             UpdateTF();
         }
 
+        public void OnSetTFComputation(SubDataset dataset, object tfComputation)
+        {}
+
         /// <summary>
         /// The 3D Texure RGBA4444 byte array computed via the given transfer function.
         /// </summary>
         /// <returns></returns>
-        public short[] TextureColor {get => m_textureColor; set { lock (this) { m_textureColor = value; } } }
+        public short[] TextureColor
+        {
+            get
+            {
+                if (m_subDataset.TFComputation == null || !(m_subDataset.TFComputation is short[]))
+                    return null;
+                short[] color = m_subDataset.TFComputation as short[];
+                if (color.Length != m_dimensions.x * m_dimensions.y * m_dimensions.z)
+                    return null;
+                return color;
+            }
+        }
 
         /// <summary>
         /// The SubDataset representing this Small Multiple

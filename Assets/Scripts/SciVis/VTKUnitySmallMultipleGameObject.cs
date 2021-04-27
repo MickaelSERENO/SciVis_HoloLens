@@ -113,6 +113,8 @@ namespace Sereno.SciVis
         /// </summary>
         private Dictionary<Camera, RenderTextureData> m_renderTextures = new Dictionary<Camera, RenderTextureData>();
 
+        private object m_oldTFComputation = null;
+
         /// <summary>
         /// Initialize the visualization
         /// </summary>
@@ -194,7 +196,7 @@ namespace Sereno.SciVis
                     m_texture3D = null;
                 }
 
-                else if (textureColor != null) //New data?
+                else if (textureColor != null && textureColor != m_oldTFComputation) //New data?
                 {
                     Debug.Log("Start Update TextureColor GPU");
                     if (m_texture3D == null || m_texture3D.width != m_sm.Dimensions.x || m_texture3D.height != m_sm.Dimensions.y || m_texture3D.depth != m_sm.Dimensions.z)
@@ -213,11 +215,8 @@ namespace Sereno.SciVis
                     m_texture3D.SetPixelData<short>(textureColor, 0);
                     m_texture3D.Apply(false, false);
                     m_unloadModel.SetActive(false);
-                    lock(m_sm)
-                    {
-                        if(m_sm.TextureColor == textureColor)
-                            m_sm.TextureColor = null;
-                    }
+
+                    m_oldTFComputation = textureColor;
 
                     m_materialNormalScale.SetTexture("_TextureData", m_texture3D);
                     m_materialDownScale.SetTexture("_TextureData", m_texture3D);

@@ -544,6 +544,9 @@ namespace Sereno.SciVis
         public void OnSetVisibility(SubDataset dataset, SubDatasetVisibility visibility)
         {}
 
+        public void OnSetTFComputation(SubDataset dataset, object tfComputation)
+        {}
+
         /// <summary>
         /// Is this GameObject targeted?
         /// </summary>
