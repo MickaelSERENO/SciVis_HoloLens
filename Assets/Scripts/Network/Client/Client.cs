@@ -334,43 +334,50 @@ namespace Sereno.Network
         /// </summary>
         private void WriteThread()
         {
-            bool sleep = false; 
-            while (!m_closed)
+            try
             {
-                if(sleep)
-                    Thread.Sleep(THREAD_SLEEP);
-                sleep = false;
-
-                lock(this)
+                bool sleep = false;
+                while (!m_closed)
                 {
-                    if(m_sock == null || m_sock.Connected == false)
+                    if (sleep)
+                        Thread.Sleep(THREAD_SLEEP);
+                    sleep = false;
+
+                    lock (this)
                     {
-                        sleep = true;
-                        continue;
-                    }
+                        if (m_sock == null || m_sock.Connected == false)
+                        {
+                            sleep = true;
+                            continue;
+                        }
 
 
-                    byte[] msg = null;
-                    lock(m_writeBuffer)
-                    {
-                        if(m_writeBuffer.Count > 0)
-                            msg = m_writeBuffer.Dequeue();
-                    }
+                        byte[] msg = null;
+                        lock (m_writeBuffer)
+                        {
+                            if (m_writeBuffer.Count > 0)
+                                msg = m_writeBuffer.Dequeue();
+                        }
 
-                    if (msg == null)
-                    {
-                        sleep = true;
-                        continue;
-                    }
+                        if (msg == null)
+                        {
+                            sleep = true;
+                            continue;
+                        }
 
-                    //Try to send. If failed -> Disconnection
-                    try
-                    {
-                        m_sock.Send(msg);
+                        //Try to send. If failed -> Disconnection
+                        try
+                        {
+                            m_sock.Send(msg);
+                        }
+                        catch (SocketException)
+                        { }
                     }
-                    catch (SocketException)
-                    {}
                 }
+            }
+            catch (ThreadInterruptedException)
+            {
+                return;
             }
         }
 

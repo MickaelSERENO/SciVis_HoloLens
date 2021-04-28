@@ -14,6 +14,7 @@ namespace Sereno.Datasets
             void OnSetMerge(SubDatasetSubjectiveStackedGroup group, bool merge);
             void OnSetStackMethod(SubDatasetSubjectiveStackedGroup group, StackMethod method);
             void OnAddSubjectiveViews(SubDatasetSubjectiveStackedGroup group, KeyValuePair<SubDataset, SubDataset> subjViews);
+            void OnUpdateSubDatasets(SubDatasetGroup sdg);
         }
 
         private List<ISubDatasetSubjectiveStackedGroupListener> m_listeners = new List<ISubDatasetSubjectiveStackedGroupListener>();
@@ -197,6 +198,9 @@ namespace Sereno.Datasets
                         it.Key.Visibility = SubDatasetVisibility.VISIBLE;
                 }
             }
+
+            foreach (var l in m_listeners)
+                l.OnUpdateSubDatasets(this);
 
             m_inUpdate = false;
         }

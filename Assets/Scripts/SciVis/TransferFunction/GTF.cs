@@ -86,13 +86,13 @@ namespace Sereno.SciVis
             {
                 GTF gtf = o as GTF;
                 if (gtf.m_alphaMax != m_alphaMax || GetDimension() != gtf.GetDimension())
-                    return true;
-
+                    return false;
                 for (int i = 0; i < GetDimension(); i++)
                     if (gtf.m_scale[i] != m_scale[i] || m_center[i] != gtf.m_center[i])
-                        return true;
+                        return false;
+                return base.Equals(o);
             }
-            return base.Equals(o);
+            return false;
         }
 
         public override TransferFunction Clone()
