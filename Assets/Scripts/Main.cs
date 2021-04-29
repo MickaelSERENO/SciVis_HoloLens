@@ -2258,6 +2258,13 @@ namespace Sereno
             }
         }
 
+        public void OnRenameSubDataset(MessageBuffer message, RenameSubDatasetMessage msg)
+        {
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if(sd != null)
+                sd.Name = msg.Name;
+        }
+
         #endregion
 
         public Color GetHeadsetColor(int headsetID)

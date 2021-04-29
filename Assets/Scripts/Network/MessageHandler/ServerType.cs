@@ -42,5 +42,6 @@ namespace Sereno.Network.MessageHandler
         ADD_SD_TO_SV_STACKED_LINKED_GROUP       = 36,
         SET_SV_STACKED_GLOBAL_PARAMETERS        = 37,
         REMOVE_SUBDATASET_GROUP                 = 38,
+        RENAME_SUBDATASET                       = 39,
     }
 }

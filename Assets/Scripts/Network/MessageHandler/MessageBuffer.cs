@@ -237,6 +237,8 @@ namespace Sereno.Network.MessageHandler
         void OnSetSubjectiveStackedGroupParameters(MessageBuffer message, SubjectiveStackedGroupGlobalParametersMessage msg);
        
         void OnRemoveSubDatasetGroup(MessageBuffer message, RemoveSubDatasetGroupMessage msg);
+
+        void OnRenameSubDataset(MessageBuffer message, RenameSubDatasetMessage msg);
     }
 
     /// <summary>
@@ -517,6 +519,10 @@ namespace Sereno.Network.MessageHandler
                             foreach (var l in m_listeners)
                                 l.OnRemoveSubDatasetGroup(this, (RemoveSubDatasetGroupMessage)m_msg);
                             break;
+                        case ServerType.RENAME_SUBDATASET:
+                            foreach (var l in m_listeners)
+                                l.OnRenameSubDataset(this, (RenameSubDatasetMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -779,6 +785,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.REMOVE_SUBDATASET_GROUP:
                     m_msg = new RemoveSubDatasetGroupMessage(ServerType.REMOVE_SUBDATASET_GROUP);
+                    break;
+                case ServerType.RENAME_SUBDATASET:
+                    m_msg = new RenameSubDatasetMessage(ServerType.RENAME_SUBDATASET);
                     break;
             }
         }
