@@ -132,8 +132,7 @@ namespace Sereno.SciVis
                 }
                 
                 short[] color = ComputeTFColor(tf);
-                lock (m_subDataset)
-                    m_subDataset.TFComputation = color;
+                m_subDataset.TFComputation = color;
             }
         }
 

@@ -1557,15 +1557,13 @@ namespace Sereno
             //Load the values in an asynchronous way
             dataset.LoadValues().ContinueWith((status) =>
             {
-                lock (this)
+                //Update the transfer functions (again, asynchronously)
+                foreach (SubDataset sd in dataset.SubDatasets)
                 {
-                    //Update the transfer functions (again, asynchronously)
-                    foreach (SubDataset sd in dataset.SubDatasets)
-                    {
-                        Debug.Log("Updating SD after loading dataset");
-                        lock (sd)
-                            sd.TransferFunction = sd.TransferFunction;
-                    }
+                    Debug.Log("Updating SD after loading dataset");
+                    TransferFunction tf = sd.TransferFunction;
+                    sd.TransferFunction = null; //We need to disactivate it in order to "launch" the event. Indeed, is old == new, no event is launched
+                    sd.TransferFunction = tf;
                 }
             });
 
@@ -1595,15 +1593,12 @@ namespace Sereno
             //Load the values in an asynchronous way
             dataset.LoadValues().ContinueWith((status) =>
             {
-                lock(this)
+                //Update the transfer functions (again, asynchronously)
+                foreach(SubDataset sd in dataset.SubDatasets)
                 {
-                    //Update the transfer functions (again, asynchronously)
-                    foreach(SubDataset sd in dataset.SubDatasets)
-                    {
-                        Debug.Log("Updating SD after loading dataset");
-                        lock (sd)
-                            sd.TransferFunction = sd.TransferFunction;
-                    }
+                    Debug.Log("Updating SD after loading dataset");
+                    lock (sd)
+                        sd.TransferFunction = sd.TransferFunction;
                 }
             });
 
@@ -1637,34 +1632,25 @@ namespace Sereno
         {
             Debug.Log("Received rotation event");
             SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if(sd == null)
+            if (sd == null)
                 return;
-            lock(sd)
-            {
-                sd.Rotation = msg.Quaternion;
-            }
+            sd.Rotation = msg.Quaternion;
         }
 
         public void OnMoveDataset(MessageBuffer messageBuffer, MoveDatasetMessage msg)
         {
             Debug.Log($"Received movement event : {msg.Position[0]}, {msg.Position[1]}, {msg.Position[2]}");
             SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if(sd != null)
-            {
-                lock(sd)
-                    sd.Position = msg.Position;
-            }
+            if (sd != null)
+                sd.Position = msg.Position;
         }
 
         public void OnScaleDataset(MessageBuffer messageBuffer, ScaleDatasetMessage msg)
         {
             Debug.Log($"Received Scale event : {msg.Scale[0]}, {msg.Scale[1]}, {msg.Scale[2]}");
             SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if(sd != null)
-            {
-                lock(sd)
-                    sd.Scale = msg.Scale;
-            }
+            if (sd != null)
+                sd.Scale = msg.Scale;
         }
 
         private TransferFunction TFMessageToTF(SubDataset sd, TFSubDatasetMessage msg)
@@ -1718,17 +1704,19 @@ namespace Sereno
 
         public void OnTFDataset(MessageBuffer messageBuffer, TFSubDatasetMessage msg)
         {
-            Debug.Log("Received a Transfer Function event");
+            lock (this)
+            {
+                Debug.Log("Received a Transfer Function event");
 
-            SubDataset       sd = GetSubDataset(msg.DataID, msg.SubDataID);
-            if(sd == null)
-                return;
-            TransferFunction tf = TFMessageToTF(sd, msg);
+                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+                if (sd == null)
+                    return;
+                TransferFunction tf = TFMessageToTF(sd, msg);
 
-            //Update the TF. Numerous thread will be separately launched to update the visual
-            lock (sd)
+                //Update the TF. Numerous thread will be separately launched to update the visual
                 sd.TransferFunction = tf;
-            Debug.Log("End Transfer Function event");
+                Debug.Log("End Transfer Function event");
+            }
         }
 
         public void OnHeadsetInit(MessageBuffer messageBuffer, HeadsetInitMessage msg)
@@ -1817,22 +1805,16 @@ namespace Sereno
 
         public void OnSubDatasetModificationOwner(MessageBuffer messageBuffer, SubDatasetModificationOwnerMessage msg)
         {
-            lock(this)
-            {
-                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-                if(sd != null)
-                    sd.LockOwnerID = msg.HeadsetID;
-            }
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if(sd != null)
+                sd.LockOwnerID = msg.HeadsetID;
         }
 
         public void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg)
         {
-            lock(this)
-            {
-                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-                if(sd != null)
-                    sd.OwnerID = msg.HeadsetID;
-            }
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if(sd != null)
+                sd.OwnerID = msg.HeadsetID;
         }
 
         public void OnStartAnnotation(MessageBuffer messageBuffer, StartAnnotationMessage msg)
@@ -1854,12 +1836,9 @@ namespace Sereno
 
         public void OnAnchorAnnotation(MessageBuffer messageBuffer, AnchorAnnotationMessage msg)
         {
-            lock(this)
-            {
-                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-                if(sd != null)
-                    sd.AddCanvasAnnotation(new CanvasAnnotation(msg.LocalPosition));
-            }
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if(sd != null)
+                sd.AddCanvasAnnotation(new CanvasAnnotation(msg.LocalPosition));
         }
 
         public void OnClearAnnotations(MessageBuffer messageBuffer, ClearAnnotationsMessage msg)
@@ -1893,22 +1872,19 @@ namespace Sereno
                 lock(this)
                 {
                     SubDataset sd = new SubDataset(vtk, msg.OwnerID, msg.Name);
-                    lock(sd)
+                    sd.ID = msg.SubDatasetID;
+
+                    //TGTF transfer function by default
+                    float[] scale  = new float[sd.Parent.PointFieldDescs.Count];
+                    float[] center = new float[sd.Parent.PointFieldDescs.Count];
+                    for(int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
                     {
-                        sd.ID = msg.SubDatasetID;
-
-                        //TGTF transfer function by default
-                        float[] scale  = new float[sd.Parent.PointFieldDescs.Count];
-                        float[] center = new float[sd.Parent.PointFieldDescs.Count];
-                        for(int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
-                        {
-                            center[i] = 0.5f;
-                            scale[i]  = 0.5f;
-                        }
-                        sd.TransferFunction = new GTF(center, scale);
-
-                        vtk.AddSubDataset(sd, false);
+                        center[i] = 0.5f;
+                        scale[i]  = 0.5f;
                     }
+                    sd.TransferFunction = new GTF(center, scale);
+
+                    vtk.AddSubDataset(sd, false);
                     m_vtkSubDatasetToLoad.Enqueue(sd);
                 }
             }
@@ -1921,22 +1897,19 @@ namespace Sereno
                 lock (this)
                 {
                     SubDataset sd = new SubDataset(cp, msg.OwnerID, msg.Name);
-                    lock(sd)
+                    sd.ID = msg.SubDatasetID;
+
+                    //GTF transfer function by default
+                    float[] scale = new float[sd.Parent.PointFieldDescs.Count];
+                    float[] center = new float[sd.Parent.PointFieldDescs.Count];
+                    for (int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
                     {
-                        sd.ID = msg.SubDatasetID;
-
-                        //GTF transfer function by default
-                        float[] scale = new float[sd.Parent.PointFieldDescs.Count];
-                        float[] center = new float[sd.Parent.PointFieldDescs.Count];
-                        for (int i = 0; i < sd.Parent.PointFieldDescs.Count; i++)
-                        {
-                            center[i] = 0.5f;
-                            scale[i] = 0.5f;
-                        }
-                        sd.TransferFunction = new GTF(center, scale);
-
-                        cp.AddSubDataset(sd, false);
+                        center[i] = 0.5f;
+                        scale[i] = 0.5f;
                     }
+                    sd.TransferFunction = new GTF(center, scale);
+
+                    cp.AddSubDataset(sd, false);
                     m_cloudPointSubDatasetToLoad.Enqueue(sd);
                 }
             }
@@ -1944,13 +1917,14 @@ namespace Sereno
 
         public void OnRemoveSubDataset(MessageBuffer messageBuffer, RemoveSubDatasetMessage msg)
         {
-            lock(this)
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            if (sd != null)
             {
-                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-                if (sd != null)
+                if(sd.SubDatasetGroup != null)
+                    sd.SubDatasetGroup.RemoveSubDataset(sd);
+
+                lock (this)
                 {
-                    if(sd.SubDatasetGroup != null)
-                        sd.SubDatasetGroup.RemoveSubDataset(sd);
                     m_subDatasetToRemove.Enqueue(sd);
                 }
             }
@@ -2110,35 +2084,26 @@ namespace Sereno
         }
         public void OnToggleMapVisibility(MessageBuffer messageBuffer, ToggleMapVisibilityMessage msg)
         {
-            lock(this)
-            {
-                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-                if(sd != null)   
-                    sd.IsMapVisible = msg.IsVisible;
-            }
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            if(sd != null)   
+                sd.IsMapVisible = msg.IsVisible;
         }
                
         public void OnResetVolumetricSelection(MessageBuffer messageBuffer, ResetVolumetricSelectionMessage msg)
         {
-            lock(this)
-            {
-                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
 
-                if (sd != null)
-                    sd.ResetVolumetricMask(false);
-            }
+            if (sd != null)
+                sd.ResetVolumetricMask(false);
         }
 
         public void OnSubDatasetVolumetricMask(MessageBuffer messageBuffer, SubDatasetVolumetricMaskMessage msg)
         {
-            lock(this)
+            Debug.Log("Received a volumetric mask message");
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            if (sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
             {
-                Debug.Log("Received a volumetric mask message");
-                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-                if (sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
-                {
-                    sd.SetVolumetricMask(msg.Mask, msg.IsEnabled);
-                }
+                sd.SetVolumetricMask(msg.Mask, msg.IsEnabled);
             }
         }
         
@@ -2179,126 +2144,105 @@ namespace Sereno
 
         public void OnLinkLogAnnotationPositionSubDataset(MessageBuffer message, LinkLogAnnotationPositionSubDatasetMessage msg)
         {
-            lock (this)
-            {
-                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-                if (sd == null)
-                    return;
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            if (sd == null)
+                return;
 
-                LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
-                if (annot == null)
-                    return;
+            LogAnnotationContainer annot = m_logAnnotations[msg.AnnotID];
+            if (annot == null)
+                return;
 
-                LogAnnotationPosition pos = annot.LogAnnotationPositions.Keys.FirstOrDefault((p) => p.ID == msg.CompID);
-                if (pos == null)
-                    return;
+            LogAnnotationPosition pos = annot.LogAnnotationPositions.Keys.FirstOrDefault((p) => p.ID == msg.CompID);
+            if (pos == null)
+                return;
 
-                sd.AddLogAnnotationPosition(new LogAnnotationPositionInstance(annot, pos, sd, msg.DrawableID));
-            }
+            sd.AddLogAnnotationPosition(new LogAnnotationPositionInstance(annot, pos, sd, msg.DrawableID));
         }
 
         public void OnSetSubDatasetClipping(MessageBuffer message, SetSubDatasetClipping msg)
         {
-            lock (this)
-            {
-                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-                if (sd == null)
-                    return;
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if (sd == null)
+                return;
 
-                sd.DepthClipping = msg.DepthClipping;
-            }
+            sd.DepthClipping = msg.DepthClipping;
         }
 
         public void OnSetDrawableAnnotationPositionColor(MessageBuffer message, SetDrawableAnnotationPositionColorMessage msg)
         {
-            lock (this)
-            {
-                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-                if (sd == null)
-                    return;
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if (sd == null)
+                return;
 
-                LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
-                if (annot == null)
-                    return;
+            LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
+            if (annot == null)
+                return;
 
-                annot.Color = new Color32((byte)((msg.Color >> 16) & 0xff),
-                                          (byte)((msg.Color >> 8) & 0xff),
-                                          (byte)((msg.Color >> 0) & 0xff),
-                                          (byte)((msg.Color >> 24) & 0xff));
-            }
+            annot.Color = new Color32((byte)((msg.Color >> 16) & 0xff),
+                                        (byte)((msg.Color >> 8) & 0xff),
+                                        (byte)((msg.Color >> 0) & 0xff),
+                                        (byte)((msg.Color >> 24) & 0xff));
         }
 
         public void OnSetDrawableAnnotationPositionIdx(MessageBuffer message, SetDrawableAnnotationPositionIdxMessage msg)
         {
-            lock (this)
-            {
-                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-                if (sd == null)
-                    return;
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if (sd == null)
+                return;
 
-                LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
-                if (annot == null)
-                    return;
+            LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == msg.DrawableID);
+            if (annot == null)
+                return;
 
-                annot.MappedIndices = msg.Indices;
-            }
+            annot.MappedIndices = msg.Indices;
         }
         
         public void OnAddSubDatasetSubjectiveGroup(MessageBuffer message, AddSubDatasetSubjectiveGroupMessage msg)
         {
-            lock (this)
-            {
-                SubDataset baseSD = GetSubDataset(msg.BaseDatasetID, msg.BaseSubDatasetID);
-                if(baseSD == null)
-                    return;
+            SubDataset baseSD = GetSubDataset(msg.BaseDatasetID, msg.BaseSubDatasetID);
+            if(baseSD == null)
+                return;
 
-                SubDatasetSubjectiveStackedGroup svGroup = new SubDatasetSubjectiveStackedGroup(m_headsetID, (SubDatasetGroupType)msg.SubjectiveViewType, msg.SDG_ID, baseSD);
-                m_sdGroups.Add(svGroup.ID, svGroup);
+            SubDatasetSubjectiveStackedGroup svGroup = new SubDatasetSubjectiveStackedGroup(m_headsetID, (SubDatasetGroupType)msg.SubjectiveViewType, msg.SDG_ID, baseSD);
+            m_sdGroups.Add(svGroup.ID, svGroup);
 
-                m_subjViewToLoad.Enqueue(svGroup);
-            }
+            m_subjViewToLoad.Enqueue(svGroup);
         }
 
         public void OnAddSubDatasetToSubjectiveStackedGroup(MessageBuffer message, AddSubDatasetToSubjectiveStackedGroupMessage msg)
         {
-            lock (this)
+            SubDataset stackedSD = null;
+            SubDataset linkedSD  = null;
+            if (msg.StackedID >= 0)
             {
-                SubDataset stackedSD = null;
-                SubDataset linkedSD  = null;
-                if (msg.StackedID >= 0)
-                {
-                    stackedSD = GetSubDataset(msg.DatasetID, msg.StackedID);
-                    if (stackedSD == null)
-                        return;
-                }
-
-                if (msg.LinkedID >= 0)
-                {
-                    linkedSD = GetSubDataset(msg.DatasetID, msg.LinkedID);
-                    if (linkedSD == null)
-                        return;
-                }
-
-                SubDatasetGroup sdg = m_sdGroups[msg.SDG_ID];
-                if (sdg == null || !SubDatasetGroup.IsSubjective(sdg))
+                stackedSD = GetSubDataset(msg.DatasetID, msg.StackedID);
+                if (stackedSD == null)
                     return;
-                SubDatasetSubjectiveStackedGroup svGroup = (SubDatasetSubjectiveStackedGroup)sdg;
-                svGroup.AddSubjectiveSubDataset(stackedSD, linkedSD);
             }
+
+            if (msg.LinkedID >= 0)
+            {
+                linkedSD = GetSubDataset(msg.DatasetID, msg.LinkedID);
+                if (linkedSD == null)
+                    return;
+            }
+
+            SubDatasetGroup sdg = m_sdGroups[msg.SDG_ID];
+            if (sdg == null || !SubDatasetGroup.IsSubjective(sdg))
+                return;
+            SubDatasetSubjectiveStackedGroup svGroup = (SubDatasetSubjectiveStackedGroup)sdg;
+            svGroup.AddSubjectiveSubDataset(stackedSD, linkedSD);
         }
 
         public void OnSetSubjectiveStackedGroupParameters(MessageBuffer message, SubjectiveStackedGroupGlobalParametersMessage msg)
         {
-            lock(this)
-            {
-                SubDatasetGroup sdg = m_sdGroups[msg.SDG_ID];
-                if (sdg == null || !SubDatasetGroup.IsSubjective(sdg))
-                    return;
-                SubDatasetSubjectiveStackedGroup svGroup = (SubDatasetSubjectiveStackedGroup)sdg;
-                svGroup.Gap         = msg.Gap;
-                svGroup.IsMerged    = msg.IsMerged;
-                svGroup.StackMethod = (StackMethod)msg.StackedMethod;
-            }
+            SubDatasetGroup sdg = m_sdGroups[msg.SDG_ID];
+            if (sdg == null || !SubDatasetGroup.IsSubjective(sdg))
+                return;
+            SubDatasetSubjectiveStackedGroup svGroup = (SubDatasetSubjectiveStackedGroup)sdg;
+            svGroup.Gap         = msg.Gap;
+            svGroup.IsMerged    = msg.IsMerged;
+            svGroup.StackMethod = (StackMethod)msg.StackedMethod;
         }
 
         public void OnRemoveSubDatasetGroup(MessageBuffer message, RemoveSubDatasetGroupMessage msg)
@@ -2516,6 +2460,9 @@ namespace Sereno
                                 sd.SubDatasetGroup.RemoveSubDataset(sd);
                         m_datasetToRemove.Enqueue(d.Value);
                     }
+                    foreach (var sdg in m_sdGroups)
+                        if (SubDatasetGroup.IsSubjective(sdg.Value))
+                            m_subjViewToRemove.Enqueue((SubDatasetSubjectiveStackedGroup)sdg.Value);
                     txt = "";
 
                     //Selection

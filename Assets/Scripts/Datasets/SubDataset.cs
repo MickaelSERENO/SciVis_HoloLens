@@ -264,9 +264,12 @@ namespace Sereno.Datasets
         /// <param name="annot">The annotation to register</param>
         public void AddCanvasAnnotation(CanvasAnnotation annot)
         {
-            m_canvasAnnots.Add(annot);
-            foreach (var l in m_listeners)
-                l.OnAddCanvasAnnotation(this, annot);
+            lock (this)
+            { 
+                m_canvasAnnots.Add(annot);
+                foreach (var l in m_listeners)
+                    l.OnAddCanvasAnnotation(this, annot);
+            }
         }
 
 
@@ -276,10 +279,13 @@ namespace Sereno.Datasets
         /// <param name="pos">The annotation to register</param>
         public void AddLogAnnotationPosition(LogAnnotationPositionInstance pos)
         {
-            m_logAnnotPositions.Add(pos);
-            pos.CurrentTime = (m_tf == null) ? 0 : m_tf.Timestep;
-            foreach(var l in m_listeners)
-                l.OnAddLogAnnotationPosition(this, pos);
+            lock (this)
+            {
+                m_logAnnotPositions.Add(pos);
+                pos.CurrentTime = (m_tf == null) ? 0 : m_tf.Timestep;
+                foreach (var l in m_listeners)
+                    l.OnAddLogAnnotationPosition(this, pos);
+            }
         }
 
         /// <summary>
@@ -287,9 +293,12 @@ namespace Sereno.Datasets
         /// </summary>
         public void ClearCanvasAnnotations()
         {
-            foreach (var l in m_listeners)
-                l.OnClearCanvasAnnotations(this);
-            m_canvasAnnots.Clear();
+            lock (this)
+            {
+                foreach (var l in m_listeners)
+                    l.OnClearCanvasAnnotations(this);
+                m_canvasAnnots.Clear();
+            }
         }
 
 
@@ -299,7 +308,8 @@ namespace Sereno.Datasets
         /// <param name="clbk">The callback listener to call</param>
         public void AddListener(ISubDatasetCallback clbk)
         {
-            m_listeners.Add(clbk);
+            lock (this)
+                m_listeners.Add(clbk);
         }
 
         /// <summary>
@@ -308,7 +318,8 @@ namespace Sereno.Datasets
         /// <param name="clbk">The callback listener to not call anymore</param>
         public void RemoveListener(ISubDatasetCallback clbk)
         {
-            m_listeners.Remove(clbk);
+            lock (this)
+                m_listeners.Remove(clbk);
         }
 
         /// <summary>
@@ -328,14 +339,17 @@ namespace Sereno.Datasets
         /// <param name="enable">Should we enable  this volumetric mask?</param>
         public void ResetVolumetricMask(bool value, bool enable = true)
         {
-            byte val = (byte)(value ? 0xff : 0x00);
-            for (int i = 0; i < (m_parent.GetNbSpatialValues()+7)/8; i++)
-                m_volumetricMask[i] = val;
+            lock (this)
+            {
+                byte val = (byte)(value ? 0xff : 0x00);
+                for (int i = 0; i < (m_parent.GetNbSpatialValues() + 7) / 8; i++)
+                    m_volumetricMask[i] = val;
 
-            m_enableVolumetricMask = enable;
+                m_enableVolumetricMask = enable;
 
-            foreach (var l in m_listeners)
-                l.OnChangeVolumetricMask(this);
+                foreach (var l in m_listeners)
+                    l.OnChangeVolumetricMask(this);
+            }
         }
 
         /// <summary>
@@ -345,11 +359,14 @@ namespace Sereno.Datasets
         /// <param name="enable">Should we enable the volumetric mask?</param>
         public void SetVolumetricMask(byte[] val, bool enable = true)
         {
-            m_volumetricMask       = val;
-            m_enableVolumetricMask = enable;
+            lock (this)
+            {
+                m_volumetricMask = val;
+                m_enableVolumetricMask = enable;
 
-            foreach (var l in m_listeners)
-                l.OnChangeVolumetricMask(this);
+                foreach (var l in m_listeners)
+                    l.OnChangeVolumetricMask(this);
+            }
         }
 
         /// <summary>
@@ -362,11 +379,14 @@ namespace Sereno.Datasets
             get => m_tfComputation;
             set
             {
-                if (m_tfComputation != value)
+                lock (this)
                 {
-                    m_tfComputation = value;
-                    foreach(ISubDatasetCallback l in m_listeners)
-                        l.OnSetTFComputation(this, m_tfComputation);
+                    if (m_tfComputation != value)
+                    {
+                        m_tfComputation = value;
+                        foreach (ISubDatasetCallback l in m_listeners)
+                            l.OnSetTFComputation(this, m_tfComputation);
+                    }
                 }
             }
         }
@@ -379,21 +399,24 @@ namespace Sereno.Datasets
             get => m_sdg;
             set
             {
-                if(m_sdg == value)
-                    return;
-                if(m_sdg != null)
+                lock (this)
                 {
-                    SubDatasetGroup old = m_sdg;
-                    m_sdg = null;
-                    old.RemoveSubDataset(this);
-                }
-                m_sdg = value;
-                if(m_sdg != null && !m_sdg.SubDatasets.Contains(this))
-                    if(!m_sdg.AddSubDataset(this))
+                    if (m_sdg == value)
+                        return;
+                    if (m_sdg != null)
+                    {
+                        SubDatasetGroup old = m_sdg;
                         m_sdg = null;
+                        old.RemoveSubDataset(this);
+                    }
+                    m_sdg = value;
+                    if (m_sdg != null && !m_sdg.SubDatasets.Contains(this))
+                        if (!m_sdg.AddSubDataset(this))
+                            m_sdg = null;
 
-                foreach(var l in m_listeners)
-                    l.OnSetSubDatasetGroup(this, m_sdg);
+                    foreach (var l in m_listeners)
+                        l.OnSetSubDatasetGroup(this, m_sdg);
+                }
             }
         }
 
@@ -405,19 +428,22 @@ namespace Sereno.Datasets
             get => m_tf;
             set
             {
-                if(m_tf == value || (m_tf != null && m_tf.Equals(value)))
-                    return;
+                lock (this)
+                {
+                    if (m_tf == value || (m_tf != null && m_tf.Equals(value)))
+                        return;
 
-                m_tf = value;
+                    m_tf = value;
 
-                //Update annotations relying on time
-                if(m_tf != null)
-                    foreach(var comp in m_logAnnotPositions)
-                        comp.CurrentTime = m_tf.Timestep;
+                    //Update annotations relying on time
+                    if (m_tf != null)
+                        foreach (var comp in m_logAnnotPositions)
+                            comp.CurrentTime = m_tf.Timestep;
 
-                //Fire the event
-                foreach(var l in m_listeners)
-                    l.OnTransferFunctionChange(this, m_tf);
+                    //Fire the event
+                    foreach (var l in m_listeners)
+                        l.OnTransferFunctionChange(this, m_tf);
+                }
             }
         }
                 
@@ -430,14 +456,17 @@ namespace Sereno.Datasets
             get => m_rotation; 
             set
             {
-                if (m_rotation.SequenceEqual(value))
-                    return;
+                lock (this)
+                {
+                    if (m_rotation.SequenceEqual(value))
+                        return;
 
-                for (int i = 0; i < Rotation.Length; i++) 
-                    m_rotation[i] = value[i];
-                
-                foreach (var l in m_listeners)
-                    l.OnRotationChange(this, m_rotation);
+                    for (int i = 0; i < Rotation.Length; i++)
+                        m_rotation[i] = value[i];
+
+                    foreach (var l in m_listeners)
+                        l.OnRotationChange(this, m_rotation);
+                }
             }
         }
 
@@ -478,13 +507,16 @@ namespace Sereno.Datasets
             get => m_position; 
             set
             {
-                if (m_position.SequenceEqual(value))
-                    return;
+                lock (this)
+                {
+                    if (m_position.SequenceEqual(value))
+                        return;
 
-                for (int i = 0; i < Position.Length; i++) 
-                    m_position[i] = value[i];
-                foreach(var l in m_listeners)
-                    l.OnPositionChange(this, m_position);
+                    for (int i = 0; i < Position.Length; i++)
+                        m_position[i] = value[i];
+                    foreach (var l in m_listeners)
+                        l.OnPositionChange(this, m_position);
+                }
             }
         }
 
@@ -497,13 +529,16 @@ namespace Sereno.Datasets
             get => m_scale;
             set
             {
-                if(m_scale.SequenceEqual(value))
-                    return;
-                for(int i = 0; i < Scale.Length; i++)
-                    m_scale[i] = value[i];
+                lock (this)
+                {
+                    if (m_scale.SequenceEqual(value))
+                        return;
+                    for (int i = 0; i < Scale.Length; i++)
+                        m_scale[i] = value[i];
 
-                foreach(var l in m_listeners)
-                    l.OnScaleChange(this, m_scale);
+                    foreach (var l in m_listeners)
+                        l.OnScaleChange(this, m_scale);
+                }
             }
         }
 
@@ -529,11 +564,15 @@ namespace Sereno.Datasets
             get => m_depthClip;
             set
             {
-                if(m_depthClip != value)
+
+                lock (this)
                 {
-                    m_depthClip = value;
-                    foreach (var l in m_listeners)
-                        l.OnChangeDepthClipping(this, value);
+                    if (m_depthClip != value)
+                    {
+                        m_depthClip = value;
+                        foreach (var l in m_listeners)
+                            l.OnChangeDepthClipping(this, value);
+                    }
                 }
             }
         }
@@ -546,11 +585,14 @@ namespace Sereno.Datasets
             get => m_lockOwnerID;
             set
             {
-                if (m_lockOwnerID == value)
-                    return;
-                m_lockOwnerID = value;
-                foreach(var l in m_listeners)
-                    l.OnLockOwnerIDChange(this, m_lockOwnerID);
+                lock (this)
+                {
+                    if (m_lockOwnerID == value)
+                        return;
+                    m_lockOwnerID = value;
+                    foreach (var l in m_listeners)
+                        l.OnLockOwnerIDChange(this, m_lockOwnerID);
+                }
             }
         }
         
@@ -562,11 +604,14 @@ namespace Sereno.Datasets
             get => m_ownerID;
             set
             {
-                if (m_ownerID == value)
-                    return;
-                m_ownerID = value;
-                foreach (var l in m_listeners)
-                    l.OnOwnerIDChange(this, m_ownerID);
+                lock (this)
+                {
+                    if (m_ownerID == value)
+                        return;
+                    m_ownerID = value;
+                    foreach (var l in m_listeners)
+                        l.OnOwnerIDChange(this, m_ownerID);
+                }
             }
         }
 
@@ -578,11 +623,14 @@ namespace Sereno.Datasets
             get => m_name;
             set
             {
-                if (m_name != null && m_name.Equals(value))
-                    return;
-                m_name = value;
-                foreach (var l in m_listeners)
-                    l.OnNameChange(this, value);
+                lock (this)
+                {
+                    if (m_name != null && m_name.Equals(value))
+                        return;
+                    m_name = value;
+                    foreach (var l in m_listeners)
+                        l.OnNameChange(this, value);
+                }
             }
         }
 
@@ -608,7 +656,11 @@ namespace Sereno.Datasets
         public int ID
         {
             get => m_ID;
-            set => m_ID = value;
+            set
+            {
+                lock (this)
+                    m_ID = value;
+            }
         }
 
         /// <summary>
@@ -672,11 +724,14 @@ namespace Sereno.Datasets
             get => m_mapVisibility;
             set 
             {
-                if (m_mapVisibility == value)
-                    return;
-                m_mapVisibility = value;
-                foreach (var l in m_listeners)
-                    l.OnToggleMapVisibility(this, value);
+                lock (this)
+                {
+                    if (m_mapVisibility == value)
+                        return;
+                    m_mapVisibility = value;
+                    foreach (var l in m_listeners)
+                        l.OnToggleMapVisibility(this, value);
+                }
             }
         }
 
@@ -688,11 +743,14 @@ namespace Sereno.Datasets
             get => m_visibility;
             set
             {
-                if (m_visibility != value)
+                lock (this)
                 {
-                    m_visibility = value;
-                    foreach (var l in m_listeners)
-                        l.OnSetVisibility(this, value);
+                    if (m_visibility != value)
+                    {
+                        m_visibility = value;
+                        foreach (var l in m_listeners)
+                            l.OnSetVisibility(this, value);
+                    }
                 }
             }
         }
