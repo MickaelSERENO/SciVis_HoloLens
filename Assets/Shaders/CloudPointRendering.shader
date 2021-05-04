@@ -41,9 +41,7 @@
             struct g2f
             {
                 float4 vertex   : SV_POSITION;
-                //float4 localPos : TEXCOORD0;
-                //float3 normal   : TEXCOORD1;
-                fixed4 color    : TEXCOORD2;
+                fixed4 color    : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -68,8 +66,8 @@
                 UNITY_SETUP_INSTANCE_ID(input[0]);
 
                 //Discard hidden pixels
-                //if(input[0].color.a == 0.0)
-                //    return;
+                if(input[0].color.a == 0.0)
+                    return;
 
                 const float f = _PointSize / 2; //half size
                 float4 vc[8] = { float4(-f, -f, -f, 0.0f),  //0
@@ -98,33 +96,25 @@
                 for(int j = 0; j < 8; j++)
                     vc[j] = mul(UNITY_MATRIX_MVP, vc[j]);// UNITY_SHADER_NO_UPGRADE
                                         
-
-                g2f v[24]; //for CUBE
-
                 // Assign new vertices positions (24 new tile vertices, forming CUBE)
-                for (int i = 0; i < 24; i++) 
+                g2f v = (g2f)(0);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(v);
+                v.color = input[0].color;
+
+                for (int i = 0; i < 6; i++) 
                 {
-                    v[i] = (g2f)(0);
-                    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(v[i]);
-                    v[i].color  = input[0].color;  
-                    v[i].vertex = input[0].vertex + vc[VERT_ORDER[i]]; 
-                }
+                    v.vertex = input[0].vertex + vc[VERT_ORDER[4*i+0]];
+                    tristream.Append(v);
 
-                // Build the CUBE tile by submitting triangle strip vertices
-                for (int k = 0; k < 6; k++)
-                {
-                    //v[k * 4 + 0].normal = n[k];
-                    tristream.Append(v[k*4 + 0]);
+                    v.vertex = input[0].vertex + vc[VERT_ORDER[4*i+1]];
+                    tristream.Append(v);
 
-                    //v[k * 4 + 1].normal = n[k];
-                    tristream.Append(v[k*4 + 1]);
+                    v.vertex = input[0].vertex + vc[VERT_ORDER[4*i+2]];
+                    tristream.Append(v);
 
-                    //v[k * 4 + 2].normal = n[k];
-                    tristream.Append(v[k * 4 + 2]);
+                    v.vertex = input[0].vertex + vc[VERT_ORDER[4*i+3]];
+                    tristream.Append(v);
 
-                    //v[k * 4 + 3].normal = n[k];
-                    tristream.Append(v[k*4 + 3]);
-                    
                     tristream.RestartStrip();
                 }
             }
@@ -132,8 +122,6 @@
             fixed4 frag(g2f input) : COLOR
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-                if (input.color.a == 0)
-                    discard;
                 return input.color;
             }
 

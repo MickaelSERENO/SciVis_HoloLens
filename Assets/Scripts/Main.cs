@@ -1948,7 +1948,6 @@ namespace Sereno
                         m_tabletSelectionData.CurrentNewSelectionMeshIDs.MeshData.LassoScale = m_tabletSelectionData.Scaling;
                     }
                     m_tabletSelectionData.NewSelectionMeshIDs.Add(m_tabletSelectionData.CurrentNewSelectionMeshIDs);
-                    AddSelectionMeshPosition();
                 }
                 else
                 {
