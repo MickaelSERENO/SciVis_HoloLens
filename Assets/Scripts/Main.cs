@@ -181,6 +181,11 @@ namespace Sereno
         /// Should we update the lasso?
         /// </summary>
         public bool UpdateLasso = false;
+
+        /// <summary>
+        /// Should we clear the volumetric selection meshes?
+        /// </summary>
+        public bool ClearVolumetricSelectionMeshes = false;
     }
 
     /// <summary>
@@ -632,7 +637,7 @@ namespace Sereno
             Task t = new Task( () =>
             {
                 AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
-                addCloudMsg.Path   = "cylinder.cp";
+                addCloudMsg.Path   = "3.cp";
                 addCloudMsg.DataID = 0;
                 OnAddCloudPointDataset(null, addCloudMsg);
                 
@@ -714,7 +719,40 @@ namespace Sereno
                 loc.position = new float[3] { 0.1f, 0.4f, 0.0f };
                 OnLocation(null, loc);
 
-                Thread.Sleep(500);
+                //Thread.Sleep(500);
+                curAction.CurrentAction = (int)HeadsetCurrentAction.LASSO;
+                OnCurrentAction(null, curAction);
+
+                //Second entry
+                lasso.size = 5 * 3;
+                lasso.data = new List<float>();
+                for (int i = 0; i < 5; i++)
+                {
+                    lasso.data.Add((float)(0.5 * Math.Cos(i / 2.5f * Math.PI)));
+                    lasso.data.Add((float)(0.5 * Math.Sin(i / 2.5f * Math.PI)));
+                    lasso.data.Add(0.0f);
+                }
+                OnLasso(null, lasso);
+
+                //Simulate a movement
+                curAction.CurrentAction = (int)HeadsetCurrentAction.SELECTING;
+                OnCurrentAction(null, curAction);
+
+                addNewSelection.BooleanOperation = 0;
+                OnAddNewSelectionInput(null, addNewSelection);
+                
+                Thread.Sleep(100);
+                loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
+                loc.position = new float[3] { 0.4f, 0.0f, 0.1f };
+                loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
+                OnLocation(null, loc);
+                
+                Thread.Sleep(100);
+                loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
+                loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
+                loc.position = new float[3] { 0.6f, 0.4f, 0.0f };
+                OnLocation(null, loc);
+                
                 curAction.CurrentAction = (int)HeadsetCurrentAction.REVIEWING_SELECTION;
                 OnCurrentAction(null, curAction);
 
@@ -1132,25 +1170,28 @@ namespace Sereno
             //Update the tablet's position
             m_tabletSelectionData.GraphicalObject.transform.localPosition = m_tabletSelectionData.Position;
             m_tabletSelectionData.GraphicalObject.transform.localScale    = m_tabletSelectionData.Scaling;
-            m_tabletSelectionData.GraphicalObject.transform.localRotation = m_tabletSelectionData.Rotation;          
+            m_tabletSelectionData.GraphicalObject.transform.localRotation = m_tabletSelectionData.Rotation;      
+            
+            if(m_tabletSelectionData.ClearVolumetricSelectionMeshes)
+            {
+                m_tabletSelectionData.ClearVolumetricSelectionMeshes = false;
+
+                m_tabletSelectionData.GraphicalLasso.positionCount = 0; //Remove the "old lasso"
+
+                //Show only the tablet
+                foreach (GameObject go in m_tabletSelectionData.SelectionMeshes)
+                    go.SetActive(false);
+
+                //Delete all the selection meshes data
+                foreach (GameObject go in m_tabletSelectionData.SelectionMeshes)
+                    Destroy(go);
+                m_tabletSelectionData.SelectionMeshes.Clear();
+            }
 
             if(m_currentAction == HeadsetCurrentAction.SELECTING || m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION || m_currentAction == HeadsetCurrentAction.LASSO)
             {
                 //Show the tablet
                 m_tabletSelectionData.GraphicalObject.SetActive(true);
-
-                if(m_currentAction == HeadsetCurrentAction.LASSO)
-                {
-                    //Show only the tablet
-                    foreach (GameObject go in m_tabletSelectionData.SelectionMeshes)
-                        go.SetActive(false);
-                    m_tabletSelectionData.GraphicalLasso.positionCount = 0; //Remove the "old lasso"
-
-                    //Delete all the selection meshes data
-                    foreach (GameObject go in m_tabletSelectionData.SelectionMeshes)
-                        Destroy(go);
-                    m_tabletSelectionData.SelectionMeshes.Clear();
-                }
 
                 if(m_tabletSelectionData.UpdateLasso)
                 { 
@@ -1835,7 +1876,7 @@ namespace Sereno
 
                 //If needed, we clean everything
                 if((m_currentAction == HeadsetCurrentAction.SELECTING || m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION || m_currentAction == HeadsetCurrentAction.LASSO) &&
-                    curAction       != HeadsetCurrentAction.SELECTING && curAction       != HeadsetCurrentAction.REVIEWING_SELECTION && curAction       != HeadsetCurrentAction.LASSO)
+                   (curAction       != HeadsetCurrentAction.SELECTING && curAction       != HeadsetCurrentAction.REVIEWING_SELECTION && curAction       != HeadsetCurrentAction.LASSO))
                     ClearSelectionData();
 
                 m_currentAction = curAction;
@@ -2176,6 +2217,7 @@ namespace Sereno
             m_tabletSelectionData.RotationList.Clear();
             m_tabletSelectionData.NewSelectionMeshIDs.Clear();
             m_tabletSelectionData.CurrentCaptureID  = 0;
+            m_tabletSelectionData.ClearVolumetricSelectionMeshes = true;
         }
 
         /// <summary>
