@@ -199,6 +199,8 @@ namespace Sereno.Network.MessageHandler
         /// <param name="messageBuffer">The message buffer in use</param>
         /// <param name="msg">the message parsed</param>
         void OnNextTrial(MessageBuffer messageBuffer, NextTrialMessage msg);
+
+        void OnPostReviewRotation(MessageBuffer msgBuffer, PostReviewRotationMessage msg);
     }
 
     /// <summary>
@@ -439,6 +441,10 @@ namespace Sereno.Network.MessageHandler
                             foreach (var l in m_listeners)
                                 l.OnNextTrial(this, (NextTrialMessage)m_msg);
                             break;
+                        case ServerType.GET_POST_REVIEW_ROTATION:
+                            foreach (var l in m_listeners)
+                                l.OnPostReviewRotation(this, (PostReviewRotationMessage)m_msg);
+                            break;
                         default:
                             break;
                     }
@@ -671,6 +677,9 @@ namespace Sereno.Network.MessageHandler
                     break;
                 case ServerType.GET_NEXT_TRIAL:
                     m_msg = new NextTrialMessage(ServerType.GET_NEXT_TRIAL);
+                    break;
+                case ServerType.GET_POST_REVIEW_ROTATION:
+                    m_msg = new PostReviewRotationMessage(ServerType.GET_POST_REVIEW_ROTATION);
                     break;
             }
         }

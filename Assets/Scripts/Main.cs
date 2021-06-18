@@ -1,4 +1,4 @@
-﻿//#define TEST
+﻿#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -57,6 +57,11 @@ namespace Sereno
     /// </summary>
     public enum ViewType
     {
+        /// <summary>
+        /// No view mode
+        /// </summary>
+        NONE = -1,
+
         /// <summary>
         /// AR View
         /// </summary>
@@ -459,12 +464,16 @@ namespace Sereno
         /// <summary>
         /// The current view type 
         /// </summary>
-        private ViewType m_viewType = ViewType.AR;
+        private ViewType m_viewType = ViewType.TWO_DIMENSION;
 
         /// <summary>
         /// Is the current view type updated? (useful for asynchronous messages)
         /// </summary>
         private bool m_viewTypeUpdated = true;
+
+        private SubDataset m_currentPostReviewSubDataset = null;
+
+        private GameObject m_currentPostReviewPivot = null;
         #endregion
 
         /* Public attributes*/
@@ -585,6 +594,7 @@ namespace Sereno
         /// How many tablet's position should be ignored before capturing?
         /// </summary>
         public int NBTabletPositionIgnored = 2;
+
         #endregion
 
         void Awake()
@@ -628,10 +638,13 @@ namespace Sereno
             m_tabletSelectionData.GraphicalObject.SetActive(false);
 
             //Initialize the bird view camera
-            TabletBirdViewCamera.transform.localPosition = new Vector3(1, 1, -1);
+            TabletBirdViewCamera.transform.localPosition = new Vector3(1, 1, -1)*0.75f;
             TabletBirdViewCamera.transform.LookAt(Vector3.zero);    
         
             CurrentPointingIT = PointingIT.NONE;
+
+            m_currentPostReviewPivot = new GameObject();
+            m_currentPostReviewPivot.transform.parent = this.transform;
 
 #if TEST
             Task t = new Task( () =>
@@ -655,12 +668,12 @@ namespace Sereno
                 addSDMsg.Name = "data";
                 OnAddSubDataset(null, addSDMsg);
 
-                /*MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
                 moveVTKMsg.SubDataID = 0;
-                moveVTKMsg.Position = new float[3] { 0.2f, 0.2f, 0.2f };
+                moveVTKMsg.Position = new float[3] { 0.5f, 0.5f, 0.5f };
                 moveVTKMsg.HeadsetID = -1;
-                OnMoveDataset(null, moveVTKMsg);*/
+                OnMoveDataset(null, moveVTKMsg);
 
                 ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
@@ -715,7 +728,7 @@ namespace Sereno
                 
                 Thread.Sleep(100);
                 loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
-                loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
+                loc.rotation = new float[4] { 0.0f, 0.447f, 0.0f, 0.8944f };
                 loc.position = new float[3] { 0.1f, 0.4f, 0.0f };
                 OnLocation(null, loc);
 
@@ -749,12 +762,18 @@ namespace Sereno
                 
                 Thread.Sleep(100);
                 loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
-                loc.rotation = new float[4] { 0.0f, 0.0f, 0.0f, 1.0f };
+                loc.rotation = new float[4] { 1.0f, 0.0f, 0.0f, 0.0f};
                 loc.position = new float[3] { 0.6f, 0.4f, 0.0f };
                 OnLocation(null, loc);
                 
                 curAction.CurrentAction = (int)HeadsetCurrentAction.REVIEWING_SELECTION;
                 OnCurrentAction(null, curAction);
+
+                PostReviewRotationMessage postRotMsg = new PostReviewRotationMessage(ServerType.GET_POST_REVIEW_ROTATION);
+                postRotMsg.DatasetID    = 0;
+                postRotMsg.SubDatasetID = 0;
+                postRotMsg.Quaternion = new float[4] { (float)Math.Cos(1.15), 0.0f, (float)Math.Sin(1.15), 0.0f };
+                OnPostReviewRotation(null, postRotMsg);
 
                 //The dataset needs to be loaded for that
                 //OnConfirmSelection(null, new ConfirmSelectionMessage(ServerType.GET_CONFIRM_SELECTION) {DataID = 0, SubDataID = 0} );
@@ -1125,11 +1144,13 @@ namespace Sereno
                 m_viewTypeUpdated = false;
             }
 
-            if(m_viewType == ViewType.BOTH || m_viewType == ViewType.TWO_DIMENSION)
+            //if(m_viewType == ViewType.BOTH || m_viewType == ViewType.TWO_DIMENSION)
             {
                 //Do not change the scaling since we do not know how to translate that for perspective projections
                 TabletVirtualCamera.transform.localPosition = m_tabletSelectionData.Position;
-                TabletVirtualCamera.transform.localRotation = m_tabletSelectionData.Rotation;
+                TabletVirtualCamera.transform.localRotation = m_tabletSelectionData.Rotation * Quaternion.AngleAxis(90.0f, new Vector3(1.0f, 0.0f, 0.0f));
+                TabletVirtualCamera.orthographicSize        = m_tabletSelectionData.Scaling.z;
+                TabletVirtualCamera.aspect = m_tabletSelectionData.Scaling.x / m_tabletSelectionData.Scaling.z;
             }
         }
 
@@ -1244,11 +1265,69 @@ namespace Sereno
                         }
                     }
                 }
+
+                //Handle the rotation pivot
+                if(m_currentPostReviewSubDataset != null && m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION)
+                {
+                    //Set the pivot at origin of the subdataset for "stayInWorldPosition"
+                    m_currentPostReviewPivot.transform.localRotation = Quaternion.identity;
+                    m_currentPostReviewPivot.transform.localPosition = new Vector3(m_currentPostReviewSubDataset.Position[0], m_currentPostReviewSubDataset.Position[1], m_currentPostReviewSubDataset.Position[2]);
+                    Vector3 origin = -m_currentPostReviewPivot.transform.localPosition;
+
+                    //Add all relevant game objects
+                    if (m_tabletSelectionData.GraphicalObject.transform.parent != m_currentPostReviewPivot.transform)
+                    {
+                        m_tabletSelectionData.GraphicalObject.transform.SetParent(m_currentPostReviewPivot.transform, false);
+                    }
+
+                    TabletVirtualCamera.transform.SetParent(m_currentPostReviewPivot.transform, false);
+                    TabletVirtualCamera.transform.localPosition = m_tabletSelectionData.Position + origin;
+
+                    m_tabletSelectionData.GraphicalObject.transform.localPosition = m_tabletSelectionData.Position + origin;
+                    foreach (var m in m_tabletSelectionData.SelectionMeshes)
+                    {
+                        if (m.transform.parent != m_currentPostReviewPivot.transform)
+                        {
+                            m.transform.SetParent(m_currentPostReviewPivot.transform, true);
+                            m.transform.localPosition = origin;
+                        }
+                    }
+
+                    //Set the pivot rotation
+                    Quaternion rot = new Quaternion(m_currentPostReviewSubDataset.PostReviewRotation[1],
+                                                    m_currentPostReviewSubDataset.PostReviewRotation[2],
+                                                    m_currentPostReviewSubDataset.PostReviewRotation[3],
+                                                    m_currentPostReviewSubDataset.PostReviewRotation[0]);
+                    m_currentPostReviewPivot.transform.localRotation = rot;
+                }
+
+                //Remove the children of the pivot reviewing object
+                else
+                {
+                    if (m_currentPostReviewPivot != null)
+                        m_currentPostReviewPivot.transform.DetachChildren();
+
+                    m_tabletSelectionData.GraphicalObject.transform.SetParent(this.transform, false);
+                    m_tabletSelectionData.GraphicalObject.transform.localPosition = m_tabletSelectionData.Position;
+
+                    TabletVirtualCamera.transform.SetParent(this.transform, false);
+                    TabletVirtualCamera.transform.localPosition = m_tabletSelectionData.Position;
+
+                    foreach (var m in m_tabletSelectionData.SelectionMeshes)
+                    {
+                        m.transform.SetParent(this.transform, false);
+                        m.transform.localPosition = new Vector3(0, 0, 0);
+                    }
+                    m_tabletSelectionData.GraphicalObject.transform.localPosition = m_tabletSelectionData.Position;
+                }
             }
 
             else
             {
-                m_tabletSelectionData.GraphicalObject.SetActive(false);
+                if(m_viewType == ViewType.AR)
+                    m_tabletSelectionData.GraphicalObject.SetActive(false);
+                else
+                    m_tabletSelectionData.GraphicalObject.SetActive(true);
 
                 //Delete all the selection meshes data as they are not needed anymore
                 foreach (GameObject go in m_tabletSelectionData.SelectionMeshes)
@@ -1355,8 +1434,8 @@ namespace Sereno
                 HandleRandomText();
                 HandleHeadsetStatusLoaded();
                 HandleHeadsetStatusSending();
-                HandleTabletSelection();
                 HandleTablet2DView();
+                HandleTabletSelection();
 
                 m_targetedGameObject = null;
 
@@ -1708,22 +1787,15 @@ namespace Sereno
 
         public void OnSubDatasetModificationOwner(MessageBuffer messageBuffer, SubDatasetModificationOwnerMessage msg)
         {
-            lock(this)
-            {
-                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-                if(sd != null)
-                    sd.LockOwnerID = msg.HeadsetID;
-            }
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            sd.LockOwnerID = msg.HeadsetID;
         }
 
         public void OnSubDatasetOwner(MessageBuffer messageBuffer, SubDatasetOwnerMessage msg)
         {
-            lock(this)
-            {
-                SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
-                if(sd != null)
-                    sd.OwnerID = msg.HeadsetID;
-            }
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
+            if(sd != null)
+                sd.OwnerID = msg.HeadsetID;
         }
 
         public void OnStartAnnotation(MessageBuffer messageBuffer, StartAnnotationMessage msg)
@@ -1860,23 +1932,29 @@ namespace Sereno
 
         public void OnCurrentAction(MessageBuffer messageBuffer, CurrentActionMessage msg)
         {
-            lock(this)
-            {
-                HeadsetCurrentAction curAction = (HeadsetCurrentAction)msg.CurrentAction;
-                Debug.Log($"Current action: {curAction}");
+            HeadsetCurrentAction curAction = (HeadsetCurrentAction)msg.CurrentAction;
 
-                if(curAction == HeadsetCurrentAction.REVIEWING_SELECTION)
+            if(curAction == HeadsetCurrentAction.REVIEWING_SELECTION)
+            {
+                lock (this)
                 {
                     //Take into account the last position of the last shape if needed
-                    if(NBTabletPositionIgnored > 0 && m_tabletSelectionData.CurrentCaptureID != 0 && m_tabletSelectionData.LassoPoints.Count > 0)
+                    if (NBTabletPositionIgnored > 0 && m_tabletSelectionData.CurrentCaptureID != 0 && m_tabletSelectionData.LassoPoints.Count > 0)
                         AddSelectionMeshPosition();
-
                     CloseTabletCurrentSelectionMesh();
                 }
+            }
+            else if(m_currentPostReviewSubDataset != null)
+            {
+                m_currentPostReviewSubDataset.PostReviewRotation = new float[4] { 1.0f, 0.0f, 0.0f, 0.0f };
+                m_currentPostReviewSubDataset = null;
+            }
 
+            lock (this)
+            {
                 //If needed, we clean everything
-                if((m_currentAction == HeadsetCurrentAction.SELECTING || m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION || m_currentAction == HeadsetCurrentAction.LASSO) &&
-                   (curAction       != HeadsetCurrentAction.SELECTING && curAction       != HeadsetCurrentAction.REVIEWING_SELECTION && curAction       != HeadsetCurrentAction.LASSO))
+                if ((m_currentAction == HeadsetCurrentAction.SELECTING || m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION || m_currentAction == HeadsetCurrentAction.LASSO) &&
+                    (curAction != HeadsetCurrentAction.SELECTING && curAction != HeadsetCurrentAction.REVIEWING_SELECTION && curAction != HeadsetCurrentAction.LASSO))
                     ClearSelectionData();
 
                 m_currentAction = curAction;
@@ -1999,53 +2077,40 @@ namespace Sereno
         
         public void OnToggleMapVisibility(MessageBuffer messageBuffer, ToggleMapVisibilityMessage msg)
         {
-            lock(this)
-            {
-                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-                if(sd != null)
-                    sd.IsMapVisible = msg.IsVisible;
-            }
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            if(sd != null)
+                sd.IsMapVisible = msg.IsVisible;
         }
                
         public void OnResetVolumetricSelection(MessageBuffer messageBuffer, ResetVolumetricSelectionMessage msg)
         {
-            lock(this)
-            {
-                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
 
-                if (sd != null)
-                    sd.ResetVolumetricMask(false, false);
-            }
+            if (sd != null)
+                sd.ResetVolumetricMask(false, false);
         }
 
         public void OnSubDatasetVolumetricMask(MessageBuffer messageBuffer, SubDatasetVolumetricMaskMessage msg)
         {
-            lock(this)
+            SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
+            if (sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
             {
-                Debug.Log("Received a volumetric mask message");
-                SubDataset sd = GetSubDataset(msg.DataID, msg.SubDataID);
-                if (sd != null && sd.VolumetricMask.Length == msg.Mask.Length)
-                {
-                    sd.SetVolumetricMask(msg.Mask, msg.IsEnabled);
-                }
+                sd.SetVolumetricMask(msg.Mask, msg.IsEnabled);
             }
         }
 
         
         public void OnNextTrial(MessageBuffer messageBuffer, NextTrialMessage msg)
         {
-            VolumetricSelectionMode mode = (VolumetricSelectionMode)msg.TangibleMode;
+            ViewType mode = (ViewType)msg.TangibleMode;
             String modeString = "none";
             switch(mode)
             {
-                case VolumetricSelectionMode.ABSOLUTE:
-                    modeString = "Absolute";
+                case ViewType.AR:
+                    modeString = "Augmented Reality";
                     break;
-                case VolumetricSelectionMode.RELATIVE_ALIGNED:
-                    modeString = "Relative Aligned";
-                    break;
-                case VolumetricSelectionMode.RELATIVE_FULL:
-                    modeString = "Relative Full";
+                case ViewType.TWO_DIMENSION:
+                    modeString = "2D Screen";
                     break;
             }
 
@@ -2054,17 +2119,30 @@ namespace Sereno
                 m_textValues.EnableRandomText = true;
                 m_textValues.UpdateRandomText = true;
 
-                if(mode != VolumetricSelectionMode.NONE)
+                if(mode != ViewType.NONE)
                     m_textValues.RandomStr = $"Technique: {modeString}\nTrial: {msg.SubTrialID}" + (msg.InTraining ? "\nTraining session" : "");
                 else
                     m_textValues.RandomStr = "End of the study.\nYou can remove the headset.\nThank you for your participation!";
                 m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 5000; //Print this message for two seconds
             }
         }
+        
+        public void OnPostReviewRotation(MessageBuffer msgBuffer, PostReviewRotationMessage msg)
+        {
+            SubDataset sd = GetSubDataset(msg.DatasetID, msg.SubDatasetID);
 
-        #endregion
+            if(m_currentPostReviewSubDataset != null && m_currentPostReviewSubDataset != sd)
+                m_currentPostReviewSubDataset.PostReviewRotation = new float[4] { 1.0f, 0.0f, 0.0f, 0.0f };
 
-        public Color GetHeadsetColor(int headsetID)
+            lock(this)
+                m_currentPostReviewSubDataset = sd;
+            if(sd != null)
+                m_currentPostReviewSubDataset.PostReviewRotation = msg.Quaternion;
+        }
+
+    #endregion
+
+    public Color GetHeadsetColor(int headsetID)
         {
             lock(this)
             {
@@ -2095,8 +2173,7 @@ namespace Sereno
 
         public DefaultSubDatasetGameObject GetTargetedGameObject()
         {
-            lock(this)
-                return m_targetedGameObject;
+            return m_targetedGameObject;
         }
 
         /// <summary>
@@ -2348,6 +2425,7 @@ namespace Sereno
 
             m_anchorImportSegments.Clear();
         }
+
 
         #endregion
     }

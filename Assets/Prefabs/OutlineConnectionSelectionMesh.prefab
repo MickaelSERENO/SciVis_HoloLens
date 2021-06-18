@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3784926728972169186}
   - component: {fileID: 1614861572889072449}
   - component: {fileID: 8064113575121925618}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: OutlineConnectionSelectionMesh
   m_TagString: Untagged
   m_Icon: {fileID: 0}

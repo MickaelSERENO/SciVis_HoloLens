@@ -241,6 +241,12 @@ namespace Sereno.SciVis
                                         q[2],
                                         q[3],
                                         q[0]).normalized;
+
+                q = dataset.PostReviewRotation;
+                m_newQ = new Quaternion(q[1],
+                                        q[2],
+                                        q[3],
+                                        q[0]).normalized * m_newQ;
                 m_updateQ = true;
             }
         }

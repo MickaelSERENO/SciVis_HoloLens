@@ -338,7 +338,16 @@ namespace Sereno.Network
             while (!m_closed)
             {
                 if(sleep)
-                    Thread.Sleep(THREAD_SLEEP);
+                {
+                    try
+                    {
+                        Thread.Sleep(THREAD_SLEEP);
+                    }
+                    catch(Exception e)
+                    { 
+                        return;
+                    }
+                }
                 sleep = false;
 
                 lock(this)

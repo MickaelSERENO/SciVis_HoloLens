@@ -205,6 +205,8 @@ namespace Sereno.SciVis
             base.LateUpdate();
             lock(this)
             {
+                if (m_mesh == null)
+                    return;
                 if(m_colors != null)
                 {
                     //Set position

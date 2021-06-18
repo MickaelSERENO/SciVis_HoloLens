@@ -130,6 +130,8 @@ namespace Sereno.Datasets
         /// </summary>
         private float[] m_scale    = new float[3]{1.0f, 1.0f, 1.0f};
 
+        private float[] m_postReviewRotation = new float[4] { 1.0f, 0.0f, 0.0f, 0.0f };
+
         /// <summary>
         /// The SubDataset name
         /// </summary>
@@ -324,6 +326,19 @@ namespace Sereno.Datasets
                         quat[i] = m_rotation[i];
 
                 return quat;
+            }
+        }
+
+        public float[] PostReviewRotation
+        {
+            get => m_postReviewRotation;
+            set
+            {
+                for (int i = 0; i < PostReviewRotation.Length; i++)
+                    m_postReviewRotation[i] = value[i];
+
+                foreach (var l in m_listeners)
+                    l.OnRotationChange(this, m_rotation);
             }
         }
 
