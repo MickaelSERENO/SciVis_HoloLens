@@ -1,4 +1,4 @@
-﻿#define TEST
+﻿//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -130,12 +130,12 @@ namespace Sereno
         /// <summary>
         /// The current tablet position
         /// </summary>
-        public Vector3 Position = new Vector3(0,0,0);
+        public Vector3 Position = new Vector3(0,0,-0.75f);
 
         /// <summary>
         /// The current tablet rotation
         /// </summary>
-        public Quaternion Rotation = Quaternion.identity;
+        public Quaternion Rotation = Quaternion.AngleAxis(-90f, new Vector3(1.0f, 0.0f, 0.0f));
 
         /// <summary>
         /// tablet positions for current selection
@@ -638,8 +638,8 @@ namespace Sereno
             m_tabletSelectionData.GraphicalObject.SetActive(false);
 
             //Initialize the bird view camera
-            TabletBirdViewCamera.transform.localPosition = new Vector3(1, 1, -1)*0.75f;
-            TabletBirdViewCamera.transform.LookAt(Vector3.zero);    
+            TabletBirdViewCamera.transform.localPosition = new Vector3(0, 1, -1.75f);
+            TabletBirdViewCamera.transform.LookAt(Vector3.zero);
         
             CurrentPointingIT = PointingIT.NONE;
 
@@ -668,12 +668,12 @@ namespace Sereno
                 addSDMsg.Name = "data";
                 OnAddSubDataset(null, addSDMsg);
 
-                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+               /* MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
                 moveVTKMsg.SubDataID = 0;
                 moveVTKMsg.Position = new float[3] { 0.5f, 0.5f, 0.5f };
                 moveVTKMsg.HeadsetID = -1;
-                OnMoveDataset(null, moveVTKMsg);
+                OnMoveDataset(null, moveVTKMsg);*/
 
                 ScaleDatasetMessage scaleMsg = new ScaleDatasetMessage(ServerType.GET_ON_SCALE_DATASET);
                 scaleMsg.DataID = 0;
@@ -707,7 +707,7 @@ namespace Sereno
                 OnLasso(null, lasso);
                                
                 //Simulate a movement
-                curAction.CurrentAction = (int)HeadsetCurrentAction.SELECTING;
+                /*curAction.CurrentAction = (int)HeadsetCurrentAction.SELECTING;
                 OnCurrentAction(null, curAction);
                 
                 LocationMessage loc = new LocationMessage(ServerType.GET_TABLET_LOCATION);
@@ -769,14 +769,14 @@ namespace Sereno
                 curAction.CurrentAction = (int)HeadsetCurrentAction.REVIEWING_SELECTION;
                 OnCurrentAction(null, curAction);
 
-                PostReviewRotationMessage postRotMsg = new PostReviewRotationMessage(ServerType.GET_POST_REVIEW_ROTATION);
+                /*PostReviewRotationMessage postRotMsg = new PostReviewRotationMessage(ServerType.GET_POST_REVIEW_ROTATION);
                 postRotMsg.DatasetID    = 0;
                 postRotMsg.SubDatasetID = 0;
                 postRotMsg.Quaternion = new float[4] { (float)Math.Cos(1.15), 0.0f, (float)Math.Sin(1.15), 0.0f };
-                OnPostReviewRotation(null, postRotMsg);
+                OnPostReviewRotation(null, postRotMsg);*/
 
                 //The dataset needs to be loaded for that
-                //OnConfirmSelection(null, new ConfirmSelectionMessage(ServerType.GET_CONFIRM_SELECTION) {DataID = 0, SubDataID = 0} );
+                //OnConfirmSelection(null, new ConfirmSelectionMessage(ServerType.GET_CONFIRM_SELECTION) {DataID = 0, SubDataID = 0} );*/
             }
             );
             t.Start();
@@ -1150,6 +1150,7 @@ namespace Sereno
                 TabletVirtualCamera.transform.localPosition = m_tabletSelectionData.Position;
                 TabletVirtualCamera.transform.localRotation = m_tabletSelectionData.Rotation * Quaternion.AngleAxis(90.0f, new Vector3(1.0f, 0.0f, 0.0f));
                 TabletVirtualCamera.orthographicSize        = m_tabletSelectionData.Scaling.z;
+                TabletVirtualCamera.aspect                  = 16.0f / 18.0f;
                 TabletVirtualCamera.aspect = m_tabletSelectionData.Scaling.x / m_tabletSelectionData.Scaling.z;
             }
         }
@@ -1300,26 +1301,6 @@ namespace Sereno
                                                     m_currentPostReviewSubDataset.PostReviewRotation[0]);
                     m_currentPostReviewPivot.transform.localRotation = rot;
                 }
-
-                //Remove the children of the pivot reviewing object
-                else
-                {
-                    if (m_currentPostReviewPivot != null)
-                        m_currentPostReviewPivot.transform.DetachChildren();
-
-                    m_tabletSelectionData.GraphicalObject.transform.SetParent(this.transform, false);
-                    m_tabletSelectionData.GraphicalObject.transform.localPosition = m_tabletSelectionData.Position;
-
-                    TabletVirtualCamera.transform.SetParent(this.transform, false);
-                    TabletVirtualCamera.transform.localPosition = m_tabletSelectionData.Position;
-
-                    foreach (var m in m_tabletSelectionData.SelectionMeshes)
-                    {
-                        m.transform.SetParent(this.transform, false);
-                        m.transform.localPosition = new Vector3(0, 0, 0);
-                    }
-                    m_tabletSelectionData.GraphicalObject.transform.localPosition = m_tabletSelectionData.Position;
-                }
             }
 
             else
@@ -1334,6 +1315,25 @@ namespace Sereno
                     Destroy(go);
                 m_tabletSelectionData.SelectionMeshes.Clear();
                 m_tabletSelectionData.GraphicalLasso.positionCount = 0;
+
+                //Handle the pivot
+                if(m_currentPostReviewPivot.transform.childCount > 0)
+                {
+                    m_currentPostReviewPivot.transform.DetachChildren();
+
+                    m_tabletSelectionData.GraphicalObject.transform.SetParent(this.transform, false);
+                    m_tabletSelectionData.GraphicalObject.transform.localPosition = m_tabletSelectionData.Position;
+
+                    TabletVirtualCamera.transform.SetParent(this.transform, false);
+                    TabletVirtualCamera.transform.localPosition = m_tabletSelectionData.Position;
+
+                    /*foreach (var m in m_tabletSelectionData.SelectionMeshes)
+                    {
+                        m.transform.SetParent(this.transform, false);
+                        m.transform.localPosition = new Vector3(0, 0, 0);
+                    }*/
+                    m_currentPostReviewSubDataset = null;
+                }
             }
         }
 
@@ -2124,6 +2124,9 @@ namespace Sereno
                 else
                     m_textValues.RandomStr = "End of the study.\nYou can remove the headset.\nThank you for your participation!";
                 m_disableRandomTextTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 5000; //Print this message for two seconds
+
+                m_viewType        = mode;
+                m_viewTypeUpdated = true;
             }
         }
         
