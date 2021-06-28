@@ -650,7 +650,7 @@ namespace Sereno
             Task t = new Task( () =>
             {
                 AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
-                addCloudMsg.Path   = "3.cp";
+                addCloudMsg.Path   = "spring.cp";
                 addCloudMsg.DataID = 0;
                 OnAddCloudPointDataset(null, addCloudMsg);
                 
@@ -692,7 +692,7 @@ namespace Sereno
                 tabletScale.width  = 1920;
                 tabletScale.posx   = 0;
                 tabletScale.posy   = 0;
-                tabletScale.scale  = 0.15f / 1920;
+                tabletScale.scale  = 0.25f / 1920;
                 OnTabletScale(null, tabletScale);
                 
                 LassoMessage lasso = new LassoMessage(ServerType.GET_LASSO);
@@ -1150,8 +1150,9 @@ namespace Sereno
                 TabletVirtualCamera.transform.localPosition = m_tabletSelectionData.Position;
                 TabletVirtualCamera.transform.localRotation = m_tabletSelectionData.Rotation * Quaternion.AngleAxis(90.0f, new Vector3(1.0f, 0.0f, 0.0f));
                 TabletVirtualCamera.orthographicSize        = m_tabletSelectionData.Scaling.z;
-                TabletVirtualCamera.aspect                  = 16.0f / 18.0f;
-                TabletVirtualCamera.aspect = m_tabletSelectionData.Scaling.x / m_tabletSelectionData.Scaling.z;
+                //TabletVirtualCamera.aspect                  = 16.0f / 18.0f;
+                TabletVirtualCamera.fieldOfView             = (float)Math.Atan(m_tabletSelectionData.Scaling.x*3.0f)*2.0f*180.0f/3.14f;
+                //TabletVirtualCamera.aspect = m_tabletSelectionData.Scaling.x / m_tabletSelectionData.Scaling.z;
             }
         }
 
@@ -1268,7 +1269,8 @@ namespace Sereno
                 }
 
                 //Handle the rotation pivot
-                if(m_currentPostReviewSubDataset != null && m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION)
+                if(m_currentPostReviewSubDataset != null && 
+                    m_currentAction == HeadsetCurrentAction.REVIEWING_SELECTION || m_currentAction == HeadsetCurrentAction.SELECTING || m_currentAction == HeadsetCurrentAction.LASSO)
                 {
                     //Set the pivot at origin of the subdataset for "stayInWorldPosition"
                     m_currentPostReviewPivot.transform.localRotation = Quaternion.identity;
@@ -1290,8 +1292,8 @@ namespace Sereno
                         if (m.transform.parent != m_currentPostReviewPivot.transform)
                         {
                             m.transform.SetParent(m_currentPostReviewPivot.transform, true);
-                            m.transform.localPosition = origin;
                         }
+                        m.transform.localPosition = origin;
                     }
 
                     //Set the pivot rotation
@@ -1316,8 +1318,13 @@ namespace Sereno
                 m_tabletSelectionData.SelectionMeshes.Clear();
                 m_tabletSelectionData.GraphicalLasso.positionCount = 0;
 
+                
+            }
+
+            if(m_currentPostReviewSubDataset == null)
+            {
                 //Handle the pivot
-                if(m_currentPostReviewPivot.transform.childCount > 0)
+                if (m_currentPostReviewPivot.transform.childCount > 0)
                 {
                     m_currentPostReviewPivot.transform.DetachChildren();
 
@@ -1327,11 +1334,11 @@ namespace Sereno
                     TabletVirtualCamera.transform.SetParent(this.transform, false);
                     TabletVirtualCamera.transform.localPosition = m_tabletSelectionData.Position;
 
-                    /*foreach (var m in m_tabletSelectionData.SelectionMeshes)
+                    foreach (var m in m_tabletSelectionData.SelectionMeshes)
                     {
                         m.transform.SetParent(this.transform, false);
                         m.transform.localPosition = new Vector3(0, 0, 0);
-                    }*/
+                    }
                     m_currentPostReviewSubDataset = null;
                 }
             }
@@ -1944,7 +1951,10 @@ namespace Sereno
                     CloseTabletCurrentSelectionMesh();
                 }
             }
-            else if(m_currentPostReviewSubDataset != null)
+            if(curAction != HeadsetCurrentAction.REVIEWING_SELECTION && 
+               curAction != HeadsetCurrentAction.LASSO &&
+               curAction != HeadsetCurrentAction.SELECTING &&
+               m_currentPostReviewSubDataset != null)
             {
                 m_currentPostReviewSubDataset.PostReviewRotation = new float[4] { 1.0f, 0.0f, 0.0f, 0.0f };
                 m_currentPostReviewSubDataset = null;
