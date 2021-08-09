@@ -206,7 +206,7 @@ namespace Sereno
         /// <summary>
         /// Default text displayed for the IP address
         /// </summary>
-        const String DEFAULT_IP_ADDRESS_TEXT = "Server not found";
+        const String DEFAULT_IP_ADDRESS_TEXT = "Server not found at";
 
         /// <summary>
         /// Maximum number of retry for importing anchor data
@@ -927,7 +927,7 @@ namespace Sereno
                     }
                     else
                     {
-                        IPHeaderText.text = DEFAULT_IP_ADDRESS_TEXT;
+                        IPHeaderText.text = $"{DEFAULT_IP_ADDRESS_TEXT}\n{m_client.ServerAddress}:{m_client.ServerPort}";
                         IPValueText.text  = "";
                     }
                 }

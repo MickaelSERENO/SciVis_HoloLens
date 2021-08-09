@@ -208,6 +208,16 @@ namespace Sereno.Network
             return null;
         }
 
+        public IPAddress ServerAddress
+        {
+            get => m_addr;
+        }
+
+        public uint ServerPort
+        {
+            get => m_port;
+        }
+
         /******************************/
         /*****PROTECTED FUNCTIONS******/
         /******************************/
