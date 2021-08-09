@@ -1,6 +1,6 @@
 {
   "Network": {
-    "IP" : "192.168.2.132",
+    "IP" : "192.168.43.114",
     "Port" : 8000
   },
 
@@ -18,6 +18,17 @@
 
     {
       "Name": "history.vtk",
+      "RotateX": true,
+      "InverseX": true,
+      "MapProperties": {
+        "TexturePath": "caboVerde",
+        "Tiling": [  0.800, 1.29  ],
+        "Offset": [  0.015, 0.015 ]
+      }
+    },
+
+    {
+      "Name": "history2019-12-10.vtk",
       "RotateX": true,
       "InverseX": true,
       "MapProperties": {

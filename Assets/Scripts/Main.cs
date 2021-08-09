@@ -642,7 +642,7 @@ namespace Sereno
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
-                addVTKMsg.Path = "history.vtk";
+                addVTKMsg.Path = "history2019-12-10.vtk";
                 addVTKMsg.PtFieldValueIndices = new int[] { 2 };
                 OnAddVTKDataset(null, addVTKMsg);
                 
@@ -759,7 +759,7 @@ namespace Sereno
                 tfMsgSD2.TFID = TFType.TF_TRIANGULAR_GTF;
                 tfMsgSD2.GTFData = new TFSubDatasetMessage.GTF();
                 tfMsgSD2.GTFData.Props = new TFSubDatasetMessage.GTFProp[1];
-                tfMsgSD2.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 0.3f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.05f };
+                tfMsgSD2.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 0.5f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.5f };
                 tfMsgSD2.Timestep = 0.0f;
                 tfMsgSD2.HeadsetID = -1;
                 OnTFDataset(null, tfMsgSD2);
@@ -772,7 +772,7 @@ namespace Sereno
                 tfMsgSD1.TFID = TFType.TF_TRIANGULAR_GTF;
                 tfMsgSD1.GTFData = new TFSubDatasetMessage.GTF();
                 tfMsgSD1.GTFData.Props = new TFSubDatasetMessage.GTFProp[1];
-                tfMsgSD1.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 1.0f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.10f };
+                tfMsgSD1.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 0.8f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.25f };
                 tfMsgSD1.Timestep = 0.0f;
                 tfMsgSD1.HeadsetID = -1;
                 OnTFDataset(null, tfMsgSD1);
@@ -840,7 +840,7 @@ namespace Sereno
                         tfMsgSD2.Timestep = 0.0f;
                     OnTFDataset(null, tfMsgSD2);
                     tfMsgSD2.Timestep += 0.25f;
-                    Thread.Sleep(2000);
+                    Thread.Sleep(1000);
                 }
             }
             );

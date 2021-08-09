@@ -589,7 +589,7 @@ PlayerSettings:
   metroCertificatePassword: 
   metroCertificateSubject: DefaultCompany
   metroCertificateIssuer: DefaultCompany
-  metroCertificateNotAfter: 80dae817c362d701
+  metroCertificateNotAfter: 00ef15bdf8abd801
   metroApplicationDescription: SciVis_Hololens
   wsaImages: {}
   metroTileShortName: SciVis_Hololens
