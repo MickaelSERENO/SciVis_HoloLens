@@ -283,7 +283,7 @@ namespace Sereno.Network
                             m_sock.Connect(new IPEndPoint(m_addr, (int)m_port));
                             FiredStatus(ConnectionStatus.CONNECTED);
                         }
-                        catch(SocketException)
+                        catch(Exception)
                         {
                             FiredStatus(ConnectionStatus.FAILED_CONNECTION);
                             askClose = true;
@@ -314,7 +314,7 @@ namespace Sereno.Network
                             else
                                 askClose = true;
                         }
-                        catch(SocketException)
+                        catch(Exception)
                         {
                             FiredStatus(ConnectionStatus.DISCONNECTED);
                             askClose = true;
