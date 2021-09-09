@@ -1,4 +1,4 @@
-﻿//#define TEST
+//#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -587,6 +587,7 @@ namespace Sereno
         
         void Awake()
         {
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
             m_appProperties = Properties.ParseProperties();
 
             //Default text helpful to bind headset to tablet
@@ -643,7 +644,7 @@ namespace Sereno
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
                 addVTKMsg.Path = "history2019-12-10.vtk";
-                addVTKMsg.PtFieldValueIndices = new int[] { 2 };
+                addVTKMsg.PtFieldValueIndices = new int[] { 1 };
                 OnAddVTKDataset(null, addVTKMsg);
                 
                 AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
@@ -651,19 +652,20 @@ namespace Sereno
                 addSDMsg.SubDatasetID = 0;
                 addSDMsg.Name = m_datasets[0].PointFieldDescs[0].Name;
                 OnAddSubDataset(null, addSDMsg);
-                addSDMsg.SubDatasetID = 1;
+                /*addSDMsg.SubDatasetID = 1;
                 addSDMsg.Name = $"{m_datasets[0].PointFieldDescs[0].Name}_bis";
                 OnAddSubDataset(null, addSDMsg);
                 addSDMsg.SubDatasetID = 2;
                 addSDMsg.Name = $"{m_datasets[0].PointFieldDescs[0].Name}_bis2";
-                OnAddSubDataset(null, addSDMsg);
+                OnAddSubDataset(null, addSDMsg);*/
 
-                m_datasets[0].SubDatasets[0].DepthClipping = 0.1f;
-                m_datasets[0].SubDatasets[1].DepthClipping = 1.0f;
+                m_datasets[0].SubDatasets[0].MinDepthClipping = 0.25f;
+                m_datasets[0].SubDatasets[0].MaxDepthClipping = 0.70f;
+                //m_datasets[0].SubDatasets[1].DepthClipping = 1.0f;
 
-                MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
+                /*MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
                 moveVTKMsg.DataID = 0;
-                moveVTKMsg.SubDataID = 2;
+                moveVTKMsg.SubDataID = 0;
                 moveVTKMsg.Position = new float[3] { -0.30f, -0.75f, 1.5f };
                 moveVTKMsg.HeadsetID = -1;
                 OnMoveDataset(null, moveVTKMsg);
@@ -673,10 +675,10 @@ namespace Sereno
                 scaleMsg.SubDataID = 0;
                 scaleMsg.HeadsetID = -1;
                 scaleMsg.Scale = new float[3] { 0.4f, 0.4f, 0.4f };
-                OnScaleDataset(null, scaleMsg);
+                OnScaleDataset(null, scaleMsg);*/
 
                 //Create a SubjectiveView group
-                AddSubDatasetSubjectiveGroupMessage subjGroupMsg = new AddSubDatasetSubjectiveGroupMessage(ServerType.ADD_SUBJECTIVE_VIEW_GROUP);
+                /*AddSubDatasetSubjectiveGroupMessage subjGroupMsg = new AddSubDatasetSubjectiveGroupMessage(ServerType.ADD_SUBJECTIVE_VIEW_GROUP);
                 subjGroupMsg.SDG_ID = 0;
                 subjGroupMsg.BaseDatasetID    = 0;
                 subjGroupMsg.BaseSubDatasetID = 0;
@@ -688,7 +690,7 @@ namespace Sereno
                 addSDToSubjMsg.StackedID = 1;
                 addSDToSubjMsg.LinkedID  = 2;
                 addSDToSubjMsg.SDG_ID    = 0;
-                OnAddSubDatasetToSubjectiveStackedGroup(null, addSDToSubjMsg);
+                OnAddSubDatasetToSubjectiveStackedGroup(null, addSDToSubjMsg);*/
 
                 /*Thread.Sleep(15000);
                 RemoveSubDatasetMessage removeSDMsg = new RemoveSubDatasetMessage(ServerType.GET_DEL_SUBDATASET);
@@ -697,11 +699,11 @@ namespace Sereno
                 OnRemoveSubDataset(null, removeSDMsg);*/
 
                 //Annotations
-                /*AddLogAnnotationMessage logAnnot = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
+                AddLogAnnotationMessage logAnnot = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
                 logAnnot.LogID     = 0;
                 logAnnot.HasHeader = true;
-                logAnnot.FileName  = "history-20191122.csv";
-                logAnnot.TimeIdx   = 2;
+                logAnnot.FileName  = "log_history_2019_12_10.csv";
+                logAnnot.TimeIdx   = 0;
                 OnAddLogAnnotation(null, logAnnot);
 
                 AddLogAnnotationPositionMessage logPos = new AddLogAnnotationPositionMessage(ServerType.GET_ADD_LOG_ANNOTATION_POSITION);
@@ -711,13 +713,10 @@ namespace Sereno
 
                 LinkLogAnnotationPositionSubDatasetMessage linkPos = new LinkLogAnnotationPositionSubDatasetMessage(ServerType.GET_LINK_LOG_ANNOT_POS_SD);
                 linkPos.DataID    = 0;
-                linkPos.SubDataID = 1;
+                linkPos.SubDataID = 0;
                 linkPos.AnnotID   = 0;
                 linkPos.CompID    = 0;
                 linkPos.DrawableID = 0;
-                OnLinkLogAnnotationPositionSubDataset(null, linkPos);
-
-                linkPos.SubDataID = 0;
                 OnLinkLogAnnotationPositionSubDataset(null, linkPos);
 
                 SubDataset sd = GetSubDataset(0, 0);
@@ -726,33 +725,29 @@ namespace Sereno
                 LogAnnotationPositionInstance annot = sd.LogAnnotationPositions.FirstOrDefault(i => i.InstanceID == 0);
                 if (annot == null)
                     return;
-
-                annot.UseTime = false;
+                annot.UseTime = true;
 
                 SetLogAnnotationPositionIndexesMessage idxMsg = new SetLogAnnotationPositionIndexesMessage(ServerType.GET_SET_LOG_ANNOTATION_POSITION_INDEXES);
                 idxMsg.AnnotID = 0;
                 idxMsg.CompID  = 0;
-                idxMsg.Indexes = new int[] { 0, 1, -1 };
+                idxMsg.Indexes = new int[] { 1, 2, -1 };
                 OnSetLogAnnotationPositionIndexes(null, idxMsg);
 
                 SetDrawableAnnotationPositionColorMessage colorMsg = new SetDrawableAnnotationPositionColorMessage(ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_COLOR);
                 colorMsg.DatasetID = 0;
-                colorMsg.SubDatasetID = 1;
+                colorMsg.SubDatasetID = 0;
                 colorMsg.DrawableID = 0;
                 colorMsg.Color = 0xffff0000;
                 OnSetDrawableAnnotationPositionColor(null, colorMsg);
 
                 SetDrawableAnnotationPositionIdxMessage idxPosMsg = new SetDrawableAnnotationPositionIdxMessage(ServerType.GET_SET_DRAWABLE_ANNOTATION_POSITION_IDX);
                 idxPosMsg.DatasetID = 0;
-                idxPosMsg.SubDatasetID = 1;
+                idxPosMsg.SubDatasetID = 0;
                 idxPosMsg.DrawableID = 0;
                 idxPosMsg.Indices = new int[] { 6 };
                 OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);
 
-                idxPosMsg.SubDatasetID = 0;
-                OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);*/
-
-                TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
+                /*TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD2.ColorType = ColorMode.WARM_COLD_CIELAB;
                 tfMsgSD2.DataID = 0;
                 tfMsgSD2.SubDataID = 2;
@@ -762,17 +757,19 @@ namespace Sereno
                 tfMsgSD2.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 0.5f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.5f };
                 tfMsgSD2.Timestep = 0.0f;
                 tfMsgSD2.HeadsetID = -1;
-                OnTFDataset(null, tfMsgSD2);
+                OnTFDataset(null, tfMsgSD2);*/
 
                 //Simulate a time animation
                 TFSubDatasetMessage tfMsgSD1 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD1.ColorType = ColorMode.WARM_COLD_CIELAB;
                 tfMsgSD1.DataID = 0;
                 tfMsgSD1.SubDataID = 0;
-                tfMsgSD1.TFID = TFType.TF_TRIANGULAR_GTF;
+                tfMsgSD1.TFID = TFType.TF_GTF;
                 tfMsgSD1.GTFData = new TFSubDatasetMessage.GTF();
                 tfMsgSD1.GTFData.Props = new TFSubDatasetMessage.GTFProp[1];
-                tfMsgSD1.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 0.8f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.25f };
+                tfMsgSD1.GTFData.Props[0] = new TFSubDatasetMessage.GTFProp() { Center = 0.5f, PID = (int)m_datasets[0].PointFieldDescs[0].ID, Scale = 0.75f };
+                tfMsgSD1.MinClipping = 0.00f;
+                tfMsgSD1.MaxClipping = 1.0f;
                 tfMsgSD1.Timestep = 0.0f;
                 tfMsgSD1.HeadsetID = -1;
                 OnTFDataset(null, tfMsgSD1);
@@ -834,14 +831,14 @@ namespace Sereno
                 //The dataset needs to be loaded for that
                 OnConfirmSelection(null, new ConfirmSelectionMessage(ServerType.GET_CONFIRM_SELECTION) {DataID = 0, SubDataID = 0} );*/
                 
-                while (true)
+               /* while (true)
                 {
-                    if (m_datasets[0].PointFieldDescs[0].Value == null || tfMsgSD2.Timestep >= m_datasets[0].PointFieldDescs[0].Value.Count)
-                        tfMsgSD2.Timestep = 0.0f;
-                    OnTFDataset(null, tfMsgSD2);
-                    tfMsgSD2.Timestep += 0.25f;
-                    Thread.Sleep(1000);
-                }
+                    if (m_datasets[0].PointFieldDescs[0].Value == null || tfMsgSD1.Timestep >= m_datasets[0].PointFieldDescs[0].Value.Count)
+                        tfMsgSD1.Timestep = 0.0f;
+                    OnTFDataset(null, tfMsgSD1);
+                    tfMsgSD1.Timestep += 0.25f;
+                    Thread.Sleep(3000);
+                }*/
             }
             );
             t.Start();
@@ -2074,6 +2071,7 @@ namespace Sereno
                         m_tabletSelectionData.CurrentNewSelectionMeshIDs.MeshData.LassoScale = m_tabletSelectionData.Scaling;
                     }
                     m_tabletSelectionData.NewSelectionMeshIDs.Add(m_tabletSelectionData.CurrentNewSelectionMeshIDs);
+                    AddSelectionMeshPosition();
                 }
                 else
                 {
@@ -2164,7 +2162,7 @@ namespace Sereno
             if (sd == null)
                 return;
 
-            sd.DepthClipping = msg.DepthClipping;
+            sd.SetDepthClipping(msg.MinDepthClipping, msg.MaxDepthClipping);
         }
 
         public void OnSetDrawableAnnotationPositionColor(MessageBuffer message, SetDrawableAnnotationPositionColorMessage msg)

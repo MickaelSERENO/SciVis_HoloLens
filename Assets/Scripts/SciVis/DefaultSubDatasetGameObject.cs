@@ -535,7 +535,7 @@ namespace Sereno.SciVis
             }
         }
 
-        public virtual void OnChangeDepthClipping(SubDataset dataset, float depth)
+        public virtual void OnChangeDepthClipping(SubDataset dataset, float minD, float maxDepth)
         {}
 
         public void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg)

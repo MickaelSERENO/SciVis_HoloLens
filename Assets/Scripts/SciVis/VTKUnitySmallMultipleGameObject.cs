@@ -265,8 +265,11 @@ namespace Sereno.SciVis
             //Update the 3D texture
             Check3DTexture();
 
-            m_materialDownScale.SetFloat("_DepthClipping", m_sd.DepthClipping);
-            m_materialNormalScale.SetFloat("_DepthClipping", m_sd.DepthClipping);
+            m_materialDownScale.SetFloat("_MinDepthClipping", m_sd.MinDepthClipping);
+            m_materialNormalScale.SetFloat("_MinDepthClipping", m_sd.MinDepthClipping);
+
+            m_materialDownScale.SetFloat("_MaxDepthClipping", m_sd.MaxDepthClipping);
+            m_materialNormalScale.SetFloat("_MaxDepthClipping", m_sd.MaxDepthClipping);
 
             //Draw the GameObject on render texture if the scaling needs to diminish
             if (ResolutionScaling < 1f)
@@ -506,7 +509,7 @@ namespace Sereno.SciVis
         }
 
 
-        public override void OnChangeDepthClipping(SubDataset dataset, float depth)
+        public override void OnChangeDepthClipping(SubDataset dataset, float minD, float maxD)
         {}
     }
 }

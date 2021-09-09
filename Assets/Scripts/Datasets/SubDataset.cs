@@ -106,8 +106,9 @@ namespace Sereno.Datasets
         /// Called when the depth clipping value of this SubDataset has changed
         /// </summary>
         /// <param name="dataset">The SubDataset calling this method</param>
-        /// <param name="depth">The new depth clipping value</param>
-        void OnChangeDepthClipping(SubDataset dataset, float depth);
+        /// <param name="minDepth">The new max depth clipping value</param>
+        /// <param name="maxDepth">The new max depth clipping value</param>
+        void OnChangeDepthClipping(SubDataset dataset, float minDepth, float maxDepth);
 
         /// <summary>
         /// Called when the subdataset group associated with this SubDataset has changed
@@ -185,9 +186,14 @@ namespace Sereno.Datasets
         private float[] m_scale    = new float[3]{1.0f, 1.0f, 1.0f};
 
         /// <summary>
-        /// The depth clipping plane factor, between 0.0f and 1.0f
+        /// The maxDepth clipping plane factor, between 0.0f and 1.0f
         /// </summary>
-        private float m_depthClip = 1.0f;
+        private float m_maxDepthClip = 1.0f;
+
+        /// <summary>
+        /// The minDepth clipping plane factor, between 0.0f and 1.0f
+        /// </summary>
+        private float m_minDepthClip = 0.0f;
 
         /// <summary>
         /// The SubDataset name
@@ -559,19 +565,63 @@ namespace Sereno.Datasets
             }
         }
 
-        public float DepthClipping
+        /// <summary>
+        /// Set the depth clipping plane values. Values should be clamped between 0.0f and 1.0f
+        /// </summary>
+        /// <param name="minD">The minimum depth clipping value</param>
+        /// <param name="maxD">The maximum depth clipping value</param>
+        public void SetDepthClipping(float minD, float maxD)
         {
-            get => m_depthClip;
+            if(minD != m_minDepthClip || maxD != m_maxDepthClip)
+            {
+                m_minDepthClip = minD;
+                m_maxDepthClip = maxD;
+                
+                foreach (var l in m_listeners)
+                    l.OnChangeDepthClipping(this, MinDepthClipping, MaxDepthClipping);
+            }
+        }
+
+        /// <summary>
+        /// The max depth clipping value, clamped between 0.0f and 1.0f
+        /// </summary>
+        /// <value></value>
+        public float MaxDepthClipping
+        {
+            get => m_maxDepthClip;
             set
             {
 
                 lock (this)
                 {
-                    if (m_depthClip != value)
+                    if (m_maxDepthClip != value)
                     {
-                        m_depthClip = value;
+                        m_maxDepthClip = value;
                         foreach (var l in m_listeners)
-                            l.OnChangeDepthClipping(this, value);
+                            l.OnChangeDepthClipping(this, MinDepthClipping, value);
+                    }
+                }
+            }
+        }
+
+        
+        /// <summary>
+        /// The min depth clipping value, clamped between 0.0f and 1.0f
+        /// </summary>
+        /// <value></value>
+        public float MinDepthClipping
+        {
+            get => m_minDepthClip;
+            set
+            {
+
+                lock (this)
+                {
+                    if (m_minDepthClip != value)
+                    {
+                        m_minDepthClip = value;
+                        foreach (var l in m_listeners)
+                            l.OnChangeDepthClipping(this, value, MaxDepthClipping);
                     }
                 }
             }

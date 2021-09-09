@@ -23,8 +23,11 @@ UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthTexture);
 /** The volume data*/
 sampler3D _TextureData;
 
-/** The depth clipping value to use*/
-fixed _DepthClipping = 1.0;
+/** The max depth clipping value to use*/
+fixed _MaxDepthClipping = 1.0;
+
+/** The min depth clipping value to use*/
+fixed _MinDepthClipping = 0.0;
 
 /** The volume dimension along all axis*/
 fixed3 _Dimensions = fixed3(128,128,128);
@@ -97,10 +100,10 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 		fixed3(0, +0.5, 0), t[3]);
 	//Front
 	tValidity[4] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 0, -1),
-		fixed3(0, 0, -_DepthClipping + 0.5), t[4]);
+		fixed3(0, 0, -_MaxDepthClipping + 0.5), t[4]);
 	//Back
 	tValidity[5] = computeRayPlaneIntersection(rayOrigin, rayNormal, fixed3(0, 0, 1),
-		fixed3(0, 0, +0.5), t[5]);
+		fixed3(0, 0, -_MinDepthClipping+0.5), t[5]);
 
 	//Test the limits
 	for (int i = 0; i < 2; i++)
@@ -109,8 +112,8 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 		if (tValidity[i])
 		{
 			fixed3 p = t[i] * rayNormal + rayOrigin;
-			if (p.y < -0.5                || p.y > +0.5 ||
-				p.z < -_DepthClipping+0.5 || p.z > +0.5)
+			if (p.y < -0.5                   || p.y > +0.5 ||
+				p.z < -_MaxDepthClipping+0.5 || p.z > -_MinDepthClipping+0.5)
 				tValidity[i] = false;
 		}
 
@@ -118,8 +121,8 @@ void computeRayCubeIntersection(in fixed3 rayOrigin, in fixed3 rayNormal, out fi
 		if (tValidity[i + 2])
 		{
 			fixed3 p = t[i + 2] * rayNormal + rayOrigin;
-			if (p.x < -0.5                  || p.x > +0.5 ||
-				p.z < -_DepthClipping + 0.5 || p.z > +0.5)
+			if (p.x < -0.5                     || p.x > +0.5 ||
+				p.z < -_MaxDepthClipping + 0.5 || p.z > -_MinDepthClipping+0.5)
 				tValidity[i + 2] = false;
 		}
 

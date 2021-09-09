@@ -59,8 +59,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _positions: []
-  _sides: 8
-  _radiusOne: 0.0025
+  _sides: 6
+  _radiusOne: 0.0015
 --- !u!33 &5037946603583890045
 MeshFilter:
   m_ObjectHideFlags: 0

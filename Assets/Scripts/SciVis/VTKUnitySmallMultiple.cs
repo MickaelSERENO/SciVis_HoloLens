@@ -278,7 +278,7 @@ namespace Sereno.SciVis
         public void OnAddLogAnnotationPosition(SubDataset dataset, LogAnnotationPositionInstance annot)
         {}
 
-        public void OnChangeDepthClipping(SubDataset dataset, float depth)
+        public void OnChangeDepthClipping(SubDataset dataset, float minD, float maxD)
         {}
 
         public void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg)

@@ -102,7 +102,8 @@ namespace Sereno.DataVis
         public void OnSetCurrentTime(LogAnnotationPositionInstance comp)
         {
             lock(this)
-                m_updatePos = true;
+                if(Component.UseTime)
+                    m_updatePos = true;
         }
 
         public void OnSetMappedIndices(LogAnnotationPositionInstance comp, Int32[] old)
@@ -218,7 +219,10 @@ namespace Sereno.DataVis
                                 {
                                     float[] mappedVal = new float[tf.GetDimension() - hasGradient];
                                     for (int j = 0; j < tf.GetDimension() - hasGradient; j++)
-                                        mappedVal[j] = (m_mappedData[j][m_data[i].Idx] - 22) / 2;
+                                    {
+                                        Debug.Log($"Min: {ptDescs[j].MinVal}; Max: {ptDescs[j].MaxVal}");
+                                        mappedVal[j] = (m_mappedData[j][m_data[i].Idx] - ptDescs[j].MinVal) / (ptDescs[j].MaxVal - ptDescs[j].MinVal);
+                                    }
 
                                     Color c = tf.ComputeColor(mappedVal);
 
@@ -265,7 +269,7 @@ namespace Sereno.DataVis
                 //Default y position : 0.5 + small offset
                 if(Component.Component.Headers[2] < 0)
                     for(int i = 0; i < m_data.Count; i++)
-                        m_data[i].Pos.z = 0.51f;
+                        m_data[i].Pos.z = 0.505f;
 
                 m_updatePos = true;
             }
@@ -310,7 +314,7 @@ namespace Sereno.DataVis
         public void OnChangeVolumetricMask(SubDataset dataset)
         {}
 
-        public void OnChangeDepthClipping(SubDataset dataset, float depth)
+        public void OnChangeDepthClipping(SubDataset dataset, float minD, float maxD)
         {}
 
         public void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg)

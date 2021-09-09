@@ -9,15 +9,18 @@ namespace Sereno.Network.MessageHandler
     public class SetSubDatasetClipping : ServerMessage
     {
         public int   DatasetID;
-        public int   SubDatasetID;
-        public float DepthClipping;
+        public int   SubDatasetID;     
+        public float MinDepthClipping;
+        public float MaxDepthClipping;
 
         public SetSubDatasetClipping(ServerType type) : base(type){}
 
         public override void Push(float value)
         {
             if (Cursor == 2)
-                DepthClipping = value;
+                MinDepthClipping = value;
+            else if(Cursor == 3)
+                MaxDepthClipping = value;
             base.Push(value);
         }
 
@@ -39,7 +42,7 @@ namespace Sereno.Network.MessageHandler
 
         public override int GetMaxCursor()
         {
-            return 2;
+            return 3;
         }
     }
 }

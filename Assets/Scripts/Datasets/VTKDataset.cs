@@ -303,12 +303,14 @@ namespace Sereno.Datasets
                                             partialRes.localGrad[0] = (m_ptFieldDescs[ids].Value[t].ReadAsFloat(indX2) - m_ptFieldDescs[ids].Value[t].ReadAsFloat(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
                                             partialRes.localGrad[1] = (m_ptFieldDescs[ids].Value[t].ReadAsFloat(indY2) - m_ptFieldDescs[ids].Value[t].ReadAsFloat(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
                                             partialRes.localGrad[2] = (m_ptFieldDescs[ids].Value[t].ReadAsFloat(indZ2) - m_ptFieldDescs[ids].Value[t].ReadAsFloat(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                                            partialRes.localGrad[2] = 0.0f;
                                         }
                                         else
                                         {
                                             partialRes.localGrad[0] = (m_ptFieldDescs[ids].ReadMagnitude(indX2, t) - m_ptFieldDescs[ids].ReadMagnitude(indX1, t)) / (2.0f * (float)ptsDesc.Spacing[0]);
                                             partialRes.localGrad[1] = (m_ptFieldDescs[ids].ReadMagnitude(indY2, t) - m_ptFieldDescs[ids].ReadMagnitude(indY1, t)) / (2.0f * (float)ptsDesc.Spacing[1]);
                                             partialRes.localGrad[2] = (m_ptFieldDescs[ids].ReadMagnitude(indZ2, t) - m_ptFieldDescs[ids].ReadMagnitude(indZ1, t)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                                            partialRes.localGrad[2] = 0.0f;
                                         }
 
                                         //Fill df
@@ -388,6 +390,7 @@ namespace Sereno.Datasets
                                     partialRes.localGrad[0] = (m_ptFieldDescs[ids].Value[t].ReadAsFloat(indX2) - m_ptFieldDescs[ids].Value[t].ReadAsFloat(indX1)) / (2.0f * (float)ptsDesc.Spacing[0]);
                                     partialRes.localGrad[1] = (m_ptFieldDescs[ids].Value[t].ReadAsFloat(indY2) - m_ptFieldDescs[ids].Value[t].ReadAsFloat(indY1)) / (2.0f * (float)ptsDesc.Spacing[1]);
                                     partialRes.localGrad[2] = (m_ptFieldDescs[ids].Value[t].ReadAsFloat(indZ2) - m_ptFieldDescs[ids].Value[t].ReadAsFloat(indZ1)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                                    partialRes.localGrad[2] = 0.0f;
                                     
                                     float gradMag = 0;
                                     for (UInt32 l = 0; l < 3; l++)
@@ -452,6 +455,7 @@ namespace Sereno.Datasets
                                 partialRes.localGrad[0] = (m_ptFieldDescs[ids].ReadMagnitude(indX2, t) - m_ptFieldDescs[ids].ReadMagnitude(indX1, t)) / (2.0f * (float)ptsDesc.Spacing[0]);
                                 partialRes.localGrad[1] = (m_ptFieldDescs[ids].ReadMagnitude(indY2, t) - m_ptFieldDescs[ids].ReadMagnitude(indY1, t)) / (2.0f * (float)ptsDesc.Spacing[1]);
                                 partialRes.localGrad[2] = (m_ptFieldDescs[ids].ReadMagnitude(indZ2, t) - m_ptFieldDescs[ids].ReadMagnitude(indZ1, t)) / (2.0f * (float)ptsDesc.Spacing[2]);
+                                partialRes.localGrad[2] = 0.0f;
 
                                 float gradMag = 0;
                                 for (UInt32 l = 0; l < 3; l++)

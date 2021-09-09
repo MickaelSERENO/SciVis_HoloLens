@@ -65,6 +65,9 @@ namespace Sereno.SciVis
         [BurstCompile(FloatPrecision.Medium, FloatMode.Fast)]
         public override Color ComputeColor(float[] values)
         {
+            if(values.Length < m_scale.Length)
+                return new Color(0,0,0,0);
+
             float mag = 0;
             for(int i = 0; i < m_scale.Length; i++)
                 mag += values[i]*values[i];
@@ -98,8 +101,10 @@ namespace Sereno.SciVis
         public override TransferFunction Clone()
         {
             GTF g = new GTF((float[])m_center.Clone(), (float[])m_scale.Clone(), m_alphaMax);
-            g.ColorMode = ColorMode;
-            g.Timestep  = Timestep;
+            g.ColorMode   = ColorMode;
+            g.Timestep    = Timestep;
+            g.MinClipping = MinClipping;
+            g.MaxClipping = MaxClipping;
 
             return g;
         }

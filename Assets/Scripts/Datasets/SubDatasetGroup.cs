@@ -159,7 +159,7 @@ namespace Sereno.Datasets
         public virtual void OnClearCanvasAnnotations(SubDataset dataset){}
         public virtual void OnToggleMapVisibility(SubDataset dataset, bool visibility){}
         public virtual void OnChangeVolumetricMask(SubDataset dataset){}
-        public virtual void OnChangeDepthClipping(SubDataset dataset, float depth){}
+        public virtual void OnChangeDepthClipping(SubDataset dataset, float minD, float maxD){}
         public virtual void OnSetSubDatasetGroup(SubDataset dataset, SubDatasetGroup sdg){}
         public virtual void OnSetVisibility(SubDataset dataset, SubDatasetVisibility visibility) {}
         public virtual void OnSetTFComputation(SubDataset dataset, object tfComputation){}

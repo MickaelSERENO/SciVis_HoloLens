@@ -147,7 +147,7 @@ namespace Sereno.Datasets
                     if(it.Value != null)
                     {
                         it.Key.TransferFunction     = null; //Disable the transfer function. The subdataset should use tfComputation instead
-                        it.Key.DepthClipping        = it.Value.DepthClipping;
+                        it.Key.SetDepthClipping(it.Value.MinDepthClipping, it.Value.MaxDepthClipping);
                         it.Key.EnableVolumetricMask = it.Value.EnableVolumetricMask;
 
                         if (it.Key.EnableVolumetricMask &&
@@ -235,7 +235,7 @@ namespace Sereno.Datasets
             UpdateSubDatasets();
         }
 
-        public override void OnChangeDepthClipping(SubDataset dataset, float depth) 
+        public override void OnChangeDepthClipping(SubDataset dataset, float minD, float maxD) 
         {
             UpdateSubDatasets();
         }
