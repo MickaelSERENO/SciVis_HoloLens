@@ -1,4 +1,4 @@
-//#define TEST
+#define TEST
 
 #if ENABLE_WINMD_SUPPORT
 using Windows.Perception.Spatial;
@@ -634,18 +634,18 @@ namespace Sereno
 #if TEST
             Task t = new Task( () =>
             {
-                /*AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
-                addCloudMsg.Path   = "1.cp";
+                AddCloudDatasetMessage addCloudMsg = new AddCloudDatasetMessage(ServerType.GET_ADD_CLOUD_POINT_DATASET);
+                addCloudMsg.Path   = "3.cp";
                 addCloudMsg.DataID = 0;
-                OnAddCloudPointDataset(null, addCloudMsg);*/
+                OnAddCloudPointDataset(null, addCloudMsg);
                 
-                AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
+                /*AddVTKDatasetMessage addVTKMsg = new AddVTKDatasetMessage(ServerType.GET_ADD_VTK_DATASET);
                 addVTKMsg.DataID = 0;
                 addVTKMsg.NbCellFieldValueIndices = 0;
                 addVTKMsg.NbPtFieldValueIndices = 1;
                 addVTKMsg.Path = "history2019-12-10.vtk";
                 addVTKMsg.PtFieldValueIndices = new int[] { 1 };
-                OnAddVTKDataset(null, addVTKMsg);
+                OnAddVTKDataset(null, addVTKMsg);*/
                 
                 AddSubDatasetMessage addSDMsg = new AddSubDatasetMessage(ServerType.GET_ADD_SUBDATASET);
                 addSDMsg.DatasetID = 0;
@@ -659,8 +659,8 @@ namespace Sereno
                 addSDMsg.Name = $"{m_datasets[0].PointFieldDescs[0].Name}_bis2";
                 OnAddSubDataset(null, addSDMsg);*/
 
-                m_datasets[0].SubDatasets[0].MinDepthClipping = 0.25f;
-                m_datasets[0].SubDatasets[0].MaxDepthClipping = 0.70f;
+                //m_datasets[0].SubDatasets[0].MinDepthClipping = 0.25f;
+                //m_datasets[0].SubDatasets[0].MaxDepthClipping = 0.70f;
                 //m_datasets[0].SubDatasets[1].DepthClipping = 1.0f;
 
                 /*MoveDatasetMessage moveVTKMsg = new MoveDatasetMessage(ServerType.GET_ON_MOVE_DATASET);
@@ -699,7 +699,7 @@ namespace Sereno
                 OnRemoveSubDataset(null, removeSDMsg);*/
 
                 //Annotations
-                AddLogAnnotationMessage logAnnot = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
+                /*AddLogAnnotationMessage logAnnot = new AddLogAnnotationMessage(ServerType.GET_ADD_LOG_ANNOTATION);
                 logAnnot.LogID     = 0;
                 logAnnot.HasHeader = true;
                 logAnnot.FileName  = "log_history_2019_12_10.csv";
@@ -745,7 +745,7 @@ namespace Sereno
                 idxPosMsg.SubDatasetID = 0;
                 idxPosMsg.DrawableID = 0;
                 idxPosMsg.Indices = new int[] { 6 };
-                OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);
+                OnSetDrawableAnnotationPositionIdx(null, idxPosMsg);*/
 
                 /*TFSubDatasetMessage tfMsgSD2 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD2.ColorType = ColorMode.WARM_COLD_CIELAB;
@@ -760,7 +760,7 @@ namespace Sereno
                 OnTFDataset(null, tfMsgSD2);*/
 
                 //Simulate a time animation
-                TFSubDatasetMessage tfMsgSD1 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
+                /*TFSubDatasetMessage tfMsgSD1 = new TFSubDatasetMessage(ServerType.GET_TF_DATASET);
                 tfMsgSD1.ColorType = ColorMode.WARM_COLD_CIELAB;
                 tfMsgSD1.DataID = 0;
                 tfMsgSD1.SubDataID = 0;
@@ -772,7 +772,7 @@ namespace Sereno
                 tfMsgSD1.MaxClipping = 1.0f;
                 tfMsgSD1.Timestep = 0.0f;
                 tfMsgSD1.HeadsetID = -1;
-                OnTFDataset(null, tfMsgSD1);
+                OnTFDataset(null, tfMsgSD1);*/
                 
                 //Simulate a lasso input
                 /*CurrentActionMessage curAction = new CurrentActionMessage(ServerType.GET_CURRENT_ACTION);

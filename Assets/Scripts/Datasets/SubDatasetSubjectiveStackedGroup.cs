@@ -21,8 +21,8 @@ namespace Sereno.Datasets
 
         private SubDataset  m_base      = null;
         private StackMethod m_stack     = StackMethod.STACK_VERTICAL;
-        private float       m_gap       = 0.05f; 
-        private bool        m_isMerged  = false;
+        private float       m_gap       = 0.1f;
+        private bool        m_isMerged  = true;
         private Int32       m_headsetID = -1;
         private bool        m_inUpdate = false;
 
@@ -147,7 +147,8 @@ namespace Sereno.Datasets
                     if(it.Value != null)
                     {
                         it.Key.TransferFunction     = null; //Disable the transfer function. The subdataset should use tfComputation instead
-                        it.Key.SetDepthClipping(it.Value.MinDepthClipping, it.Value.MaxDepthClipping);
+                        it.Key.MinDepthClipping = it.Value.MinDepthClipping;
+                        it.Key.MaxDepthClipping = it.Value.MaxDepthClipping;
                         it.Key.EnableVolumetricMask = it.Value.EnableVolumetricMask;
 
                         if (it.Key.EnableVolumetricMask &&
@@ -235,7 +236,7 @@ namespace Sereno.Datasets
             UpdateSubDatasets();
         }
 
-        public override void OnChangeDepthClipping(SubDataset dataset, float minD, float maxD) 
+        public override void OnChangeDepthClipping(SubDataset dataset, float minDepth, float maxDepth) 
         {
             UpdateSubDatasets();
         }
